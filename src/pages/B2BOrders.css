@@ -1,0 +1,78 @@
+/* B2BOrders.css */
+/* Specific B2B Status Pills tailored for the dark theme */
+
+.b2b-status-b2b_pending {
+  color: #ffda79;
+  border-color: rgba(255, 218, 121, 0.4);
+}
+
+.b2b-status-approved {
+  color: #a3e7ff;
+  border-color: rgba(163, 231, 255, 0.4);
+}
+
+.b2b-status-dispatched {
+  color: #c9d8ff;
+  border-color: rgba(201, 216, 255, 0.4);
+}
+
+.b2b-status-delivered {
+  color: #93f2c8;
+  border-color: rgba(147, 242, 200, 0.4);
+}
+
+.b2b-status-cancelled {
+  color: #ff9b9b;
+  border-color: rgba(255, 155, 155, 0.4);
+}
+
+/* Custom Workflow Action Buttons */
+.b2b-action-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+/* Danger / Decline Button */
+.orders-btn-small.b2b-btn-danger {
+  color: #ff9b9b;
+  border-color: rgba(255, 155, 155, 0.4);
+  background: radial-gradient(circle at top left, rgba(255, 155, 155, 0.1), transparent 60%), var(--orders-panel-soft-2);
+}
+.orders-btn-small.b2b-btn-danger:hover {
+  border-color: #ff9b9b;
+  box-shadow: 0 8px 20px rgba(255, 155, 155, 0.2);
+}
+
+/* Success / Mark Paid Button */
+.orders-btn-small.b2b-btn-success {
+  color: #93f2c8;
+  border-color: rgba(147, 242, 200, 0.4);
+  background: radial-gradient(circle at top left, rgba(147, 242, 200, 0.1), transparent 60%), var(--orders-panel-soft-2);
+}
+.orders-btn-small.b2b-btn-success:hover {
+  border-color: #93f2c8;
+  box-shadow: 0 8px 20px rgba(147, 242, 200, 0.2);
+}
+
+/* Info / Dispatch Button */
+.orders-btn-small.b2b-btn-blue {
+  color: #a3e7ff;
+  border-color: rgba(163, 231, 255, 0.4);
+  background: radial-gradient(circle at top left, rgba(163, 231, 255, 0.1), transparent 60%), var(--orders-panel-soft-2);
+}
+.orders-btn-small.b2b-btn-blue:hover {
+  border-color: #a3e7ff;
+  box-shadow: 0 8px 20px rgba(163, 231, 255, 0.2);
+}
+
+/* Solid Success / Delivered Button */
+.orders-btn-small.b2b-btn-success-solid {
+  color: #111;
+  background: #93f2c8;
+  border-color: #93f2c8;
+}
+.orders-btn-small.b2b-btn-success-solid:hover {
+  box-shadow: 0 8px 20px rgba(147, 242, 200, 0.4);
+}

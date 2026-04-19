@@ -1,0 +1,145 @@
+/* --- ADMIN PAGE CORE STYLES --- */
+.admin-homepage-wrapper {
+  padding: 24px;
+  max-width: 1280px;
+  margin: 0 auto;
+  background: #000;
+  color: #fff;
+}
+
+.home1-page-new-home {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background: #000;
+  color: #fff;
+  padding-bottom: 50px;
+}
+
+.admin-section {
+  max-width: 1280px;
+  margin: 0 auto 50px auto;
+  padding: 0 16px;
+}
+
+.admin-section-title {
+  font-size: 24px;
+  color: #d4af37;
+  margin-bottom: 20px;
+  font-weight: 600;
+  border-bottom: 1px solid #333;
+  padding-bottom: 10px;
+}
+
+/* --- ADMIN UNIFORM GRIDS --- */
+.admin-grid-3 {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px;
+}
+
+.admin-grid-4 {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 20px;
+}
+
+.admin-grid-5 {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 20px;
+}
+
+.admin-grid-6 {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 20px;
+}
+
+/* --- ADMIN UNIFORM CARDS --- */
+.admin-card-standard {
+  background: #111;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid #333;
+  aspect-ratio: 4/5; /* Standard portrait card */
+}
+
+.admin-card-square {
+  background: #111;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid #333;
+  aspect-ratio: 1/1; /* Square box */
+}
+
+.admin-card-circle {
+  background: transparent;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 2px solid #fff;
+  aspect-ratio: 1/1; /* Perfect circle */
+}
+
+/* --- BANNERS --- */
+.home1-hero-frame-new-home, .home1-hero-frame-new-home-2 {
+  width: 100%;
+  height: 440px;
+  overflow: hidden;
+  border-radius: 12px;
+  background: #111;
+  border: 1px solid #333;
+}
+
+.main-hero-slide, .home1-hero-slide-new-home-2 {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.main-hero-slide img, .home1-hero-slide-new-home-2 img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* --- TABS --- */
+.cool4-tabs {
+  display: flex;
+  justify-content: flex-start;
+  gap: 12px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+
+.cool4-tab {
+  background: transparent;
+  color: #fff;
+  border: 1px solid #444;
+  padding: 8px 16px;
+  border-radius: 20px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.cool4-tab.is-active {
+  background: #d4af37;
+  color: #000;
+  border-color: #d4af37;
+}
+
+/* --- RESPONSIVE --- */
+@media (max-width: 1100px) {
+  .home1-hero-frame-new-home, .home1-hero-frame-new-home-2 {
+    height: 320px;
+  }
+}
+
+@media (max-width: 768px) {
+  .home1-hero-frame-new-home, .home1-hero-frame-new-home-2 {
+    height: 260px;
+  }
+}

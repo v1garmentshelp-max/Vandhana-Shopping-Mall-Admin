@@ -1,0 +1,402 @@
+.navbar-final {
+  background-color: black;
+  color: white;
+  padding: 10px 30px;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  width: 100%;
+  z-index: 1000;
+  font-family: sans-serif;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  box-sizing: border-box;
+  overflow-x: hidden;
+}
+
+body {
+  padding-top: 60px;
+}
+
+.top-row-final {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.logo-final img {
+  height: 40px;
+}
+
+.nav-toggle-final {
+  display: none;
+  cursor: pointer;
+}
+
+.dot-grid-final {
+  display: grid;
+  grid-template-columns: repeat(3, 6px);
+  grid-gap: 4px;
+}
+
+.dot-grid-final span {
+  width: 6px;
+  height: 6px;
+  background-color: white;
+  border-radius: 50%;
+}
+
+.nav-right-final {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+}
+
+.nav-links-final {
+  display: flex;
+  gap: 30px;
+}
+
+.nav-link-final {
+  text-decoration: none;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  position: relative;
+  color: white;
+  white-space: nowrap;
+}
+
+.search-bar-final {
+  display: flex;
+  align-items: center;
+  padding: 5px 10px;
+  border-radius: 10px;
+  border: 2px solid gold;
+}
+
+.search-icon-final {
+  color: gold;
+  margin-right: 8px;
+}
+
+.search-bar-final input {
+  background: transparent;
+  border: none;
+  color: white;
+  outline: none;
+  font-size: 16px;
+}
+
+.icon-buttons-final {
+  display: flex;
+  gap: 30px;
+}
+
+.icon-buttons-final a {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  text-decoration: none;
+  font-weight: 600;
+  color: white;
+}
+
+.bottom-row-final {
+  margin-top: 10px;
+  display: none;
+  justify-content: center;
+}
+
+.mobile-drawer-final {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 280px;
+  height: 100%;
+  background-color: black;
+  padding: 20px;
+  z-index: 2000;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  border-left: 1px solid #333;
+}
+
+.close-btn-final {
+  align-self: flex-end;
+  font-size: 24px;
+  color: white;
+  cursor: pointer;
+}
+
+.desktop-tab-only-final {
+  display: flex;
+}
+
+.mobile-only-final {
+  display: none;
+}
+
+.active-final span {
+  z-index: 3;
+  position: relative;
+  color: gold;
+}
+
+.logo-final video {
+  height: 60px;
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(255, 210, 119, 0.15);
+  object-fit: cover;
+}
+
+.active-final svg {
+  fill: white !important; 
+}
+
+
+.active-final {
+  width: auto;
+  padding: 0px 14px;
+  height: 33px;
+  border: none;
+  border-radius: 10px;
+  background: linear-gradient(to right,#77530a,#ffd277,#77530a,#77530a,#ffd277,#77530a);
+  background-size: 250%;
+  background-position: left;
+  color: white;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition-duration: 1s;
+  overflow: hidden;
+  z-index: 2;
+}
+
+.active-final::before {
+  position: absolute;
+  content: '';
+  width: 97%;
+  height: 90%;
+  border-radius: 8px;
+  background-color: rgba(0, 0, 0, 0.842);
+  background-size: 200%;
+  transition-duration: 1s;
+  z-index: 1;
+}
+
+.active-final:hover {
+  background-position: right;
+  transition-duration: 1s;
+}
+
+.active-final:hover::before {
+  background-position: right;
+  transition-duration: 1s;
+}
+
+.active-final:active {
+  transform: scale(0.95);
+}
+
+@media (max-width: 1200px) {
+  .nav-right-final {
+    gap: 10px;
+  }
+}
+
+@media (max-width: 1024px) {
+  .nav-right-final {
+    gap: 10px;
+  }
+}
+
+@media (max-width: 768px) {
+  .nav-right-final {
+    display: none;
+  }
+
+  .nav-toggle-final {
+    display: block;
+  }
+
+  .bottom-row-final {
+    display: flex;
+    justify-content: center;
+  }
+
+  .mobile-only-final {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .mobile-drawer-final {
+    position: fixed;
+    top: 0;
+    right: 0;
+    width: 100%;
+    max-width: 280px;
+    height: 100%;
+    background-color: black;
+    padding: 40px;
+    z-index: 2000;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    border-left: 1px solid #333;
+  }
+
+  .mobile-drawer-final .nav-links-final {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+  }
+
+  .mobile-drawer-final .icon-buttons-final {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .mobile-drawer-final .nav-link-final {
+    font-size: 18px;
+    color: white;
+  }
+
+  .search-bar-final {
+    width: 80%;
+    margin: 10px auto;
+  }
+}
+
+@media (max-width: 500px) {
+  .search-bar-final input {
+    font-size: 14px;
+  }
+
+  .navbar-final {
+    padding: 10px;
+  }
+
+  .mobile-drawer-final {
+    width: 100%;
+  }
+
+  .search-bar-final {
+    width: 80%;
+    margin: 0 auto;
+  }
+}
+
+@media (max-width: 400px) {
+  .mobile-drawer-final {
+    position: fixed;
+    top: 0;
+    right: 0;
+    width: 100%;
+    max-width: 220px;
+    height: 100%;
+    background-color: black;
+    padding: 40px;
+    z-index: 2000;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    border-left: 1px solid #333;
+  }
+
+  .search-bar-final input {
+    font-size: 13px;
+  }
+
+  .nav-link-final {
+    font-size: 14px;
+  }
+
+  .icon-buttons-final {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .active-final {
+    width: 50%;
+    height: 40px;
+    border: none;
+    border-radius: 10px;
+    background: linear-gradient(to right,#77530a,#ffd277,#77530a,#77530a,#ffd277,#77530a);
+    background-size: 250%;
+    background-position: left;
+    color: white !important;
+    text-shadow: 0 0 6px #ffd277;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition-duration: 1s;
+    overflow: hidden;
+    box-shadow: 0 0 10px #ffd277, 0 0 10px #77530a;
+    z-index: 2;
+  }
+
+  .active-final span {
+    z-index: 3;
+    position: relative;
+    color: white;
+  }
+}
+
+.red-dot {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 9px;
+  height: 9px;
+  background-color: red;
+  border-radius: 50%;
+}
+.nav-link-final {
+  position: relative;
+}
+
+.icon-btn {
+  position: relative;
+  padding: 0px;
+  margin: 0 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color 0.3s;
+  color: white;
+}
+
+.icon-btn:hover {
+  border-color: gold;
+}
+
+.icon-default {
+  font-size: 22px;
+  color: white;
+}
+
+.icon-active {
+  font-size: 22px;
+  color: gold;
+}
+
+.red-dot {
+  position: absolute;
+  top:-5%;
+  right: -10%;
+  width: 9px;
+  height: 9px;
+  background-color: red;
+  border-radius: 50%;
+}

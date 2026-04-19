@@ -1,0 +1,683 @@
+.odp-modal {
+  position: relative;
+}
+
+.odp-btn-close {
+  margin-top: 10px;
+}
+
+.odp-courier-card {
+  border-radius: var(--orders-radius-md);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: radial-gradient(circle at top left, rgba(255, 211, 110, 0.09), transparent 70%), var(--orders-panel-soft-2);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.odp-courier-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.odp-courier-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--orders-gold);
+  letter-spacing: 0.02em;
+}
+
+.odp-courier-sub {
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--orders-muted);
+  max-width: 560px;
+}
+
+.odp-courier-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.odp-muted-btn {
+  opacity: 0.75;
+  cursor: default;
+}
+
+.odp-alert {
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-size: 12px;
+  line-height: 1.35;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.odp-alert-error {
+  background: rgba(255, 155, 155, 0.12);
+  border-color: rgba(255, 155, 155, 0.24);
+  color: #ffd8d8;
+}
+
+.odp-alert-ok {
+  background: rgba(147, 242, 200, 0.12);
+  border-color: rgba(147, 242, 200, 0.24);
+  color: #d7fff0;
+}
+
+.odp-courier-summary {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.odp-summary-pill {
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(0, 0, 0, 0.25);
+  padding: 6px 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.odp-summary-label {
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--orders-muted);
+}
+
+.odp-summary-value {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--orders-white);
+}
+
+.odp-courier-list {
+  display: grid;
+  gap: 10px;
+}
+
+.odp-courier-row {
+  width: 100%;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(0, 0, 0, 0.22);
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  cursor: pointer;
+  text-align: left;
+  transition: transform var(--orders-transition), box-shadow var(--orders-transition), border-color var(--orders-transition),
+    background var(--orders-transition);
+}
+
+.odp-courier-row:hover {
+  transform: translateY(-1px);
+  border-color: rgba(255, 211, 110, 0.35);
+  box-shadow: 0 12px 26px rgba(0, 0, 0, 0.8);
+}
+
+.odp-courier-row-selected {
+  border-color: rgba(255, 211, 110, 0.65);
+  background: radial-gradient(circle at top left, rgba(255, 211, 110, 0.16), transparent 65%), rgba(0, 0, 0, 0.25);
+}
+
+.odp-courier-left {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.odp-courier-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--orders-white);
+  flex-wrap: wrap;
+}
+
+.odp-courier-meta {
+  font-size: 11px;
+  color: var(--orders-muted);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.odp-courier-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 3px;
+  white-space: nowrap;
+}
+
+.odp-courier-price {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--orders-gold);
+}
+
+.odp-courier-id {
+  font-size: 11px;
+  color: var(--orders-muted);
+}
+
+.odp-courier-radio {
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+}
+
+.odp-courier-radio-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: transparent;
+}
+
+.odp-courier-radio-dot.on {
+  background: radial-gradient(circle at center, var(--orders-gold), rgba(255, 211, 110, 0.25));
+}
+
+.odp-tag {
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  border-radius: 999px;
+  padding: 4px 8px;
+  border: 1px solid rgba(255, 211, 110, 0.35);
+  color: var(--orders-gold);
+  background: rgba(0, 0, 0, 0.18);
+}
+
+.odp-tag-danger {
+  border-color: rgba(255, 155, 155, 0.35);
+  color: #ffb9b9;
+}
+
+.odp-empty {
+  padding: 14px 12px;
+  border-radius: 12px;
+  border: 1px dashed rgba(255, 255, 255, 0.18);
+  color: var(--orders-muted);
+  font-size: 12px;
+  text-align: center;
+  background: rgba(0, 0, 0, 0.18);
+}
+
+.odp-action-bar {
+  margin-top: 2px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(0, 0, 0, 0.18);
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.odp-action-left {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.odp-action-title {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--orders-muted);
+}
+
+.odp-action-sub {
+  font-size: 13px;
+  color: var(--orders-white);
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 720px;
+}
+
+.odp-action-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.odp-primary-btn {
+  border-color: rgba(255, 211, 110, 0.7);
+}
+
+.odp-awb-panel {
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(0, 0, 0, 0.18);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.odp-awb-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 10px;
+}
+
+.odp-awb-item {
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(0, 0, 0, 0.22);
+  padding: 10px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.odp-awb-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--orders-muted);
+}
+
+.odp-awb-value {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--orders-white);
+}
+
+.odp-awb-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.odp-awb-note {
+  font-size: 11px;
+  color: var(--orders-muted);
+  line-height: 1.35;
+}
+
+@media (max-width: 900px) {
+  .odp-action-sub {
+    max-width: 100%;
+    white-space: normal;
+  }
+}
+.odp-formal {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.odp-top-card {
+  border-radius: var(--orders-radius-md);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(0, 0, 0, 0.22);
+  padding: 12px 14px;
+  display: flex;
+  align-items: stretch;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.odp-top-left {
+  min-width: 260px;
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.odp-top-title {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--orders-white);
+}
+
+.odp-top-sub {
+  font-size: 12px;
+  color: var(--orders-muted);
+}
+
+.odp-top-meta {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.odp-top-chip {
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(0, 0, 0, 0.18);
+  padding: 6px 10px;
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.odp-chip-k {
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--orders-muted);
+}
+
+.odp-chip-v {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--orders-white);
+}
+
+.odp-top-right {
+  min-width: 260px;
+  flex: 0 0 auto;
+}
+
+.odp-stepper {
+  display: grid;
+  gap: 10px;
+}
+
+.odp-step {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  opacity: 0.55;
+}
+
+.odp-step.active {
+  opacity: 1;
+}
+
+.odp-step.done {
+  opacity: 0.95;
+}
+
+.odp-step-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  border: 2px solid rgba(255, 255, 255, 0.25);
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.odp-step.active .odp-step-dot {
+  border-color: rgba(255, 211, 110, 0.75);
+  background: rgba(255, 211, 110, 0.18);
+}
+
+.odp-step.done .odp-step-dot {
+  border-color: rgba(147, 242, 200, 0.6);
+  background: rgba(147, 242, 200, 0.16);
+}
+
+.odp-step-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.odp-step-title {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--orders-muted);
+}
+
+.odp-step-sub {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--orders-white);
+}
+
+.odp-step-card {
+  border-radius: var(--orders-radius-md);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(0, 0, 0, 0.18);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.odp-step-card-disabled {
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+.odp-step-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.odp-step-card-title {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--orders-gold);
+}
+
+.odp-step-card-sub {
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--orders-muted);
+  max-width: 720px;
+}
+
+.odp-step-card-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.odp-payment-box {
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(0, 0, 0, 0.22);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.odp-payment-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.odp-pay-k {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--orders-muted);
+}
+
+.odp-pay-v {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--orders-white);
+}
+
+.odp-payment-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-top: 4px;
+}
+
+.odp-primary-link {
+  border-color: rgba(255, 211, 110, 0.65);
+}
+
+.odp-docs-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.odp-wallet-row {
+  border-radius: 14px;
+  border: 1px solid rgba(255, 155, 155, 0.22);
+  background: rgba(255, 155, 155, 0.10);
+  padding: 10px 12px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.odp-wallet-left {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 220px;
+}
+
+.odp-wallet-title {
+  font-size: 12px;
+  font-weight: 800;
+  color: #ffd8d8;
+}
+
+.odp-wallet-sub {
+  font-size: 12px;
+  color: #ffd8d8;
+  opacity: 0.95;
+}
+
+.odp-wallet-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.odp-track-card {
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(0, 0, 0, 0.22);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.odp-track-head {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.odp-track-title {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--orders-white);
+}
+
+.odp-track-sub {
+  font-size: 12px;
+  color: var(--orders-muted);
+}
+
+.odp-track-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 10px;
+}
+
+.odp-track-item {
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(0, 0, 0, 0.18);
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.odp-track-k {
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--orders-muted);
+}
+
+.odp-track-v {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--orders-white);
+}
+
+.odp-track-events {
+  display: grid;
+  gap: 8px;
+}
+
+.odp-track-event {
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(0, 0, 0, 0.18);
+  padding: 10px;
+  display: grid;
+  grid-template-columns: 140px 1fr 160px;
+  gap: 10px;
+  align-items: center;
+}
+
+.odp-track-ev-time {
+  font-size: 11px;
+  color: var(--orders-muted);
+}
+
+.odp-track-ev-text {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--orders-white);
+}
+
+.odp-track-ev-loc {
+  font-size: 11px;
+  color: var(--orders-muted);
+  text-align: right;
+}
+
+@media (max-width: 900px) {
+  .odp-track-event {
+    grid-template-columns: 1fr;
+  }
+  .odp-track-ev-loc {
+    text-align: left;
+  }
+}

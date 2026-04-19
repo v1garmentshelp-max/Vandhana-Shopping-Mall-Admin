@@ -1,0 +1,230 @@
+.delete-product-page {
+  color: gold;
+  font-family: Arial, sans-serif;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: 24px;
+  background-color: #000;
+}
+
+.delete-toolbar {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  justify-content: space-between;
+  background: #111;
+  border: 1px solid gold;
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 0 10px rgba(255, 215, 0, 0.2);
+}
+
+.filters {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.chip {
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 2px solid white;
+  background: transparent;
+  color: white;
+  font-weight: bold;
+  cursor: pointer;
+  transition: .2s;
+}
+
+.chip:hover {
+  border-color: gold;
+  color: gold;
+}
+
+.chip.active {
+  border-color: gold;
+  background: black;
+  color: gold;
+}
+
+.tools {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.search-input {
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid gold;
+  background: #0d0d0d;
+  color: white;
+  min-width: 280px;
+  outline: none;
+}
+
+.sort-select {
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid gold;
+  background: #0d0d0d;
+  color: white;
+  outline: none;
+}
+
+.refresh-btn {
+  padding: 10px 16px;
+  background: none;
+  border: 2px solid gold;
+  color: gold;
+  font-weight: bold;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: .2s;
+}
+
+.refresh-btn:disabled {
+  opacity: .6;
+  cursor: not-allowed;
+}
+
+.refresh-btn:hover:not(:disabled) {
+  background: gold;
+  color: black;
+}
+
+.danger-btn {
+  padding: 10px 16px;
+  background: none;
+  border: 2px solid #ff6b6b;
+  color: #ff6b6b;
+  font-weight: bold;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: .2s;
+}
+
+.danger-btn:hover {
+  background: #ff6b6b;
+  color: black;
+}
+
+.delete-section2 {
+  background-color: #111;
+  padding: 20px;
+  border-radius: 12px;
+  border: 1px solid gold;
+  box-shadow: 0 0 10px rgba(255, 215, 0, 0.2);
+}
+
+.delete-section2 h2 {
+  font-size: 20px;
+  margin-bottom: 12px;
+  border-bottom: 2px solid gold;
+  padding-bottom: 6px;
+}
+
+.table-scroll-wrapper {
+  width: 100%;
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  color: white;
+  min-width: 1200px;
+}
+
+th, td {
+  padding: 0px;
+  border: 1px solid gold;
+  text-align: center;
+  vertical-align: middle;
+}
+
+th {
+  background-color: #222;
+  color: gold;
+  font-weight: bold;
+}
+
+.table-image {
+  width: 60px;
+  height: auto;
+  border-radius: 6px;
+  margin: 8px auto;
+}
+
+.delete-btn {
+  padding: 8px 14px;
+  background-color: red;
+  color: white;
+  font-weight: bold;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: .2s;
+}
+
+.delete-btn:hover {
+  background-color: darkred;
+}
+
+.popup-card,
+.popup-confirm-box {
+  position: fixed;
+  top: 50%;
+  left: 65%;
+  transform: translate(-50%, -50%);
+  background-color: #111;
+  color: gold;
+  padding: 30px;
+  border-radius: 12px;
+  box-shadow: 0 0 15px rgba(255, 215, 0, 0.3);
+  z-index: 1000;
+  text-align: center;
+  max-width: 90%;
+  width: 350px;
+  font-size: 16px;
+}
+
+.popup-card.success {
+  border: 1px solid #9acd32;
+}
+
+.popup-card.error {
+  border: 1px solid #ff6b6b;
+}
+
+.popup-actions {
+  margin-top: 20px;
+  display: flex;
+  justify-content: space-around;
+}
+
+.popup-actions button {
+  padding: 10px 20px;
+  font-weight: bold;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: .2s;
+}
+
+.popup-actions button:first-child {
+  background-color: gold;
+  color: black;
+}
+
+.popup-actions button:last-child {
+  background-color: #444;
+  color: white;
+}
+
+.popup-actions button:last-child:hover {
+  background-color: #666;
+}

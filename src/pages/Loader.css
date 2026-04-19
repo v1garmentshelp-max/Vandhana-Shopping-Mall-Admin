@@ -1,0 +1,108 @@
+:root {
+  --bg: #0b0b0b;
+  --text: #ffffff;
+  --gold: #ffd84d;
+  --gold-2: #d4af37;
+}
+
+.loader-overlay-gbw {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.6);
+  display: grid;
+  place-items: center;
+  z-index: 9999;
+  backdrop-filter: blur(2px);
+}
+
+.loader-gbw {
+  width: fit-content;
+  height: fit-content;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.truckWrapper-gbw {
+  width: 200px;
+  height: 100px;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  align-items: center;
+  justify-content: flex-end;
+  overflow-x: hidden;
+}
+
+.truckBody-gbw {
+  width: 130px;
+  height: fit-content;
+  margin-bottom: 6px;
+  animation: motion-gbw 1s linear infinite;
+}
+
+@keyframes motion-gbw {
+  0% { transform: translateY(0) }
+  50% { transform: translateY(3px) }
+  100% { transform: translateY(0) }
+}
+
+.truckTires-gbw {
+  width: 130px;
+  height: fit-content;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 10px 0 15px;
+  position: absolute;
+  bottom: 0;
+}
+
+.truckTires-gbw .tiresvg-gbw { width: 24px }
+
+.road-gbw {
+  width: 100%;
+  height: 1.5px;
+  background-color: #161616;
+  position: relative;
+  bottom: 0;
+  align-self: flex-end;
+  border-radius: 3px;
+}
+
+.road-gbw::before {
+  content: "";
+  position: absolute;
+  width: 20px;
+  height: 100%;
+  background-color: #161616;
+  right: -50%;
+  border-radius: 3px;
+  animation: roadAnimation-gbw 1.4s linear infinite;
+  border-left: 10px solid #ffffff;
+}
+
+.road-gbw::after {
+  content: "";
+  position: absolute;
+  width: 10px;
+  height: 100%;
+  background-color: #161616;
+  right: -65%;
+  border-radius: 3px;
+  animation: roadAnimation-gbw 1.4s linear infinite;
+  border-left: 4px solid #ffffff;
+}
+
+.lampPost-gbw {
+  position: absolute;
+  bottom: 0;
+  right: -90%;
+  height: 90px;
+  animation: roadAnimation-gbw 1.4s linear infinite;
+}
+
+@keyframes roadAnimation-gbw {
+  0% { transform: translateX(0) }
+  100% { transform: translateX(-350px) }
+}

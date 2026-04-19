@@ -1,0 +1,240 @@
+.transaction-page {
+  color: gold;
+  font-family: Arial, sans-serif;
+  padding: 24px;
+  background-color: #000;
+  margin-top: -20px;
+}
+
+.transaction-header {
+  text-align: center;
+  margin-bottom: 16px;
+}
+
+.transaction-header h2 {
+  font-size: 28px;
+  margin-bottom: 6px;
+}
+
+.transaction-header p {
+  font-size: 14px;
+  color: #d9d9d9;
+}
+
+.stats-row {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(140px, 1fr));
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.stat-card {
+  background: #111;
+  border: 1px solid gold;
+  border-radius: 12px;
+  padding: 10px 12px;
+  text-align: left;
+}
+
+.stat-card.accent { border-color: #4caf50; }
+.stat-card.warn { border-color: #ffbf00; }
+.stat-card.info { border-color: #1e90ff; }
+.stat-card.danger { border-color: #ff6b6b; }
+
+.stat-title {
+  font-size: 12px;
+  color: #cccccc;
+  margin-bottom: 4px;
+}
+
+.stat-value {
+  font-size: 20px;
+  font-weight: bold;
+}
+
+.chip-bar {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 10px 0 16px;
+}
+
+.chip {
+  padding: 8px 14px;
+  background: transparent;
+  border: 2px solid white;
+  color: white;
+  border-radius: 999px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: .2s;
+}
+
+.chip:hover {
+  border-color: gold;
+  color: gold;
+}
+
+.chip.active {
+  border-color: gold;
+  background: black;
+  color: gold;
+}
+
+.transaction-filter {
+  background-color: #111;
+  padding: 16px;
+  border-radius: 12px;
+  box-shadow: 0 0 10px rgba(255, 215, 0, 0.2);
+  margin-bottom: 16px;
+}
+
+.transaction-filter h3 {
+  font-size: 20px;
+  margin-bottom: 10px;
+  border-bottom: 2px solid gold;
+  padding-bottom: 6px;
+}
+
+.filter-grid {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 10px;
+}
+
+.filter-grid input,
+.filter-grid select,
+.filter-grid button {
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid gold;
+  background-color: #222;
+  color: white;
+  outline: none;
+}
+
+.filter-grid button {
+  background-color: gold;
+  color: black;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.filter-grid button:hover {
+  opacity: .9;
+}
+
+.transaction-table {
+  background-color: #111;
+  padding: 20px;
+  border-radius: 12px;
+  border: 1px solid gold;
+  box-shadow: 0 0 10px rgba(255, 215, 0, 0.2);
+}
+
+.transaction-table h3 {
+  font-size: 20px;
+  margin-bottom: 12px;
+  border-bottom: 2px solid gold;
+  padding-bottom: 6px;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  color: white;
+  min-width: 900px;
+}
+
+th, td {
+  padding: 10px;
+  border: 1px solid gold;
+  text-align: center;
+  vertical-align: middle;
+}
+
+th {
+  background-color: #222;
+  color: gold;
+  font-weight: bold;
+}
+
+td {
+  background-color: #333;
+}
+
+.status-pill {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  border: 1px solid currentColor;
+}
+
+.status-pill.ok { color: #4caf50; }
+.status-pill.warn { color: #ffbf00; }
+.status-pill.info { color: #1e90ff; }
+.status-pill.danger { color: #ff6b6b; }
+
+.delete-btn {
+  padding: 8px 12px;
+  background-color: red;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: .2s;
+}
+
+.delete-btn:hover {
+  background-color: darkred;
+}
+
+.popup-card,
+.popup-confirm-box {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background-color: #111;
+  color: gold;
+  padding: 22px;
+  border-radius: 12px;
+  box-shadow: 0 0 12px rgba(255, 215, 0, 0.3);
+  z-index: 1000;
+  text-align: center;
+  font-size: 16px;
+}
+
+.centered-popup { width: 360px; }
+
+.popup-actions {
+  margin-top: 14px;
+  display: flex;
+  justify-content: space-around;
+}
+
+.popup-actions button {
+  padding: 10px 16px;
+  font-weight: bold;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: .2s;
+}
+
+.popup-actions button:first-child {
+  background-color: gold;
+  color: black;
+}
+
+.popup-actions button:last-child {
+  background-color: #444;
+  color: white;
+}
+
+.popup-actions button:last-child:hover {
+  background-color: #666;
+}
