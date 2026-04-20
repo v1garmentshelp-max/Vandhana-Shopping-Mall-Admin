@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import './UpdateProduct.css';
 
-const DEFAULT_API_BASE = 'https://taras-kart-backend.vercel.app';
-const DEFAULT_ASSETS_BASE = 'https://taras-kart-backend.vercel.app/uploads';
+const DEFAULT_API_BASE = 'https://vandhana-shopping-mall-backend.vercel.app';
+const DEFAULT_ASSETS_BASE = 'https://vandhana-shopping-mall-backend.vercel.app/uploads';
 
 const API_BASE_RAW =
   (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_BASE) ||
@@ -437,55 +437,55 @@ const UpdateProduct = () => {
   const editedCount = dirtyRows.length;
 
   return (
-    <div className="update-product-page">
-      <div className="update-topbar">
-        <div className="topbar-left">
-          <div className="title-wrap">
-            <p className="page-kicker">Catalog Management</p>
+    <div className="update-product-page-vandana">
+      <div className="update-topbar-vandana">
+        <div className="topbar-left-vandana">
+          <div className="title-wrap-vandana">
+            <p className="page-kicker-vandana">Product Control</p>
             <h1>Update Products</h1>
-            <p className="page-subtitle">Refine product details, pricing, stock and images from one clean workspace.</p>
+            <p className="page-subtitle-vandana">Edit pricing, stock, images and product details in one place.</p>
           </div>
 
-          <div className="summary-strip">
-            <div className="summary-chip">
+          <div className="summary-strip-vandana">
+            <div className="summary-chip-vandana">
               <span>Total</span>
               <strong>{totalCount}</strong>
             </div>
-            <div className="summary-chip">
+            <div className="summary-chip-vandana">
               <span>Visible</span>
               <strong>{visibleCount}</strong>
             </div>
-            <div className="summary-chip active">
+            <div className="summary-chip-vandana active-vandana">
               <span>Edited</span>
               <strong>{editedCount}</strong>
             </div>
           </div>
         </div>
 
-        <div className="topbar-right">
-          <button className="ghost-btn" onClick={fetchAll} disabled={isLoading || isSaving}>
+        <div className="topbar-right-vandana">
+          <button className="ghost-btn-vandana" onClick={fetchAll} disabled={isLoading || isSaving}>
             {isLoading ? 'Refreshing...' : 'Refresh'}
           </button>
         </div>
       </div>
 
-      <div className="toolbar-card">
-        <div className="filters">
+      <div className="toolbar-card-vandana">
+        <div className="filters-vandana">
           {['All', 'Men', 'Women', 'Kids'].map((f) => (
-            <button key={f} className={`filter-pill ${filter === f ? 'active' : ''}`} onClick={() => setFilter(f)}>
+            <button key={f} className={`filter-pill-vandana ${filter === f ? 'active-vandana' : ''}`} onClick={() => setFilter(f)}>
               {f}
             </button>
           ))}
         </div>
 
-        <div className="toolbar-right">
+        <div className="toolbar-right-vandana">
           <input
-            className="search-input"
+            className="search-input-vandana"
             placeholder="Search by brand, product, color, size or category"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
-          <select className="sort-select" value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
+          <select className="sort-select-vandana" value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
             <option value="recent">Sort: Recent</option>
             <option value="price_b2c_asc">Price B2C: Low to High</option>
             <option value="price_b2c_desc">Price B2C: High to Low</option>
@@ -495,16 +495,16 @@ const UpdateProduct = () => {
         </div>
       </div>
 
-      <div className="table-panel">
-        <div className="table-panel-head">
+      <div className="table-panel-vandana">
+        <div className="table-panel-head-vandana">
           <div>
             <h2>Product Table</h2>
             <p>{editedCount ? `${editedCount} row${editedCount > 1 ? 's' : ''} have unsaved changes` : 'Everything is up to date'}</p>
           </div>
         </div>
 
-        <div className="table-scroll-wrapper">
-          <table>
+        <div className="table-scroll-wrapper-vandana">
+          <table className="table-vandana">
             <thead>
               <tr>
                 <th>Sl. No</th>
@@ -528,12 +528,12 @@ const UpdateProduct = () => {
               {filteredSortedRows.map((product, idx) => {
                 const rowIndex = rowIndexById.get(product.id);
                 return (
-                  <tr key={product.id || idx} className={product.dirty ? 'dirty-row' : ''}>
-                    <td className="serial-cell">{idx + 1}</td>
+                  <tr key={product.id || idx} className={product.dirty ? 'dirty-row-vandana' : ''}>
+                    <td className="serial-cell-vandana">{idx + 1}</td>
 
                     <td>
                       <select
-                        className="table-select"
+                        className="table-select-vandana"
                         value={product.category}
                         onChange={(e) => updateField(rowIndex, 'category', e.target.value)}
                       >
@@ -593,7 +593,7 @@ const UpdateProduct = () => {
                     </td>
 
                     <td>
-                      <div className="readonly-value">{computeFinal(product.original_price_b2b, product.discount_b2b).toFixed(2)}</div>
+                      <div className="readonly-value-vandana">{computeFinal(product.original_price_b2b, product.discount_b2b).toFixed(2)}</div>
                     </td>
 
                     <td>
@@ -613,7 +613,7 @@ const UpdateProduct = () => {
                     </td>
 
                     <td>
-                      <div className="readonly-value">{computeFinal(product.original_price_b2c, product.discount_b2c).toFixed(2)}</div>
+                      <div className="readonly-value-vandana">{computeFinal(product.original_price_b2c, product.discount_b2c).toFixed(2)}</div>
                     </td>
 
                     <td>
@@ -626,13 +626,13 @@ const UpdateProduct = () => {
                     </td>
 
                     <td>
-                      <div className="image-stack">
+                      <div className="image-stack-vandana">
                         <img
                           src={product.preview_url || product.image_url || 'https://via.placeholder.com/76x76?text=No+Image'}
                           alt="product"
-                          className="table-image"
+                          className="table-image-vandana"
                         />
-                        <label className="upload-btn">
+                        <label className="upload-btn-vandana">
                           Replace
                           <input
                             type="file"
@@ -644,7 +644,7 @@ const UpdateProduct = () => {
                     </td>
 
                     <td>
-                      <span className={`status-badge ${product.dirty ? 'edited' : 'saved'}`}>
+                      <span className={`status-badge-vandana ${product.dirty ? 'edited-vandana' : 'saved-vandana'}`}>
                         {product.dirty ? 'Edited' : 'Saved'}
                       </span>
                     </td>
@@ -654,7 +654,7 @@ const UpdateProduct = () => {
 
               {!filteredSortedRows.length && (
                 <tr>
-                  <td colSpan="15" className="empty-state-cell">No products found</td>
+                  <td colSpan="15" className="empty-state-cell-vandana">No products found</td>
                 </tr>
               )}
             </tbody>
@@ -662,36 +662,36 @@ const UpdateProduct = () => {
         </div>
       </div>
 
-      <div className="floating-savebar">
-        <div className="floating-savebar-left">
-          <span className="floating-label">Unsaved changes</span>
-          <strong className="floating-value">{editedCount} row{editedCount !== 1 ? 's' : ''} edited</strong>
+      <div className="floating-savebar-vandana">
+        <div className="floating-savebar-left-vandana">
+          <span className="floating-label-vandana">Unsaved changes</span>
+          <strong className="floating-value-vandana">{editedCount} row{editedCount !== 1 ? 's' : ''} edited</strong>
         </div>
 
-        <div className="floating-savebar-right">
-          <button className="ghost-btn" onClick={fetchAll} disabled={isLoading || isSaving}>
+        <div className="floating-savebar-right-vandana">
+          <button className="ghost-btn-vandana" onClick={fetchAll} disabled={isLoading || isSaving}>
             {isLoading ? 'Refreshing...' : 'Refresh'}
           </button>
-          <button className="primary-btn" onClick={handleUpdateClick} disabled={!dirtyRows.length || isSaving}>
+          <button className="primary-btn-vandana" onClick={handleUpdateClick} disabled={!dirtyRows.length || isSaving}>
             {isSaving ? 'Saving...' : 'Save Changes'}
           </button>
         </div>
       </div>
 
       {popupMessage && (
-        <div className={`popup-toast ${popupType}`}>
+        <div className={`popup-toast-vandana ${popupType}`}>
           {popupMessage}
         </div>
       )}
 
       {popupConfirm && (
-        <div className="popup-overlay">
-          <div className="confirm-modal">
+        <div className="popup-overlay-vandana">
+          <div className="confirm-modal-vandana">
             <h3>Save changes</h3>
             <p>Do you want to save all edited rows now?</p>
-            <div className="modal-actions">
-              <button className="primary-btn" onClick={() => confirmUpdate(true)}>Yes, Save</button>
-              <button className="ghost-btn" onClick={() => confirmUpdate(false)}>Cancel</button>
+            <div className="modal-actions-vandana">
+              <button className="primary-btn-vandana" onClick={() => confirmUpdate(true)}>Yes, Save</button>
+              <button className="ghost-btn-vandana" onClick={() => confirmUpdate(false)}>Cancel</button>
             </div>
           </div>
         </div>

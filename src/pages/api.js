@@ -1,7 +1,7 @@
 const API_BASE =
   process.env.REACT_APP_API_BASE ||
   process.env.VITE_API_BASE ||
-  'https://taras-kart-backend.vercel.app';
+  'https://vandhana-shopping-mall-backend.vercel.app';
 
 function buildUrl(path) {
   const p = path.startsWith('/api') ? path : `/api${path}`;

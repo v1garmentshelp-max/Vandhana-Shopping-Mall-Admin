@@ -87,14 +87,12 @@ export default function OrderCancelPopup({
                 <span>!</span>
               </div>
               <div className="ocp-header-text">
-                <div className="ocp-title">Cancel order</div>
-                <div className="ocp-chip-subtle">
-                  Order #{sale.id}
-                </div>
+                <div className="ocp-title">Cancel Order</div>
+                <div className="ocp-chip-subtle">Order #{sale.id}</div>
               </div>
             </div>
             <div className="ocp-subtitle">
-              You are cancelling this order. This will stop fulfilment and the customer should be informed clearly.
+              Review the order summary, choose a cancellation reason, and confirm the action carefully.
             </div>
           </div>
           <button className="ocp-close-btn" onClick={onClose} disabled={isSubmitting}>
@@ -103,23 +101,18 @@ export default function OrderCancelPopup({
         </div>
 
         <div className="ocp-section ocp-section-summary">
-          <div className="ocp-summary-row">
-            <div className="ocp-summary-block">
+          <div className="ocp-summary-grid">
+            <div className="ocp-summary-card">
               <div className="ocp-label">Customer</div>
-              <div className="ocp-value">
-                {sale.customer_name || '-'}
-              </div>
-              <div className="ocp-subvalue">
-                {sale.customer_mobile || 'No phone added'}
-              </div>
+              <div className="ocp-value">{sale.customer_name || '-'}</div>
+              <div className="ocp-subvalue">{sale.customer_mobile || 'No phone added'}</div>
             </div>
-            <div className="ocp-summary-block ocp-summary-right">
+
+            <div className="ocp-summary-card">
               <div className="ocp-label">Amount payable</div>
               <div className="ocp-value-strong">{fmtAmount(payable)}</div>
               <div className="ocp-summary-pill-row">
-                <div className="ocp-chip ocp-chip-payment">
-                  {paymentLabel}
-                </div>
+                <div className="ocp-chip ocp-chip-payment">{paymentLabel}</div>
                 {itemCount > 0 && (
                   <div className="ocp-chip ocp-chip-neutral">
                     {itemCount} item{itemCount > 1 ? 's' : ''}
@@ -127,9 +120,9 @@ export default function OrderCancelPopup({
                 )}
               </div>
             </div>
-          </div>
-          <div className="ocp-summary-row ocp-summary-row-secondary">
-            <div className="ocp-summary-block">
+
+            <div className="ocp-summary-card">
+              <div className="ocp-label">Order info</div>
               <div className="ocp-summary-meta">
                 <span className="ocp-meta-label">Order ID</span>
                 <span className="ocp-meta-value">#{sale.id}</span>
@@ -137,15 +130,14 @@ export default function OrderCancelPopup({
               {sale.created_at && (
                 <div className="ocp-summary-meta">
                   <span className="ocp-meta-label">Placed on</span>
-                  <span className="ocp-meta-value">
-                    {new Date(sale.created_at).toLocaleString()}
-                  </span>
+                  <span className="ocp-meta-value">{new Date(sale.created_at).toLocaleString()}</span>
                 </div>
               )}
             </div>
           </div>
+
           <div className="ocp-banner">
-            Use a clear reason and short note. This helps your team and makes it easier to explain the cancellation to the customer.
+            Write a short, clear note so your team can understand the cancellation later and the customer can be informed properly.
           </div>
         </div>
 
@@ -162,7 +154,7 @@ export default function OrderCancelPopup({
                   onChange={e => setReasonType(e.target.value)}
                   disabled={isSubmitting}
                 />
-                <span>Stock or product issue (out of stock, damaged piece, wrong SKU)</span>
+                <span>Stock or product issue, out of stock, damaged piece, wrong SKU</span>
               </label>
               <label className="ocp-radio">
                 <input
@@ -173,7 +165,7 @@ export default function OrderCancelPopup({
                   onChange={e => setReasonType(e.target.value)}
                   disabled={isSubmitting}
                 />
-                <span>Address or contact issue (invalid address, phone not reachable)</span>
+                <span>Address or contact issue, invalid address, phone not reachable</span>
               </label>
               <label className="ocp-radio">
                 <input
@@ -184,7 +176,7 @@ export default function OrderCancelPopup({
                   onChange={e => setReasonType(e.target.value)}
                   disabled={isSubmitting}
                 />
-                <span>Payment or refund concern (duplicate order, suspicious payment)</span>
+                <span>Payment or refund concern, duplicate order, suspicious payment</span>
               </label>
               <label className="ocp-radio">
                 <input
@@ -209,9 +201,10 @@ export default function OrderCancelPopup({
                 <span>Other internal reason</span>
               </label>
             </div>
+
             <textarea
               className="ocp-textarea"
-              placeholder="Short note for internal use and for customer explanation. Example: Customer asked to cancel as delivery date was too late."
+              placeholder="Short note for internal use and customer explanation. Example: Customer asked to cancel as delivery date was too late."
               value={notes}
               onChange={e => setNotes(e.target.value)}
               disabled={isSubmitting}
@@ -230,15 +223,14 @@ export default function OrderCancelPopup({
                     disabled={isSubmitting}
                   />
                   <div className="ocp-checkbox-text">
-                    <div className="ocp-checkbox-title">
-                      Inform the customer
-                    </div>
+                    <div className="ocp-checkbox-title">Inform the customer</div>
                     <div className="ocp-checkbox-desc">
                       I will make sure the customer is told that this order is cancelled and why it was cancelled.
                     </div>
                   </div>
                 </div>
               </label>
+
               <label className="ocp-checkbox-card">
                 <div className="ocp-checkbox-inner">
                   <input
@@ -248,9 +240,7 @@ export default function OrderCancelPopup({
                     disabled={isSubmitting}
                   />
                   <div className="ocp-checkbox-text">
-                    <div className="ocp-checkbox-title">
-                      Final action
-                    </div>
+                    <div className="ocp-checkbox-title">Final action</div>
                     <div className="ocp-checkbox-desc">
                       I understand this action cannot be reversed here. The order status will be set to cancelled.
                     </div>

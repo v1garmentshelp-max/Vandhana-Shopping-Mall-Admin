@@ -4,7 +4,7 @@ import Navbar from './NavbarAdmin'
 import OrderCancelPopup from './OrderCancelPopup'
 import { useNavigate } from 'react-router-dom'
 
-const DEFAULT_API_BASE = 'https://taras-kart-backend.vercel.app'
+const DEFAULT_API_BASE = 'https://vandhana-shopping-mall-backend.vercel.app'
 const API_BASE_RAW =
   (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_BASE) ||
   (typeof process !== 'undefined' && process.env && process.env.REACT_APP_API_BASE) ||
@@ -93,13 +93,13 @@ export default function OrderIssues() {
   }, [])
 
   const cancelledOrders = useMemo(
-    () => sales.filter(s => statusText(s.status) === 'CANCELLED'),
+    () => sales.filter((s) => statusText(s.status) === 'CANCELLED'),
     [sales]
   )
 
   const filteredOrders = useMemo(() => {
     const ql = q.trim().toLowerCase()
-    return sales.filter(s => {
+    return sales.filter((s) => {
       const payType = getPaymentType(s)
       const okPayment = paymentFilter === 'ALL' ? true : payType === paymentFilter
       const hay = [
@@ -119,13 +119,13 @@ export default function OrderIssues() {
 
   const summary = useMemo(() => {
     const total = cancelledOrders.length
-    const cod = cancelledOrders.filter(s => getPaymentType(s) === 'COD').length
-    const prepaid = cancelledOrders.filter(s => getPaymentType(s) === 'PREPAID').length
+    const cod = cancelledOrders.filter((s) => getPaymentType(s) === 'COD').length
+    const prepaid = cancelledOrders.filter((s) => getPaymentType(s) === 'PREPAID').length
     const totalAmount = cancelledOrders.reduce((acc, s) => acc + getPayable(s), 0)
     return { total, cod, prepaid, totalAmount }
   }, [cancelledOrders])
 
-  const openCancelPopupForSale = sale => {
+  const openCancelPopupForSale = (sale) => {
     if (!sale) return
     setPopupSale(sale)
     setPopupOpen(true)
@@ -138,7 +138,7 @@ export default function OrderIssues() {
     setCancelBusyId(null)
   }
 
-  const handleAdminConfirmCancel = async reasonText => {
+  const handleAdminConfirmCancel = async (reasonText) => {
     if (!popupSale) return
     setPopupSubmitting(true)
     setCancelBusyId(popupSale.id)
@@ -156,8 +156,8 @@ export default function OrderIssues() {
       })
       const trimmedReason = reasonText && reasonText.trim() ? reasonText.trim() : ''
       const nowIso = new Date().toISOString()
-      setSales(prev =>
-        prev.map(s =>
+      setSales((prev) =>
+        prev.map((s) =>
           s.id === popupSale.id
             ? {
                 ...s,
@@ -226,9 +226,10 @@ export default function OrderIssues() {
       <div className="oi-layout">
         <header className="oi-header">
           <div className="oi-header-main">
-            <h1 className="oi-title">Cancel / Return / Refund Center</h1>
+            <span className="oi-badge">Issue Center</span>
+            <h1 className="oi-title">Cancel, Return and Refund Center</h1>
             <p className="oi-subtitle">
-              See all order problems in one place and keep customers informed.
+              Track cancellations, review return requests, and manage refund updates from one place.
             </p>
           </div>
           <div className="oi-header-actions">
@@ -264,22 +265,22 @@ export default function OrderIssues() {
           <>
             <section className="oi-summary">
               <div className="oi-summary-card">
-                <div className="oi-summary-label">Cancelled orders</div>
+                <div className="oi-summary-label">Cancelled Orders</div>
                 <div className="oi-summary-value">{summary.total}</div>
                 <div className="oi-summary-note">Across all payment types</div>
               </div>
-              <div className="oi-summary-card">
-                <div className="oi-summary-label">COD cancellations</div>
+              <div className="oi-summary-card blue">
+                <div className="oi-summary-label">COD Cancellations</div>
                 <div className="oi-summary-value">{summary.cod}</div>
                 <div className="oi-summary-note">Useful for courier follow up</div>
               </div>
-              <div className="oi-summary-card">
-                <div className="oi-summary-label">Prepaid cancellations</div>
+              <div className="oi-summary-card green">
+                <div className="oi-summary-label">Prepaid Cancellations</div>
                 <div className="oi-summary-value">{summary.prepaid}</div>
                 <div className="oi-summary-note">Needs refund handling</div>
               </div>
-              <div className="oi-summary-card">
-                <div className="oi-summary-label">Cancelled order value</div>
+              <div className="oi-summary-card gold">
+                <div className="oi-summary-label">Cancelled Order Value</div>
                 <div className="oi-summary-value">{fmtAmount(summary.totalAmount)}</div>
                 <div className="oi-summary-note">Total of cancelled orders</div>
               </div>
@@ -287,11 +288,11 @@ export default function OrderIssues() {
 
             <section className="oi-filters">
               <div className="oi-filter-group">
-                <label className="oi-filter-label">Payment type</label>
+                <label className="oi-filter-label">Payment Type</label>
                 <select
                   className="oi-filter-select"
                   value={paymentFilter}
-                  onChange={e => setPaymentFilter(e.target.value)}
+                  onChange={(e) => setPaymentFilter(e.target.value)}
                 >
                   <option value="ALL">All</option>
                   <option value="COD">COD</option>
@@ -307,13 +308,12 @@ export default function OrderIssues() {
                     className="oi-filter-input"
                     placeholder="Search by order id, name, email or mobile"
                     value={q}
-                    onChange={e => setQ(e.target.value)}
+                    onChange={(e) => setQ(e.target.value)}
                   />
                 </div>
               </div>
               <div className="oi-filter-helper">
-                Use this view to see cancelled orders, who cancelled them, and cancel new orders
-                when needed.
+                Use this section to review cancelled orders and cancel active orders when needed.
               </div>
             </section>
 
@@ -328,8 +328,7 @@ export default function OrderIssues() {
                   <div className="oi-empty-icon" />
                   <h3 className="oi-empty-title">No orders found</h3>
                   <p className="oi-empty-text">
-                    When an order is cancelled, it will show up here with who cancelled and the
-                    reason.
+                    When an order is cancelled, it will show up here with who cancelled it and why.
                   </p>
                 </div>
               ) : (
@@ -338,7 +337,7 @@ export default function OrderIssues() {
                     <thead>
                       <tr>
                         <th className="oi-th">Order</th>
-                        <th className="oi-th">Placed on</th>
+                        <th className="oi-th">Placed On</th>
                         <th className="oi-th">Status</th>
                         <th className="oi-th">Payment</th>
                         <th className="oi-th">Customer</th>
@@ -349,7 +348,7 @@ export default function OrderIssues() {
                       </tr>
                     </thead>
                     <tbody>
-                      {filteredOrders.map(s => {
+                      {filteredOrders.map((s) => {
                         const payType = getPaymentType(s)
                         const orderStatus = statusText(s.status)
                         const isCancelled = orderStatus === 'CANCELLED'
@@ -496,7 +495,7 @@ export default function OrderIssues() {
                     </tr>
                   </thead>
                   <tbody>
-                    {returnsList.map(r => {
+                    {returnsList.map((r) => {
                       const createdAt = r.created_at ? new Date(r.created_at).toLocaleString() : '-'
                       const status = statusText(r.status || '')
                       const type = statusText(r.type || '')
@@ -592,13 +591,13 @@ export default function OrderIssues() {
                       <th className="oi-th">Amount</th>
                       <th className="oi-th">Mode</th>
                       <th className="oi-th">Status</th>
-                      <th className="oi-th">Initiated by</th>
+                      <th className="oi-th">Initiated By</th>
                       <th className="oi-th">Created</th>
                       <th className="oi-th">Remarks</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {refundsList.map(r => {
+                    {refundsList.map((r) => {
                       const createdAt = r.created_at ? new Date(r.created_at).toLocaleString() : '-'
                       return (
                         <tr key={r.id} className="oi-tr">

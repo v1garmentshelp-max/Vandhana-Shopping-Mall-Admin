@@ -1,8 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import './DeleteProduct.css';
 
-const DEFAULT_API_BASE = 'https://taras-kart-backend.vercel.app';
-const DEFAULT_ASSETS_BASE = 'https://taras-kart-backend.vercel.app/uploads';
+const DEFAULT_API_BASE = 'https://vandhana-shopping-mall-backend.vercel.app';
+const DEFAULT_ASSETS_BASE = 'https://vandhana-shopping-mall-backend.vercel.app/uploads';
 
 const API_BASE_RAW =
   (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_BASE) ||
@@ -296,46 +296,46 @@ const DeleteProduct = () => {
   };
 
   return (
-    <div className="delete-product-page">
-      <div className="delete-toolbar">
-        <div className="filters">
+    <div className="delete-product-page-vandana">
+      <div className="delete-toolbar-vandana">
+        <div className="filters-vandana">
           {['All', 'Men', 'Women', 'Kids'].map((f) => (
-            <button key={f} className={`chip ${filter === f ? 'active' : ''}`} onClick={() => setFilter(f)}>
+            <button key={f} className={`chip-vandana ${filter === f ? 'active-vandana' : ''}`} onClick={() => setFilter(f)}>
               {f}
             </button>
           ))}
         </div>
 
-        <div className="tools">
+        <div className="tools-vandana">
           <input
-            className="search-input"
+            className="search-input-vandana"
             placeholder="Search by brand, product, color, size"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
 
-          <select className="sort-select" value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
+          <select className="sort-select-vandana" value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
             <option value="recent">Sort: Recent</option>
             <option value="price_b2c_asc">Price B2C: Low to High</option>
             <option value="price_b2c_desc">Price B2C: High to Low</option>
             <option value="stock_desc">Stock: High to Low</option>
-            <option value="brand_asc">Brand: A → Z</option>
+            <option value="brand_asc">Brand: A to Z</option>
           </select>
 
-          <button className="refresh-btn" onClick={fetchAll} disabled={isLoading}>
+          <button className="refresh-btn-vandana" onClick={fetchAll} disabled={isLoading}>
             {isLoading ? 'Loading...' : 'Refresh'}
           </button>
 
-          <button className="danger-btn" onClick={() => askDelete(Array.from(selectedIds))}>
+          <button className="danger-btn-vandana" onClick={() => askDelete(Array.from(selectedIds))}>
             Delete Selected
           </button>
         </div>
       </div>
 
-      <div className="delete-section2">
+      <div className="delete-section2-vandana">
         <h2>Product Table ({filteredSortedRows.length})</h2>
-        <div className="table-scroll-wrapper">
-          <table>
+        <div className="table-scroll-wrapper-vandana">
+          <table className="table-vandana">
             <thead>
               <tr>
                 <th>
@@ -385,10 +385,10 @@ const DeleteProduct = () => {
                   <td>{computeFinal(p.original_price_b2c, p.discount_b2c).toFixed(2)}</td>
                   <td>{p.total_count}</td>
                   <td>
-                    <img src={p.image_url} alt="product" className="table-image" />
+                    <img src={p.image_url} alt="product" className="table-image-vandana" />
                   </td>
                   <td>
-                    <button className="delete-btn" onClick={() => askDelete([p.id])}>
+                    <button className="delete-btn-vandana" onClick={() => askDelete([p.id])}>
                       Delete
                     </button>
                   </td>
@@ -397,7 +397,7 @@ const DeleteProduct = () => {
 
               {!filteredSortedRows.length && (
                 <tr>
-                  <td colSpan="13" style={{ padding: 16, color: 'gold' }}>
+                  <td colSpan="13" className="empty-cell-vandana">
                     No products found
                   </td>
                 </tr>
@@ -407,14 +407,16 @@ const DeleteProduct = () => {
         </div>
       </div>
 
-      {popupMessage && <div className={`popup-card ${popupType}`}>{popupMessage}</div>}
+      {popupMessage && <div className={`popup-card-vandana ${popupType}`}>{popupMessage}</div>}
 
       {showConfirm && (
-        <div className="popup-confirm-box centered-popup">
-          <p>{confirmIds.length > 1 ? `Delete ${confirmIds.length} products?` : 'Delete this product?'}</p>
-          <div className="popup-actions">
-            <button onClick={() => confirmDelete(true)}>Yes</button>
-            <button onClick={() => confirmDelete(false)}>No</button>
+        <div className="popup-confirm-overlay-vandana">
+          <div className="popup-confirm-box-vandana">
+            <p>{confirmIds.length > 1 ? `Delete ${confirmIds.length} products?` : 'Delete this product?'}</p>
+            <div className="popup-actions-vandana">
+              <button onClick={() => confirmDelete(true)}>Yes</button>
+              <button onClick={() => confirmDelete(false)}>No</button>
+            </div>
           </div>
         </div>
       )}

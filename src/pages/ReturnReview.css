@@ -1,55 +1,62 @@
 .rr-screen {
   min-height: 100vh;
-  background: #000;
-  color: #fff;
+  background:
+    radial-gradient(circle at top left, rgba(255, 215, 87, 0.16), transparent 24%),
+    radial-gradient(circle at top right, rgba(255, 255, 255, 0.68), transparent 28%),
+    linear-gradient(180deg, #fffdf6 0%, #fff7dc 46%, #ffffff 100%);
+  color: #171717;
   display: flex;
   flex-direction: column;
 }
 
 .rr-layout {
-  max-width: 1160px;
+  max-width: 1180px;
   margin: 0 auto;
-  padding: 20px 16px 80px;
+  padding: 118px 16px 56px;
 }
 
 .rr-header {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  gap: 16px;
-  margin-bottom: 20px;
+  gap: 18px;
+  margin-bottom: 22px;
 }
 
 .rr-header-main {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 14px;
 }
 
 .rr-back-btn {
   border-radius: 999px;
-  border: 1px solid #ffd700;
-  background: #000;
-  color: #ffd700;
-  padding: 6px 12px;
+  border: 1px solid #111111;
+  background: #111111;
+  color: #ffd84d;
+  padding: 10px 14px;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   font-size: 13px;
+  font-weight: 700;
   cursor: pointer;
-  transition: background 0.15s ease, transform 0.12s ease;
+  transition: 0.18s ease;
+  white-space: nowrap;
 }
 
 .rr-back-btn:hover {
-  background: #111;
+  background: #ffd84d;
+  color: #111111;
+  border-color: #ffd84d;
   transform: translateY(-1px);
 }
 
 .rr-back-icon {
-  width: 12px;
-  height: 12px;
-  border-left: 2px solid #ffd700;
-  border-bottom: 2px solid #ffd700;
+  width: 10px;
+  height: 10px;
+  border-left: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
   transform: rotate(45deg);
   margin-right: 2px;
 }
@@ -57,19 +64,35 @@
 .rr-header-title-block {
   display: flex;
   flex-direction: column;
+  gap: 6px;
+}
+
+.rr-badge {
+  display: inline-flex;
+  width: fit-content;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: #111111;
+  color: #ffd84d;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .rr-title {
   margin: 0;
-  font-size: 22px;
-  font-weight: 600;
-  color: #ffd700;
+  font-size: 32px;
+  font-weight: 800;
+  color: #171717;
 }
 
 .rr-subtitle {
-  margin: 4px 0 0;
-  font-size: 13px;
-  color: #f5f5f5;
+  margin: 0;
+  font-size: 14px;
+  color: #666666;
+  line-height: 1.7;
+  max-width: 760px;
 }
 
 .rr-header-tags {
@@ -79,111 +102,129 @@
 }
 
 .rr-pill {
-  padding: 6px 12px;
+  padding: 8px 12px;
   border-radius: 999px;
   font-size: 11px;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  border: 1px solid #ffd700;
+  font-weight: 800;
+  border: 1px solid transparent;
+  white-space: nowrap;
 }
 
 .rr-pill-status {
-  background: #111;
-  color: #ffd700;
+  background: #f6f6f6;
+  color: #4b4b4b;
+  border-color: #dddddd;
 }
 
 .rr-pill-status-requested {
-  background: #111;
+  background: rgba(255, 216, 77, 0.18);
+  color: #9b7100;
+  border-color: rgba(255, 216, 77, 0.42);
 }
 
 .rr-pill-status-approved {
-  background: #101000;
+  background: rgba(92, 199, 130, 0.16);
+  color: #1e7f46;
+  border-color: rgba(92, 199, 130, 0.34);
 }
 
 .rr-pill-status-rejected {
-  background: #1a0000;
+  background: rgba(210, 82, 82, 0.14);
+  color: #c54a4a;
+  border-color: rgba(210, 82, 82, 0.32);
 }
 
 .rr-pill-refund {
-  background: #050505;
-  color: #ffd700;
+  background: #f6f6f6;
+  color: #4b4b4b;
+  border-color: #dddddd;
 }
 
 .rr-pill-refund-not-started {
   border-style: dashed;
 }
 
-.rr-pill-refund-pending-refund {
-  background: #101000;
+.rr-pill-refund-pending_refund {
+  background: rgba(255, 216, 77, 0.18);
+  color: #9b7100;
+  border-color: rgba(255, 216, 77, 0.42);
 }
 
 .rr-pill-refund-refunded {
-  background: #0f1300;
+  background: rgba(92, 199, 130, 0.16);
+  color: #1e7f46;
+  border-color: rgba(92, 199, 130, 0.34);
 }
 
 .rr-loader {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 60px 20px;
-  gap: 12px;
+  padding: 100px 20px;
+  gap: 14px;
 }
 
 .rr-spinner {
-  width: 38px;
-  height: 38px;
+  width: 42px;
+  height: 42px;
   border-radius: 50%;
-  border: 3px solid #222;
-  border-top-color: #ffd700;
+  border: 3px solid rgba(17, 17, 17, 0.15);
+  border-top-color: #111111;
   animation: rr-spin 0.9s linear infinite;
 }
 
 .rr-loader-text {
   font-size: 14px;
-  color: #f0f0f0;
+  color: #666666;
+  font-weight: 600;
 }
 
 .rr-empty {
-  max-width: 480px;
-  margin: 40px auto;
-  padding: 24px 20px;
-  border-radius: 16px;
-  background: radial-gradient(circle at top, #111 0, #000 55%);
-  border: 1px solid #222;
+  max-width: 520px;
+  margin: 60px auto;
+  padding: 26px 22px;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid rgba(227, 199, 95, 0.34);
   text-align: center;
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.7);
+  box-shadow: 0 18px 48px rgba(17, 17, 17, 0.08);
 }
 
 .rr-empty-title {
-  margin: 0 0 6px;
-  font-size: 20px;
-  font-weight: 600;
-  color: #ffd700;
+  margin: 0 0 8px;
+  font-size: 24px;
+  font-weight: 800;
+  color: #171717;
 }
 
 .rr-empty-text {
-  margin: 0 0 16px;
+  margin: 0 0 18px;
   font-size: 14px;
-  color: #f5f5f5;
+  color: #6b6b6b;
+  line-height: 1.7;
 }
 
 .rr-primary-btn {
   border-radius: 999px;
-  border: 1px solid #ffd700;
-  background: #ffd700;
-  color: #000;
-  padding: 8px 18px;
+  border: 1px solid #111111;
+  background: #111111;
+  color: #ffd84d;
+  padding: 10px 18px;
   font-size: 13px;
-  font-weight: 500;
+  font-weight: 800;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  transition: background 0.15s ease, transform 0.12s ease;
+  transition: 0.18s ease;
 }
 
 .rr-primary-btn:hover {
-  background: #e6c200;
+  background: #ffd84d;
+  color: #111111;
+  border-color: #ffd84d;
   transform: translateY(-1px);
 }
 
@@ -194,31 +235,36 @@
 }
 
 .rr-primary-btn.ghost {
-  background: #000;
-  color: #ffd700;
+  background: #ffffff;
+  color: #171717;
+  border-color: #d8d8d8;
 }
 
 .rr-primary-btn.ghost:hover {
-  background: #111;
+  background: #f4f4f4;
+  color: #171717;
+  border-color: #cfcfcf;
 }
 
 .rr-danger-btn {
   border-radius: 999px;
-  border: 1px solid #ffd700;
-  background: #1a0000;
-  color: #ffd700;
-  padding: 8px 18px;
+  border: 1px solid rgba(210, 82, 82, 0.3);
+  background: #fff1f1;
+  color: #c54a4a;
+  padding: 10px 18px;
   font-size: 13px;
-  font-weight: 500;
+  font-weight: 800;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  transition: background 0.15s ease, transform 0.12s ease;
+  transition: 0.18s ease;
 }
 
 .rr-danger-btn:hover {
-  background: #260000;
+  background: #c54a4a;
+  color: #ffffff;
+  border-color: #c54a4a;
   transform: translateY(-1px);
 }
 
@@ -228,137 +274,128 @@
   transform: none;
 }
 
-.rr-error {
-  margin-top: 10px;
-  font-size: 13px;
-  color: #ffd700;
-}
-
 .rr-top-grid {
   display: grid;
   grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
-  gap: 16px;
+  gap: 18px;
   margin-bottom: 18px;
 }
 
 .rr-bottom-grid {
   display: grid;
   grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
-  gap: 16px;
+  gap: 18px;
 }
 
 .rr-card {
-  border-radius: 16px;
-  background: radial-gradient(circle at top left, #111 0, #000 60%);
-  border: 1px solid #222;
-  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.65);
-  padding: 16px 14px 18px;
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid rgba(227, 199, 95, 0.34);
+  box-shadow: 0 16px 42px rgba(17, 17, 17, 0.08);
+  padding: 18px 18px 20px;
 }
 
 .rr-card-header {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  margin-bottom: 12px;
+  gap: 5px;
+  margin-bottom: 14px;
 }
 
 .rr-card-header h2 {
   margin: 0;
-  font-size: 16px;
-  font-weight: 600;
-  color: #ffd700;
+  font-size: 18px;
+  font-weight: 800;
+  color: #171717;
 }
 
 .rr-card-caption {
   font-size: 12px;
-  color: #f0f0f0;
+  color: #6f6f6f;
+  line-height: 1.5;
 }
 
 .rr-summary-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px 14px;
+  gap: 12px 14px;
 }
 
 .rr-summary-item {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 4px;
 }
 
 .rr-label {
   font-size: 11px;
-  color: #e0e0e0;
+  color: #8a8a8a;
   text-transform: uppercase;
   letter-spacing: 0.08em;
+  font-weight: 700;
 }
 
 .rr-value {
   font-size: 14px;
-  color: #ffffff;
-}
-
-.rr-chip {
-  display: inline-flex;
-  align-items: center;
-  padding: 4px 10px;
-  border-radius: 999px;
-  font-size: 11px;
-  border: 1px solid #ffd700;
-  background: #101010;
-  color: #ffd700;
+  color: #171717;
+  line-height: 1.5;
+  font-weight: 600;
 }
 
 .rr-section-block {
-  margin-top: 12px;
+  margin-top: 14px;
 }
 
 .rr-box {
-  margin-top: 6px;
-  padding: 10px 10px;
-  border-radius: 12px;
-  background: #050505;
-  border: 1px solid #222;
+  margin-top: 8px;
+  padding: 12px;
+  border-radius: 16px;
+  background: #fffaf0;
+  border: 1px solid #ece3bf;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
 }
 
 .rr-box-line {
   display: flex;
   gap: 8px;
-  align-items: baseline;
+  align-items: flex-start;
 }
 
 .rr-box-text {
   font-size: 13px;
-  color: #f5f5f5;
+  color: #4d4d4d;
+  line-height: 1.7;
 }
 
 .rr-tag-mini {
-  padding: 2px 8px;
+  padding: 4px 8px;
   border-radius: 999px;
-  border: 1px solid #333;
+  border: 1px solid #e6d89f;
+  background: #fff3bf;
   font-size: 10px;
-  color: #ffd700;
+  color: #866100;
   text-transform: uppercase;
   letter-spacing: 0.08em;
+  font-weight: 800;
+  white-space: nowrap;
 }
 
 .rr-card-bank .rr-form-grid {
-  margin-top: 6px;
+  margin-top: 8px;
 }
 
 .rr-form-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px 14px;
+  gap: 12px 14px;
 }
 
 .rr-form-field {
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 6px;
 }
 
 .rr-form-field-full {
@@ -367,30 +404,39 @@
 
 .rr-form-field label {
   font-size: 11px;
-  color: #f0f0f0;
+  color: #7b7b7b;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
 }
 
 .rr-form-field input,
 .rr-form-field textarea {
-  border-radius: 999px;
-  border: 1px solid #333;
-  background: #050505;
-  padding: 8px 12px;
+  border-radius: 14px;
+  border: 1px solid #d8d8d8;
+  background: #ffffff;
+  padding: 11px 14px;
   font-size: 13px;
-  color: #fff;
+  color: #171717;
   outline: none;
+  transition: 0.18s ease;
 }
 
 .rr-form-field textarea {
-  border-radius: 12px;
   resize: vertical;
-  min-height: 70px;
+  min-height: 92px;
+}
+
+.rr-form-field input:focus,
+.rr-form-field textarea:focus {
+  border-color: rgba(227, 199, 95, 0.55);
+  box-shadow: 0 0 0 4px rgba(227, 199, 95, 0.14);
 }
 
 .rr-form-field input:disabled,
 .rr-form-field textarea:disabled {
-  background: #050505;
-  color: #bbbbbb;
+  background: #f8f8f8;
+  color: #8d8d8d;
 }
 
 .rr-form-field textarea::placeholder {
@@ -398,56 +444,57 @@
 }
 
 .rr-note {
-  margin-top: 8px;
+  margin-top: 10px;
   font-size: 12px;
-  color: #f5f5f5;
+  color: #6b6b6b;
+  line-height: 1.6;
 }
 
 .rr-card-evidence {
-  min-height: 200px;
+  min-height: 220px;
 }
 
 .rr-evidence-empty {
-  padding: 16px 10px;
-  border-radius: 12px;
-  border: 1px dashed #444;
-  background: #050505;
+  padding: 18px 14px;
+  border-radius: 16px;
+  border: 1px dashed #d8d8d8;
+  background: #fafafa;
   font-size: 13px;
-  color: #f5f5f5;
+  color: #6d6d6d;
 }
 
 .rr-evidence-grid {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 12px;
 }
 
 .rr-evidence-item {
-  border: none;
-  background: #050505;
-  border-radius: 12px;
-  padding: 6px;
+  border: 1px solid #ece3bf;
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 8px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  width: 104px;
+  width: 118px;
   cursor: pointer;
-  border: 1px solid #222;
-  transition: border-color 0.15s ease, transform 0.12s ease, box-shadow 0.15s ease;
+  transition: 0.18s ease;
+  box-shadow: 0 8px 18px rgba(17, 17, 17, 0.04);
 }
 
 .rr-evidence-item:hover {
-  border-color: #ffd700;
+  border-color: rgba(227, 199, 95, 0.55);
   transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.7);
+  box-shadow: 0 12px 24px rgba(17, 17, 17, 0.08);
 }
 
 .rr-evidence-thumb {
-  width: 88px;
-  height: 88px;
-  border-radius: 10px;
+  width: 100px;
+  height: 100px;
+  border-radius: 12px;
   overflow: hidden;
-  background: #111;
+  background: #f3f3f3;
 }
 
 .rr-evidence-thumb img {
@@ -457,16 +504,17 @@
 }
 
 .rr-evidence-label {
-  margin-top: 4px;
+  margin-top: 6px;
   font-size: 11px;
-  color: #ffd700;
+  color: #866100;
   text-align: center;
+  font-weight: 700;
 }
 
 .rr-card-actions {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
 }
 
 .rr-action-section {
@@ -484,9 +532,8 @@
 .rr-divider {
   height: 1px;
   width: 100%;
-  background: radial-gradient(circle at center, #ffd700 0, #ffd700 1px, #222 50%);
-  opacity: 0.85;
-  margin: 8px 0;
+  background: linear-gradient(90deg, rgba(227, 199, 95, 0), rgba(227, 199, 95, 0.7), rgba(227, 199, 95, 0));
+  margin: 2px 0;
 }
 
 .rr-refund-line {
@@ -497,31 +544,36 @@
 }
 
 .rr-refund-pill {
-  padding: 4px 10px;
+  padding: 7px 12px;
   border-radius: 999px;
-  border: 1px solid #ffd700;
+  border: 1px solid #e2d7a7;
   font-size: 11px;
-  color: #ffd700;
-  background: #080808;
+  color: #866100;
+  background: #fff5cf;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
 }
 
 .rr-message {
   margin-top: 8px;
-  padding: 8px 10px;
-  border-radius: 12px;
+  padding: 10px 12px;
+  border-radius: 14px;
   font-size: 13px;
+  line-height: 1.6;
+  font-weight: 600;
 }
 
 .rr-message-ok {
-  background: #101000;
-  border: 1px solid #ffd700;
-  color: #fff;
+  background: rgba(92, 199, 130, 0.12);
+  border: 1px solid rgba(92, 199, 130, 0.24);
+  color: #1e7f46;
 }
 
 .rr-message-error {
-  background: #1a0000;
-  border: 1px solid #ffd700;
-  color: #ffd700;
+  background: rgba(210, 82, 82, 0.12);
+  border: 1px solid rgba(210, 82, 82, 0.24);
+  color: #c54a4a;
 }
 
 @keyframes rr-spin {
@@ -538,14 +590,23 @@
   .rr-bottom-grid {
     grid-template-columns: minmax(0, 1fr);
   }
+
+  .rr-title {
+    font-size: 28px;
+  }
 }
 
 @media (max-width: 768px) {
   .rr-layout {
-    padding: 16px 12px 60px;
+    padding: 126px 12px 44px;
   }
 
   .rr-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .rr-header-main {
     flex-direction: column;
     align-items: flex-start;
   }
@@ -558,7 +619,46 @@
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .rr-header-main {
-    align-items: flex-start;
+  .rr-card {
+    padding: 16px;
+  }
+}
+
+@media (max-width: 560px) {
+  .rr-layout {
+    padding: 134px 12px 36px;
+  }
+
+  .rr-title {
+    font-size: 24px;
+  }
+
+  .rr-subtitle {
+    font-size: 13px;
+  }
+
+  .rr-summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .rr-action-row,
+  .rr-refund-line {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .rr-primary-btn,
+  .rr-danger-btn,
+  .rr-back-btn {
+    width: 100%;
+  }
+
+  .rr-evidence-item {
+    width: calc(50% - 6px);
+  }
+
+  .rr-evidence-thumb {
+    width: 100%;
+    height: 110px;
   }
 }

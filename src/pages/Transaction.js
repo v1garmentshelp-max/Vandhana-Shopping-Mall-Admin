@@ -4,7 +4,7 @@ import NavbarAdmin from './NavbarAdmin'
 
 const API_BASE =
   process.env.REACT_APP_API_BASE_URL ||
-  'https://taras-kart-backend.vercel.app/api'
+  'https://vandhana-shopping-mall-backend.vercel.app/api'
 
 function asNum(v) {
   const n = Number(v)
@@ -135,9 +135,20 @@ export default function Transaction() {
 
   const enriched = useMemo(() => {
     return (rows || []).map(r => {
-      const totals = typeof r.totals === 'string' ? (() => { try { return JSON.parse(r.totals) } catch { return null } })() : r.totals
+      const totals =
+        typeof r.totals === 'string'
+          ? (() => {
+              try {
+                return JSON.parse(r.totals)
+              } catch {
+                return null
+              }
+            })()
+          : r.totals
+
       const payable = totals?.payable != null ? asNum(totals.payable) : asNum(r.total)
       const meta = derivePaymentMeta(r)
+
       return {
         ...r,
         _totalsObj: totals,
@@ -175,10 +186,12 @@ export default function Transaction() {
 
     let fromTs = 0
     let toTs = 0
+
     if (filters.dateFrom) {
       const d = new Date(filters.dateFrom)
       if (!Number.isNaN(d.getTime())) fromTs = d.getTime()
     }
+
     if (filters.dateTo) {
       const d = new Date(filters.dateTo)
       if (!Number.isNaN(d.getTime())) toTs = d.getTime() + 24 * 60 * 60 * 1000 - 1
@@ -200,6 +213,7 @@ export default function Transaction() {
           rowName.includes(q) ||
           rowMobile.includes(q) ||
           rowId.includes(filters.q)
+
         if (!hit) return false
       }
 
@@ -265,214 +279,226 @@ export default function Transaction() {
   return (
     <div className="transaction-page">
       <NavbarAdmin />
-      <div className="transaction-header">
-        <h2>Transactions</h2>
-        <p>
-          COD is counted as received only when payment status is PAID (Shiprocket remitted). Prepaid is
-          counted as received only when payment status is PAID (Razorpay captured).
-        </p>
-      </div>
 
-      <div className="stats-row">
-        <div className="stat-card info">
-          <div className="stat-title">Total Transactions</div>
-          <div className="stat-value">{stats.count}</div>
-        </div>
-        <div className="stat-card warn">
-          <div className="stat-title">Pending / Not Received</div>
-          <div className="stat-value">{stats.pending}</div>
-        </div>
-        <div className="stat-card accent">
-          <div className="stat-title">Received</div>
-          <div className="stat-value">{stats.received}</div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-title">Total Amount</div>
-          <div className="stat-value">₹ {money(stats.totalAmount)}</div>
-        </div>
-        <div className="stat-card accent">
-          <div className="stat-title">Received Amount</div>
-          <div className="stat-value">₹ {money(stats.receivedAmount)}</div>
-        </div>
-      </div>
-
-      <div className="chip-bar">
-        {['ALL', 'COD', 'PREPAID', 'RECEIVED', 'PENDING', 'CANCELLED'].map(c => (
-          <button
-            key={c}
-            className={`chip ${activeChip === c ? 'active' : ''}`}
-            onClick={() => setActiveChip(c)}
-            type="button"
-          >
-            {c}
-          </button>
-        ))}
-      </div>
-
-      <div className="transaction-filter">
-        <h3>Filters</h3>
-
-        <div className="filter-grid">
-          <input
-            value={filters.q}
-            onChange={e => setFilters(s => ({ ...s, q: e.target.value }))}
-            placeholder="Search (name/email/mobile/order id)"
-          />
-
-          <input
-            value={filters.email}
-            onChange={e => setFilters(s => ({ ...s, email: e.target.value }))}
-            placeholder="Exact Email"
-          />
-
-          <input
-            value={filters.mobile}
-            onChange={e => setFilters(s => ({ ...s, mobile: e.target.value }))}
-            placeholder="Exact Mobile"
-          />
-
-          <select
-            value={filters.status}
-            onChange={e => setFilters(s => ({ ...s, status: e.target.value }))}
-          >
-            <option value="">Order Status</option>
-            <option value="PLACED">PLACED</option>
-            <option value="CONFIRMED">CONFIRMED</option>
-            <option value="DELIVERED">DELIVERED</option>
-            <option value="CANCELLED">CANCELLED</option>
-            <option value="RTO">RTO</option>
-          </select>
-
-          <select
-            value={filters.paymentType}
-            onChange={e => setFilters(s => ({ ...s, paymentType: e.target.value }))}
-          >
-            <option value="">Payment Type</option>
-            <option value="COD">COD</option>
-            <option value="PREPAID">PREPAID</option>
-          </select>
-
-          <select
-            value={filters.paymentState}
-            onChange={e => setFilters(s => ({ ...s, paymentState: e.target.value }))}
-          >
-            <option value="">Payment State</option>
-            <option value="RECEIVED">RECEIVED</option>
-            <option value="PENDING">PENDING</option>
-            <option value="NOT_RECEIVED">NOT_RECEIVED</option>
-            <option value="FAILED">FAILED</option>
-          </select>
-
-          <select
-            value={filters.channel}
-            onChange={e => setFilters(s => ({ ...s, channel: e.target.value }))}
-          >
-            <option value="">Channel</option>
-            <option value="WEB">WEB</option>
-            <option value="POS">POS</option>
-            <option value="ADMIN">ADMIN</option>
-          </select>
-
-          <input
-            type="date"
-            value={filters.dateFrom}
-            onChange={e => setFilters(s => ({ ...s, dateFrom: e.target.value }))}
-          />
-          <input
-            type="date"
-            value={filters.dateTo}
-            onChange={e => setFilters(s => ({ ...s, dateTo: e.target.value }))}
-          />
-
-          <button type="button" onClick={fetchTx}>
-            {loading ? 'Loading...' : 'Refresh'}
-          </button>
-
-          <button type="button" onClick={onReset}>
-            Reset
-          </button>
+      <div className="transaction-wrapper">
+        <div className="transaction-header">
+          <h2>Transactions</h2>
+          <p>
+            COD is counted as received only when payment status is PAID. Prepaid is counted as
+            received only when payment status is PAID.
+          </p>
         </div>
 
-        {err ? <p style={{ marginTop: 12, color: '#ff6b6b' }}>{err}</p> : null}
-      </div>
+        <div className="stats-row">
+          <div className="stat-card info">
+            <div className="stat-title">Total Transactions</div>
+            <div className="stat-value">{stats.count}</div>
+          </div>
 
-      <div className="transaction-table">
-        <h3>Transaction List</h3>
+          <div className="stat-card warn">
+            <div className="stat-title">Pending / Not Received</div>
+            <div className="stat-value">{stats.pending}</div>
+          </div>
 
-        <div style={{ overflowX: 'auto' }}>
-          <table>
-            <thead>
-              <tr>
-                <th>Date</th>
-                <th>Order</th>
-                <th>Channel</th>
-                <th>Customer</th>
-                <th>Amount</th>
-                <th>Payment Type</th>
-                <th>Received From</th>
-                <th>Payment State</th>
-                <th>Order Status</th>
-                <th>Payment Status</th>
-              </tr>
-            </thead>
+          <div className="stat-card accent">
+            <div className="stat-title">Received</div>
+            <div className="stat-value">{stats.received}</div>
+          </div>
 
-            <tbody>
-              {filtered.length === 0 ? (
+          <div className="stat-card">
+            <div className="stat-title">Total Amount</div>
+            <div className="stat-value">₹ {money(stats.totalAmount)}</div>
+          </div>
+
+          <div className="stat-card accent">
+            <div className="stat-title">Received Amount</div>
+            <div className="stat-value">₹ {money(stats.receivedAmount)}</div>
+          </div>
+        </div>
+
+        <div className="chip-bar">
+          {['ALL', 'COD', 'PREPAID', 'RECEIVED', 'PENDING', 'CANCELLED'].map(c => (
+            <button
+              key={c}
+              className={`chip ${activeChip === c ? 'active' : ''}`}
+              onClick={() => setActiveChip(c)}
+              type="button"
+            >
+              {c}
+            </button>
+          ))}
+        </div>
+
+        <div className="transaction-filter">
+          <div className="section-head">
+            <h3>Filters</h3>
+          </div>
+
+          <div className="filter-grid">
+            <input
+              value={filters.q}
+              onChange={e => setFilters(s => ({ ...s, q: e.target.value }))}
+              placeholder="Search by name, email, mobile or order id"
+            />
+
+            <input
+              value={filters.email}
+              onChange={e => setFilters(s => ({ ...s, email: e.target.value }))}
+              placeholder="Exact Email"
+            />
+
+            <input
+              value={filters.mobile}
+              onChange={e => setFilters(s => ({ ...s, mobile: e.target.value }))}
+              placeholder="Exact Mobile"
+            />
+
+            <select
+              value={filters.status}
+              onChange={e => setFilters(s => ({ ...s, status: e.target.value }))}
+            >
+              <option value="">Order Status</option>
+              <option value="PLACED">PLACED</option>
+              <option value="CONFIRMED">CONFIRMED</option>
+              <option value="DELIVERED">DELIVERED</option>
+              <option value="CANCELLED">CANCELLED</option>
+              <option value="RTO">RTO</option>
+            </select>
+
+            <select
+              value={filters.paymentType}
+              onChange={e => setFilters(s => ({ ...s, paymentType: e.target.value }))}
+            >
+              <option value="">Payment Type</option>
+              <option value="COD">COD</option>
+              <option value="PREPAID">PREPAID</option>
+            </select>
+
+            <select
+              value={filters.paymentState}
+              onChange={e => setFilters(s => ({ ...s, paymentState: e.target.value }))}
+            >
+              <option value="">Payment State</option>
+              <option value="RECEIVED">RECEIVED</option>
+              <option value="PENDING">PENDING</option>
+              <option value="NOT_RECEIVED">NOT_RECEIVED</option>
+              <option value="FAILED">FAILED</option>
+            </select>
+
+            <select
+              value={filters.channel}
+              onChange={e => setFilters(s => ({ ...s, channel: e.target.value }))}
+            >
+              <option value="">Channel</option>
+              <option value="WEB">WEB</option>
+              <option value="POS">POS</option>
+              <option value="ADMIN">ADMIN</option>
+            </select>
+
+            <input
+              type="date"
+              value={filters.dateFrom}
+              onChange={e => setFilters(s => ({ ...s, dateFrom: e.target.value }))}
+            />
+
+            <input
+              type="date"
+              value={filters.dateTo}
+              onChange={e => setFilters(s => ({ ...s, dateTo: e.target.value }))}
+            />
+
+            <button type="button" onClick={fetchTx}>
+              {loading ? 'Loading...' : 'Refresh'}
+            </button>
+
+            <button type="button" className="reset-btn" onClick={onReset}>
+              Reset
+            </button>
+          </div>
+
+          {err ? <p className="error-text">{err}</p> : null}
+        </div>
+
+        <div className="transaction-table">
+          <div className="section-head">
+            <h3>Transaction List</h3>
+          </div>
+
+          <div className="table-scroll">
+            <table>
+              <thead>
                 <tr>
-                  <td colSpan="10" style={{ textAlign: 'center', padding: 16 }}>
-                    No transactions found
-                  </td>
+                  <th>Date</th>
+                  <th>Order</th>
+                  <th>Channel</th>
+                  <th>Customer</th>
+                  <th>Amount</th>
+                  <th>Payment Type</th>
+                  <th>Received From</th>
+                  <th>Payment State</th>
+                  <th>Order Status</th>
+                  <th>Payment Status</th>
                 </tr>
-              ) : (
-                filtered.map(r => {
-                  const orderShort = normStr(r.id).slice(0, 8)
-                  const customer = normStr(r.customer_name) || 'Unknown'
-                  const email = normStr(r.customer_email)
-                  const mobile = normStr(r.customer_mobile)
-                  const amount = r._payable
-                  const orderStatus = safeUpper(r.status)
-                  const paymentStatus = safeUpper(r.payment_status)
+              </thead>
 
-                  return (
-                    <tr key={r.id}>
-                      <td>{toDateStr(r.created_at)}</td>
-                      <td>{orderShort}</td>
-                      <td>{r._channel}</td>
-                      <td>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                          <span>{customer}</span>
-                          {email ? <span style={{ fontSize: 12, color: '#d9d9d9' }}>{email}</span> : null}
-                          {mobile ? <span style={{ fontSize: 12, color: '#d9d9d9' }}>{mobile}</span> : null}
-                        </div>
-                      </td>
-                      <td>₹ {money(amount)}</td>
-                      <td>
-                        <span className={`status-pill ${statusPillClass(r._paymentType)}`}>
-                          {r._paymentType}
-                        </span>
-                      </td>
-                      <td>{r._receivedFrom}</td>
-                      <td>
-                        <span className={`status-pill ${statusPillClass(r._paymentState)}`}>
-                          {r._paymentState}
-                        </span>
-                      </td>
-                      <td>
-                        <span className={`status-pill ${statusPillClass(orderStatus)}`}>
-                          {orderStatus}
-                        </span>
-                      </td>
-                      <td>
-                        <span className={`status-pill ${statusPillClass(paymentStatus)}`}>
-                          {paymentStatus}
-                        </span>
-                      </td>
-                    </tr>
-                  )
-                })
-              )}
-            </tbody>
-          </table>
+              <tbody>
+                {filtered.length === 0 ? (
+                  <tr>
+                    <td colSpan="10" className="empty-cell">
+                      No transactions found
+                    </td>
+                  </tr>
+                ) : (
+                  filtered.map(r => {
+                    const orderShort = normStr(r.id).slice(0, 8)
+                    const customer = normStr(r.customer_name) || 'Unknown'
+                    const email = normStr(r.customer_email)
+                    const mobile = normStr(r.customer_mobile)
+                    const amount = r._payable
+                    const orderStatus = safeUpper(r.status)
+                    const paymentStatus = safeUpper(r.payment_status)
+
+                    return (
+                      <tr key={r.id}>
+                        <td>{toDateStr(r.created_at)}</td>
+                        <td>{orderShort}</td>
+                        <td>{r._channel}</td>
+                        <td>
+                          <div className="customer-box">
+                            <span className="customer-name">{customer}</span>
+                            {email ? <span className="customer-sub">{email}</span> : null}
+                            {mobile ? <span className="customer-sub">{mobile}</span> : null}
+                          </div>
+                        </td>
+                        <td>₹ {money(amount)}</td>
+                        <td>
+                          <span className={`status-pill ${statusPillClass(r._paymentType)}`}>
+                            {r._paymentType}
+                          </span>
+                        </td>
+                        <td>{r._receivedFrom}</td>
+                        <td>
+                          <span className={`status-pill ${statusPillClass(r._paymentState)}`}>
+                            {r._paymentState}
+                          </span>
+                        </td>
+                        <td>
+                          <span className={`status-pill ${statusPillClass(orderStatus)}`}>
+                            {orderStatus}
+                          </span>
+                        </td>
+                        <td>
+                          <span className={`status-pill ${statusPillClass(paymentStatus)}`}>
+                            {paymentStatus}
+                          </span>
+                        </td>
+                      </tr>
+                    )
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>

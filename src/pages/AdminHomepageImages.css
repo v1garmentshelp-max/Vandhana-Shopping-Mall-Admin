@@ -1,145 +1,325 @@
-/* --- ADMIN PAGE CORE STYLES --- */
-.admin-homepage-wrapper {
-  padding: 24px;
-  max-width: 1280px;
-  margin: 0 auto;
-  background: #000;
-  color: #fff;
+.admin-homepage-page {
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at top left, rgba(255, 216, 77, 0.14), transparent 24%),
+    radial-gradient(circle at top right, rgba(255, 255, 255, 0.65), transparent 30%),
+    linear-gradient(180deg, #fffdf6 0%, #fff8e8 48%, #ffffff 100%);
+  color: #171717;
+  padding-bottom: 56px;
 }
 
-.home1-page-new-home {
+.admin-homepage-shell {
+  max-width: 1320px;
+  margin: 0 auto;
+  padding: 118px 20px 0;
+}
+
+.admin-homepage-topbar {
+  margin-bottom: 28px;
+  padding: 24px;
+  border-radius: 28px;
+  background: rgba(255, 255, 255, 0.94);
+  border: 1px solid rgba(227, 199, 95, 0.34);
+  box-shadow: 0 18px 40px rgba(17, 17, 17, 0.08);
+}
+
+.admin-homepage-badge {
+  display: inline-flex;
+  width: fit-content;
+  padding: 7px 14px;
+  border-radius: 999px;
+  background: #111111;
+  color: #ffd84d;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.admin-homepage-heading {
+  margin: 12px 0 6px;
+  font-size: 34px;
+  line-height: 1.1;
+  color: #171717;
+  font-weight: 700;
+}
+
+.admin-homepage-subheading {
+  margin: 0;
+  max-width: 760px;
+  color: #666666;
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+.admin-homepage-loading-card {
+  min-height: 320px;
+  border-radius: 28px;
+  background: rgba(255, 255, 255, 0.94);
+  border: 1px solid rgba(227, 199, 95, 0.34);
+  box-shadow: 0 18px 40px rgba(17, 17, 17, 0.08);
+  display: grid;
+  place-items: center;
+  text-align: center;
+  padding: 32px;
+}
+
+.admin-homepage-loading-card h2 {
+  margin: 12px 0 6px;
+  font-size: 24px;
+  color: #171717;
+  font-weight: 700;
+}
+
+.admin-homepage-loading-card p {
+  margin: 0;
+  color: #666666;
+  font-size: 14px;
+}
+
+.admin-homepage-loading-spinner {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 3px solid rgba(17, 17, 17, 0.12);
+  border-top-color: #111111;
+  animation: adminHomepageSpin 0.9s linear infinite;
+}
+
+.admin-homepage-spacer {
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
-  background: #000;
-  color: #fff;
-  padding-bottom: 50px;
+  gap: 30px;
 }
 
-.admin-section {
-  max-width: 1280px;
-  margin: 0 auto 50px auto;
-  padding: 0 16px;
+.admin-homepage-section {
+  padding: 22px;
+  border-radius: 26px;
+  background: rgba(255, 255, 255, 0.94);
+  border: 1px solid rgba(227, 199, 95, 0.3);
+  box-shadow: 0 16px 36px rgba(17, 17, 17, 0.06);
 }
 
-.admin-section-title {
-  font-size: 24px;
-  color: #d4af37;
-  margin-bottom: 20px;
-  font-weight: 600;
-  border-bottom: 1px solid #333;
-  padding-bottom: 10px;
+.admin-homepage-section.narrow-section {
+  max-width: 460px;
 }
 
-/* --- ADMIN UNIFORM GRIDS --- */
-.admin-grid-3 {
+.admin-homepage-section-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+}
+
+.admin-homepage-section-title {
+  margin: 0;
+  font-size: 22px;
+  color: #171717;
+  font-weight: 700;
+}
+
+.admin-homepage-section-note {
+  margin: 0;
+  font-size: 13px;
+  color: #6f6f6f;
+  line-height: 1.5;
+}
+
+.admin-homepage-grid {
   display: grid;
+  gap: 20px;
+}
+
+.admin-homepage-grid.grid-3 {
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 20px;
 }
 
-.admin-grid-4 {
-  display: grid;
+.admin-homepage-grid.grid-4 {
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 20px;
 }
 
-.admin-grid-5 {
-  display: grid;
+.admin-homepage-grid.grid-5 {
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 20px;
 }
 
-.admin-grid-6 {
-  display: grid;
+.admin-homepage-grid.grid-6 {
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 20px;
 }
 
-/* --- ADMIN UNIFORM CARDS --- */
-.admin-card-standard {
-  background: #111;
-  border-radius: 12px;
+.admin-homepage-card {
+  background: linear-gradient(180deg, #ffffff 0%, #fffaf0 100%);
+  border-radius: 20px;
   overflow: hidden;
-  border: 1px solid #333;
-  aspect-ratio: 4/5; /* Standard portrait card */
+  border: 1px solid #ece3bf;
+  box-shadow: 0 12px 26px rgba(17, 17, 17, 0.05);
 }
 
-.admin-card-square {
-  background: #111;
-  border-radius: 12px;
-  overflow: hidden;
-  border: 1px solid #333;
-  aspect-ratio: 1/1; /* Square box */
+.admin-homepage-card.standard {
+  aspect-ratio: 4 / 5;
 }
 
-.admin-card-circle {
-  background: transparent;
+.admin-homepage-card.square {
+  aspect-ratio: 1 / 1;
+}
+
+.admin-homepage-card.circle {
+  aspect-ratio: 1 / 1;
   border-radius: 50%;
-  overflow: hidden;
-  border: 2px solid #fff;
-  aspect-ratio: 1/1; /* Perfect circle */
+  border: 3px solid #ffffff;
+  box-shadow:
+    0 0 0 1px rgba(227, 199, 95, 0.48),
+    0 14px 28px rgba(17, 17, 17, 0.08);
 }
 
-/* --- BANNERS --- */
-.home1-hero-frame-new-home, .home1-hero-frame-new-home-2 {
+.admin-homepage-banner-frame {
   width: 100%;
-  height: 440px;
   overflow: hidden;
-  border-radius: 12px;
-  background: #111;
-  border: 1px solid #333;
+  border-radius: 24px;
+  background: linear-gradient(180deg, #ffffff 0%, #fffaf0 100%);
+  border: 1px solid #ece3bf;
+  box-shadow: 0 12px 28px rgba(17, 17, 17, 0.05);
 }
 
-.main-hero-slide, .home1-hero-slide-new-home-2 {
+.admin-homepage-banner-frame.large {
+  height: 460px;
+}
+
+.admin-homepage-banner-frame.medium {
+  height: 380px;
+}
+
+.admin-homepage-banner-slide {
   width: 100%;
   height: 100%;
   display: flex;
-  align-items: center;
+  align-items: stretch;
   justify-content: center;
 }
 
-.main-hero-slide img, .home1-hero-slide-new-home-2 img {
+.admin-homepage-banner-slide img {
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
 
-/* --- TABS --- */
-.cool4-tabs {
+.admin-homepage-tabs {
   display: flex;
   justify-content: flex-start;
   gap: 12px;
-  margin-bottom: 24px;
+  margin-bottom: 20px;
   flex-wrap: wrap;
 }
 
-.cool4-tab {
-  background: transparent;
-  color: #fff;
-  border: 1px solid #444;
-  padding: 8px 16px;
-  border-radius: 20px;
+.admin-homepage-tab {
+  background: #ffffff;
+  color: #4d4d4d;
+  border: 1px solid #dddddd;
+  padding: 10px 16px;
+  border-radius: 999px;
   cursor: pointer;
-  font-weight: 500;
-  transition: all 0.3s ease;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  transition: 0.18s ease;
 }
 
-.cool4-tab.is-active {
-  background: #d4af37;
-  color: #000;
-  border-color: #d4af37;
+.admin-homepage-tab:hover {
+  background: #fff5cf;
+  color: #866100;
+  border-color: #e6d89f;
 }
 
-/* --- RESPONSIVE --- */
+.admin-homepage-tab.active {
+  background: #111111;
+  color: #ffd84d;
+  border-color: #111111;
+}
+
+.admin-homepage-page .swiper {
+  width: 100%;
+  height: 100%;
+}
+
+.admin-homepage-page .swiper-pagination-bullet {
+  background: rgba(17, 17, 17, 0.3);
+  opacity: 1;
+}
+
+.admin-homepage-page .swiper-pagination-bullet-active {
+  background: #111111;
+}
+
+@keyframes adminHomepageSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 @media (max-width: 1100px) {
-  .home1-hero-frame-new-home, .home1-hero-frame-new-home-2 {
-    height: 320px;
+  .admin-homepage-banner-frame.large {
+    height: 360px;
+  }
+
+  .admin-homepage-banner-frame.medium {
+    height: 300px;
   }
 }
 
 @media (max-width: 768px) {
-  .home1-hero-frame-new-home, .home1-hero-frame-new-home-2 {
+  .admin-homepage-shell {
+    padding: 112px 14px 0;
+  }
+
+  .admin-homepage-topbar,
+  .admin-homepage-section {
+    padding: 18px;
+    border-radius: 22px;
+  }
+
+  .admin-homepage-heading {
+    font-size: 28px;
+  }
+
+  .admin-homepage-section-title {
+    font-size: 20px;
+  }
+
+  .admin-homepage-banner-frame.large {
     height: 260px;
+  }
+
+  .admin-homepage-banner-frame.medium {
+    height: 220px;
+  }
+
+  .admin-homepage-grid.grid-3,
+  .admin-homepage-grid.grid-4,
+  .admin-homepage-grid.grid-5,
+  .admin-homepage-grid.grid-6 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 520px) {
+  .admin-homepage-grid.grid-3,
+  .admin-homepage-grid.grid-4,
+  .admin-homepage-grid.grid-5,
+  .admin-homepage-grid.grid-6 {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-homepage-card.circle {
+    max-width: 240px;
+    margin: 0 auto;
+  }
+
+  .admin-homepage-banner-frame.large {
+    height: 220px;
+  }
+
+  .admin-homepage-banner-frame.medium {
+    height: 190px;
   }
 }

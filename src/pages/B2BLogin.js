@@ -17,39 +17,112 @@ const B2BLogin = ({
 }) => {
   const popupRef = useRef(null);
 
-  const handleClickOutside = (e) => {
-    if (popupRef.current && !popupRef.current.contains(e.target)) {
-      onClose();
-    }
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (popupRef.current && !popupRef.current.contains(e.target)) {
+        onClose();
+      }
+    };
+
+    const handleEscape = (e) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleEscape);
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [onClose]);
+
+  const onSubmit = (e) => {
+    e.preventDefault();
+    handleSubmit();
   };
 
-  useEffect(() => {
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
   return (
-    <div className="popup-overlay">
+    <div className="popup-overlay" role="dialog" aria-modal="true" aria-labelledby="b2b-login-title">
       <div className="popup-box" ref={popupRef}>
-        <div className="popup-close" onClick={onClose}>×</div>
-        <h3>Add New User</h3>
+        <button type="button" className="popup-close" onClick={onClose} aria-label="Close">
+          ×
+        </button>
 
-        <label>Full Name</label>
-        <input type="text" placeholder="Full Name" value={name} onChange={(e) => setName(e.target.value)} />
+        <div className="popup-header">
+          <span className="popup-badge">B2B Customer</span>
+          <h3 id="b2b-login-title">Add New User</h3>
+          <p>Create a wholesale customer account with login access.</p>
+        </div>
 
-        <label>Email</label>
-        <input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
+        <form className="popup-form" onSubmit={onSubmit}>
+          <div className="popup-field">
+            <label htmlFor="b2b-name">Full Name</label>
+            <input
+              id="b2b-name"
+              type="text"
+              placeholder="Enter full name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+            />
+          </div>
 
-        <label>Mobile Number</label>
-        <input type="tel" placeholder="Mobile Number" maxLength="10" value={mobile} onChange={(e) => setMobile(e.target.value)} />
+          <div className="popup-field">
+            <label htmlFor="b2b-email">Email</label>
+            <input
+              id="b2b-email"
+              type="email"
+              placeholder="Enter email address"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+          </div>
 
-        <label>Password</label>
-        <input type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} />
+          <div className="popup-field">
+            <label htmlFor="b2b-mobile">Mobile Number</label>
+            <input
+              id="b2b-mobile"
+              type="tel"
+              placeholder="Enter mobile number"
+              maxLength="10"
+              value={mobile}
+              onChange={(e) => setMobile(e.target.value)}
+            />
+          </div>
 
-        <label>Confirm Password</label>
-        <input type="password" placeholder="Confirm Password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
+          <div className="popup-field">
+            <label htmlFor="b2b-password">Password</label>
+            <input
+              id="b2b-password"
+              type="password"
+              placeholder="Enter password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+          </div>
 
-        <button className="submit-btn" onClick={handleSubmit}>Submit</button>
+          <div className="popup-field">
+            <label htmlFor="b2b-confirm-password">Confirm Password</label>
+            <input
+              id="b2b-confirm-password"
+              type="password"
+              placeholder="Confirm password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+            />
+          </div>
+
+          <div className="popup-actions">
+            <button type="button" className="cancel-btn" onClick={onClose}>
+              Cancel
+            </button>
+            <button type="submit" className="submit-btn">
+              Submit
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );

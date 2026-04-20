@@ -1,230 +1,324 @@
-.delete-product-page {
-  color: gold;
+.delete-product-page-vandana {
+  color: #1a1a1a;
   font-family: Arial, sans-serif;
   display: flex;
   flex-direction: column;
   gap: 24px;
   padding: 24px;
-  background-color: #000;
+  background: linear-gradient(180deg, #fffdf6 0%, #fff4d6 100%);
+  min-height: 100vh;
 }
 
-.delete-toolbar {
+.delete-toolbar-vandana {
   display: flex;
   gap: 16px;
   align-items: center;
   justify-content: space-between;
-  background: #111;
-  border: 1px solid gold;
-  border-radius: 12px;
-  padding: 16px;
-  box-shadow: 0 0 10px rgba(255, 215, 0, 0.2);
+  background: #ffffff;
+  border: 1px solid rgba(212, 162, 0, 0.22);
+  border-radius: 20px;
+  padding: 18px;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.06);
+  flex-wrap: wrap;
 }
 
-.filters {
+.filters-vandana {
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
 }
 
-.chip {
-  padding: 8px 14px;
+.chip-vandana {
+  padding: 10px 16px;
   border-radius: 999px;
-  border: 2px solid white;
-  background: transparent;
-  color: white;
-  font-weight: bold;
+  border: 1px solid #e7d28d;
+  background: #fffaf0;
+  color: #222222;
+  font-weight: 700;
   cursor: pointer;
-  transition: .2s;
+  transition: 0.2s;
 }
 
-.chip:hover {
-  border-color: gold;
-  color: gold;
+.chip-vandana:hover {
+  border-color: #d4a200;
+  color: #d4a200;
+  background: #fff7dd;
 }
 
-.chip.active {
-  border-color: gold;
-  background: black;
-  color: gold;
+.chip-vandana.active-vandana {
+  border-color: #d4a200;
+  background: linear-gradient(180deg, #f0c64f 0%, #d4a200 100%);
+  color: #111111;
 }
 
-.tools {
+.tools-vandana {
   display: flex;
   gap: 10px;
   align-items: center;
+  flex-wrap: wrap;
 }
 
-.search-input {
-  padding: 10px 12px;
-  border-radius: 10px;
-  border: 1px solid gold;
-  background: #0d0d0d;
-  color: white;
+.search-input-vandana {
+  padding: 11px 14px;
+  border-radius: 12px;
+  border: 1px solid #e0cf98;
+  background: #fffdf8;
+  color: #1a1a1a;
   min-width: 280px;
   outline: none;
 }
 
-.sort-select {
-  padding: 10px 12px;
-  border-radius: 10px;
-  border: 1px solid gold;
-  background: #0d0d0d;
-  color: white;
+.search-input-vandana:focus {
+  border-color: #d4a200;
+  box-shadow: 0 0 0 4px rgba(212, 162, 0, 0.08);
+}
+
+.sort-select-vandana {
+  padding: 11px 14px;
+  border-radius: 12px;
+  border: 1px solid #e0cf98;
+  background: #fffdf8;
+  color: #1a1a1a;
   outline: none;
 }
 
-.refresh-btn {
-  padding: 10px 16px;
-  background: none;
-  border: 2px solid gold;
-  color: gold;
-  font-weight: bold;
-  border-radius: 10px;
-  cursor: pointer;
-  transition: .2s;
+.sort-select-vandana:focus {
+  border-color: #d4a200;
+  box-shadow: 0 0 0 4px rgba(212, 162, 0, 0.08);
 }
 
-.refresh-btn:disabled {
-  opacity: .6;
+.refresh-btn-vandana {
+  padding: 11px 16px;
+  background: #ffffff;
+  border: 1px solid #d4a200;
+  color: #b48500;
+  font-weight: 700;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.refresh-btn-vandana:disabled {
+  opacity: 0.6;
   cursor: not-allowed;
 }
 
-.refresh-btn:hover:not(:disabled) {
-  background: gold;
-  color: black;
+.refresh-btn-vandana:hover:not(:disabled) {
+  background: #fff5d7;
+  color: #8f6a00;
 }
 
-.danger-btn {
-  padding: 10px 16px;
-  background: none;
-  border: 2px solid #ff6b6b;
-  color: #ff6b6b;
-  font-weight: bold;
-  border-radius: 10px;
-  cursor: pointer;
-  transition: .2s;
-}
-
-.danger-btn:hover {
-  background: #ff6b6b;
-  color: black;
-}
-
-.delete-section2 {
-  background-color: #111;
-  padding: 20px;
+.danger-btn-vandana {
+  padding: 11px 16px;
+  background: #fff1f1;
+  border: 1px solid #dc3545;
+  color: #c82333;
+  font-weight: 700;
   border-radius: 12px;
-  border: 1px solid gold;
-  box-shadow: 0 0 10px rgba(255, 215, 0, 0.2);
+  cursor: pointer;
+  transition: 0.2s;
 }
 
-.delete-section2 h2 {
-  font-size: 20px;
-  margin-bottom: 12px;
-  border-bottom: 2px solid gold;
-  padding-bottom: 6px;
+.danger-btn-vandana:hover {
+  background: #dc3545;
+  color: #ffffff;
 }
 
-.table-scroll-wrapper {
+.delete-section2-vandana {
+  background: #ffffff;
+  padding: 20px;
+  border-radius: 22px;
+  border: 1px solid rgba(212, 162, 0, 0.18);
+  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.06);
+}
+
+.delete-section2-vandana h2 {
+  font-size: 21px;
+  margin-bottom: 14px;
+  color: #1a1a1a;
+}
+
+.table-scroll-wrapper-vandana {
   width: 100%;
   overflow-x: auto;
 }
 
-table {
+.table-vandana {
   width: 100%;
   border-collapse: collapse;
-  color: white;
+  color: #1f1f1f;
   min-width: 1200px;
+  background: #ffffff;
 }
 
-th, td {
-  padding: 0px;
-  border: 1px solid gold;
+.table-vandana th,
+.table-vandana td {
+  padding: 12px 10px;
+  border: 1px solid #f0e2b4;
   text-align: center;
   vertical-align: middle;
 }
 
-th {
-  background-color: #222;
-  color: gold;
-  font-weight: bold;
+.table-vandana th {
+  background: #fff3cf;
+  color: #b48500;
+  font-weight: 700;
 }
 
-.table-image {
+.table-vandana tbody tr:nth-child(even) {
+  background: #fffdf8;
+}
+
+.table-vandana tbody tr:hover {
+  background: #fff8e8;
+}
+
+.table-image-vandana {
   width: 60px;
-  height: auto;
-  border-radius: 6px;
-  margin: 8px auto;
+  height: 60px;
+  object-fit: cover;
+  border-radius: 10px;
+  margin: 4px auto;
+  border: 1px solid #ead79f;
+  background: #fff8e6;
 }
 
-.delete-btn {
+.delete-btn-vandana {
   padding: 8px 14px;
-  background-color: red;
-  color: white;
-  font-weight: bold;
+  background: #dc3545;
+  color: #ffffff;
+  font-weight: 700;
   border: none;
-  border-radius: 6px;
+  border-radius: 10px;
   cursor: pointer;
   font-size: 14px;
-  transition: .2s;
+  transition: 0.2s;
 }
 
-.delete-btn:hover {
-  background-color: darkred;
+.delete-btn-vandana:hover {
+  background: #b91d2b;
 }
 
-.popup-card,
-.popup-confirm-box {
+.empty-cell-vandana {
+  padding: 18px;
+  color: #b48500;
+  font-weight: 600;
+}
+
+.popup-card-vandana {
   position: fixed;
-  top: 50%;
-  left: 65%;
-  transform: translate(-50%, -50%);
-  background-color: #111;
-  color: gold;
-  padding: 30px;
-  border-radius: 12px;
-  box-shadow: 0 0 15px rgba(255, 215, 0, 0.3);
+  top: 24px;
+  right: 24px;
+  background: #ffffff;
+  color: #1a1a1a;
+  padding: 16px 20px;
+  border-radius: 16px;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.12);
   z-index: 1000;
   text-align: center;
   max-width: 90%;
-  width: 350px;
+  width: 320px;
+  font-size: 15px;
+  border: 1px solid rgba(212, 162, 0, 0.15);
+}
+
+.popup-card-vandana.success {
+  border-color: rgba(25, 135, 84, 0.28);
+  color: #198754;
+}
+
+.popup-card-vandana.error {
+  border-color: rgba(220, 53, 69, 0.28);
+  color: #c82333;
+}
+
+.popup-confirm-overlay-vandana {
+  position: fixed;
+  inset: 0;
+  background: rgba(17, 17, 17, 0.32);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1001;
+  padding: 16px;
+}
+
+.popup-confirm-box-vandana {
+  background: #ffffff;
+  color: #1a1a1a;
+  padding: 28px 24px;
+  border-radius: 20px;
+  box-shadow: 0 20px 44px rgba(0, 0, 0, 0.14);
+  text-align: center;
+  max-width: 90%;
+  width: 360px;
   font-size: 16px;
+  border: 1px solid rgba(212, 162, 0, 0.18);
 }
 
-.popup-card.success {
-  border: 1px solid #9acd32;
-}
-
-.popup-card.error {
-  border: 1px solid #ff6b6b;
-}
-
-.popup-actions {
+.popup-actions-vandana {
   margin-top: 20px;
   display: flex;
-  justify-content: space-around;
+  justify-content: center;
+  gap: 12px;
 }
 
-.popup-actions button {
+.popup-actions-vandana button {
   padding: 10px 20px;
-  font-weight: bold;
+  font-weight: 700;
   border: none;
-  border-radius: 8px;
+  border-radius: 10px;
   cursor: pointer;
   font-size: 14px;
-  transition: .2s;
+  transition: 0.2s;
 }
 
-.popup-actions button:first-child {
-  background-color: gold;
-  color: black;
+.popup-actions-vandana button:first-child {
+  background: linear-gradient(180deg, #f0c64f 0%, #d4a200 100%);
+  color: #111111;
 }
 
-.popup-actions button:last-child {
-  background-color: #444;
-  color: white;
+.popup-actions-vandana button:last-child {
+  background: #f3f3f3;
+  color: #333333;
 }
 
-.popup-actions button:last-child:hover {
-  background-color: #666;
+.popup-actions-vandana button:last-child:hover {
+  background: #e4e4e4;
+}
+
+@media (max-width: 900px) {
+  .delete-toolbar-vandana {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .tools-vandana {
+    width: 100%;
+  }
+
+  .search-input-vandana,
+  .sort-select-vandana,
+  .refresh-btn-vandana,
+  .danger-btn-vandana {
+    width: 100%;
+  }
+}
+
+@media (max-width: 600px) {
+  .delete-product-page-vandana {
+    padding: 14px;
+    gap: 16px;
+  }
+
+  .delete-section2-vandana {
+    padding: 14px;
+  }
+
+  .popup-card-vandana {
+    top: 14px;
+    right: 14px;
+    left: 14px;
+    width: auto;
+  }
 }

@@ -3,7 +3,7 @@ import './ReturnReview.css'
 import Navbar from './NavbarAdmin'
 import { useParams, useNavigate } from 'react-router-dom'
 
-const DEFAULT_API_BASE = 'https://taras-kart-backend.vercel.app'
+const DEFAULT_API_BASE = 'https://vandhana-shopping-mall-backend.vercel.app'
 const API_BASE_RAW =
   (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_BASE) ||
   (typeof process !== 'undefined' && process.env && process.env.REACT_APP_API_BASE) ||
@@ -230,9 +230,10 @@ export default function ReturnReview() {
               <span>Back to returns</span>
             </button>
             <div className="rr-header-title-block">
-              <h1 className="rr-title">Return / refund review</h1>
+              <span className="rr-badge">Return Management</span>
+              <h1 className="rr-title">Return / Refund Review</h1>
               <p className="rr-subtitle">
-                Review product images and bank details, then approve, reject, or complete the refund.
+                Review product images, verify bank details, and complete the decision flow with a cleaner dashboard.
               </p>
             </div>
           </div>
@@ -249,7 +250,7 @@ export default function ReturnReview() {
         <div className="rr-top-grid">
           <div className="rr-card">
             <div className="rr-card-header">
-              <h2>Order and customer</h2>
+              <h2>Order and Customer</h2>
               <div className="rr-card-caption">
                 Request ID {request.id} for order {sale.id || request.sale_id}
               </div>
@@ -317,7 +318,7 @@ export default function ReturnReview() {
 
           <div className="rr-card rr-card-evidence">
             <div className="rr-card-header">
-              <h2>Product images</h2>
+              <h2>Product Images</h2>
               <div className="rr-card-caption">
                 Verify condition from the uploaded evidence before you approve.
               </div>
@@ -349,7 +350,7 @@ export default function ReturnReview() {
         <div className="rr-bottom-grid">
           <div className="rr-card rr-card-bank">
             <div className="rr-card-header">
-              <h2>Bank / UPI details</h2>
+              <h2>Bank / UPI Details</h2>
               <div className="rr-card-caption">
                 Refund will be processed to these details after approval.
               </div>
@@ -393,7 +394,7 @@ export default function ReturnReview() {
                 <label>Rejection reason (only required when rejecting)</label>
                 <textarea
                   value={rejectReason}
-                  onChange={e => setRejectReason(e.target.value)}
+                  onChange={(e) => setRejectReason(e.target.value)}
                   placeholder="Example: Used product, missing tags, wrong images, etc."
                   disabled={!canDecide || actionLoading}
                 />

@@ -1,244 +1,329 @@
 :root {
-    --bg: #0b0b0b;
-    --card: #121212;
-    --line: #202020;
-    --text: #ffffff;
-    --muted: #bfbfbf;
-    --gold: #ffd84d;
-    --gold-2: #d4af37;
-    --danger: #ff5c5c;
+  --branch-black: #050505;
+  --branch-black-soft: #101010;
+  --branch-black-card: #141414;
+  --branch-border: rgba(255, 208, 0, 0.18);
+  --branch-border-strong: rgba(255, 208, 0, 0.38);
+  --branch-white: #ffffff;
+  --branch-white-soft: rgba(255, 255, 255, 0.72);
+  --branch-yellow: #ffd000;
+  --branch-yellow-deep: #f0b400;
+  --branch-danger: #ff6b6b;
+  --branch-shadow: 0 24px 60px rgba(0, 0, 0, 0.6);
 }
 
-/* Reset + layout safety */
 *,
 *::before,
 *::after {
-    box-sizing: border-box;
+  box-sizing: border-box;
 }
 
 html,
+body,
+#root {
+  min-height: 100%;
+  margin: 0;
+  padding: 0;
+  background: var(--branch-black);
+  color: var(--branch-white);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
 body {
-    height: 100%;
-    margin: 0;
-    background: black;
-    color: var(--text);
-    overflow-x: hidden;
+  overflow-x: hidden;
 }
 
-.login-wrap-admin-admin-login {
-    min-height: auto;
-    background: black;
-    display: grid;
-    place-items: center;
-    padding: 24px;
-    color: var(--text);
+.branch-login-page {
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at top left, rgba(255, 208, 0, 0.16), transparent 28%),
+    radial-gradient(circle at bottom right, rgba(255, 208, 0, 0.1), transparent 24%),
+    linear-gradient(135deg, #000000 0%, #080808 45%, #0d0d0d 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 20px;
+  position: relative;
+  overflow: hidden;
 }
 
-/* Card */
-.login-card-admin-admin-login {
-    width: min(460px, calc(100vw - 32px));
-    background:
-        linear-gradient(180deg, rgba(255, 216, 77, 0.06), rgba(255, 216, 77, 0)) border-box,
-        linear-gradient(180deg, rgba(255, 216, 77, 0.18), rgba(255, 216, 77, 0.04)) padding-box,
-        var(--card);
-    border: 1px solid rgba(255, 216, 77, 0.18);
-    border-radius: 20px;
-    padding: 24px;
-    box-shadow: 0 18px 44px rgba(0, 0, 0, 0.55);
-    backdrop-filter: blur(2px);
-    overflow: hidden;
+.branch-login-glow {
+  position: absolute;
+  border-radius: 999px;
+  filter: blur(90px);
+  pointer-events: none;
 }
 
-/* Header */
-.login-header-admin-admin-login {
-    display: grid;
-    gap: 6px;
-    margin-bottom: 18px;
+.branch-login-glow-one {
+  width: 240px;
+  height: 240px;
+  background: rgba(255, 208, 0, 0.14);
+  top: 7%;
+  left: -60px;
 }
 
-.login-title-admin-admin-login {
-    font-weight: 900;
-    font-size: 22px;
-    color: var(--gold);
-    letter-spacing: .2px;
+.branch-login-glow-two {
+  width: 280px;
+  height: 280px;
+  background: rgba(255, 208, 0, 0.1);
+  right: -90px;
+  bottom: 4%;
 }
 
-.login-subtitle-admin-admin-login {
-    color: var(--muted);
+.branch-login-card {
+  width: 100%;
+  max-width: 460px;
+  background: linear-gradient(180deg, rgba(255, 208, 0, 0.05), rgba(255, 208, 0, 0.01)), var(--branch-black-card);
+  border: 1px solid var(--branch-border);
+  border-radius: 28px;
+  padding: 32px 28px;
+  box-shadow: var(--branch-shadow);
+  position: relative;
+  z-index: 2;
+  backdrop-filter: blur(6px);
+}
+
+.branch-login-brand {
+  text-align: center;
+  margin-bottom: 26px;
+}
+
+.branch-login-badge {
+  width: fit-content;
+  margin: 0 auto 14px;
+  padding: 8px 14px;
+  background: rgba(255, 208, 0, 0.12);
+  border: 1px solid rgba(255, 208, 0, 0.22);
+  color: var(--branch-yellow);
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+}
+
+.branch-login-title {
+  margin: 0;
+  color: var(--branch-white);
+  font-size: 30px;
+  line-height: 1.15;
+  font-weight: 800;
+}
+
+.branch-login-subtitle {
+  margin: 10px 0 0;
+  color: var(--branch-white-soft);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.branch-login-form {
+  display: grid;
+  gap: 16px;
+}
+
+.branch-login-field {
+  display: grid;
+  gap: 8px;
+}
+
+.branch-login-label {
+  color: var(--branch-white);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.branch-login-input-wrap {
+  position: relative;
+}
+
+.branch-login-icon {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: rgba(255, 255, 255, 0.68);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.branch-login-input {
+  width: 100%;
+  height: 54px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  color: var(--branch-white);
+  padding: 0 16px 0 44px;
+  outline: none;
+  font-size: 15px;
+  transition: 0.25s ease;
+}
+
+.branch-login-input::placeholder {
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.branch-login-input:focus {
+  border-color: var(--branch-border-strong);
+  box-shadow: 0 0 0 4px rgba(255, 208, 0, 0.1);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.branch-login-password-input {
+  padding-right: 82px;
+}
+
+.branch-login-toggle {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  border: none;
+  background: rgba(255, 208, 0, 0.08);
+  color: var(--branch-yellow);
+  height: 34px;
+  min-width: 60px;
+  padding: 0 12px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: 0.2s ease;
+}
+
+.branch-login-toggle:hover {
+  background: rgba(255, 208, 0, 0.16);
+}
+
+.branch-login-error {
+  background: rgba(255, 107, 107, 0.08);
+  border: 1px solid rgba(255, 107, 107, 0.24);
+  color: #ff9a9a;
+  padding: 12px 14px;
+  border-radius: 14px;
+  font-size: 13px;
+}
+
+.branch-login-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.branch-login-remember {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--branch-white-soft);
+  font-size: 13px;
+  user-select: none;
+}
+
+.branch-login-remember input {
+  accent-color: var(--branch-yellow);
+  width: 15px;
+  height: 15px;
+}
+
+.branch-login-link {
+  border: none;
+  background: transparent;
+  color: var(--branch-yellow);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+}
+
+.branch-login-link:hover {
+  color: #ffe36b;
+}
+
+.branch-login-submit,
+.branch-login-back {
+  width: 100%;
+  height: 52px;
+  border-radius: 16px;
+  font-size: 15px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: 0.2s ease;
+}
+
+.branch-login-submit {
+  border: none;
+  background: linear-gradient(180deg, var(--branch-yellow) 0%, var(--branch-yellow-deep) 100%);
+  color: #111111;
+  box-shadow: 0 14px 28px rgba(255, 208, 0, 0.22);
+}
+
+.branch-login-submit:hover:not(:disabled) {
+  transform: translateY(-1px);
+  filter: brightness(1.05);
+}
+
+.branch-login-submit:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  filter: grayscale(0.1);
+}
+
+.branch-login-divider {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  color: rgba(255, 255, 255, 0.45);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.branch-login-divider::before,
+.branch-login-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 208, 0, 0.22), transparent);
+}
+
+.branch-login-back {
+  background: transparent;
+  color: var(--branch-white);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.branch-login-back:hover {
+  border-color: rgba(255, 208, 0, 0.3);
+  background: rgba(255, 208, 0, 0.06);
+  color: var(--branch-yellow);
+}
+
+@media (max-width: 540px) {
+  .branch-login-page {
+    padding: 20px 14px;
+  }
+
+  .branch-login-card {
+    padding: 24px 18px;
+    border-radius: 22px;
+  }
+
+  .branch-login-title {
+    font-size: 24px;
+  }
+
+  .branch-login-subtitle {
     font-size: 13px;
-}
+  }
 
-/* Form */
-.login-form-admin-admin-login {
-    display: grid;
-    gap: 14px;
-    width: 100%;
-}
-
-/* Field wrapper ensures icon + button sit inside without affecting width */
-.login-field-admin-admin-login {
-    position: relative;
-    width: 100%;
-}
-
-.login-input-icon-admin-admin-login {
-    position: absolute;
-    left: 12px;
-    top: 50%;
-    transform: translateY(-50%);
-    color: var(--muted);
-    pointer-events: none;
-}
-
-/* Inputs: border-box + max-width prevents overflow */
-.login-input-admin-admin-login {
-    display: block;
-    width: 100%;
-    max-width: 100%;
-    background: #0f0f0f;
-    border: 1px solid var(--line);
-    color: var(--text);
-    padding: 12px 44px 12px 38px;
-    /* room for icon + toggle */
-    border-radius: 14px;
-    outline: none;
-    transition: border-color .2s, box-shadow .2s, background .2s;
-}
-
-.login-input-admin-admin-login:focus {
-    border-color: rgba(255, 216, 77, .65);
-    box-shadow: 0 0 0 5px rgba(255, 216, 77, .10);
-    background: #101010;
-}
-
-/* Password toggle sits inside the field without causing overflow */
-.login-toggle-btn-admin-admin-login {
-    position: absolute;
-    right: 10px;
-    top: 50%;
-    transform: translateY(-50%);
-    background: transparent;
-    color: var(--muted);
-    border: none;
-    font-size: 12px;
-    padding: 6px 8px;
-    border-radius: 10px;
-    cursor: pointer;
-    transition: color .2s, background .2s;
-}
-
-.login-toggle-btn-admin-admin-login:hover {
-    color: var(--text);
-    background: rgba(255, 216, 77, 0.08);
-}
-
-/* Error */
-.login-error-admin-admin-login {
-    color: var(--danger);
-    font-size: 13px;
-    margin-top: -4px;
-}
-
-/* Row with remember + forgot */
-.login-actions-row-admin-admin-login {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-    flex-wrap: wrap;
-}
-
-.login-remember-admin-admin-login {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    color: var(--muted);
-    font-size: 13px;
-    user-select: none;
-}
-
-.login-remember-admin-admin-login input {
-    width: 14px;
-    height: 14px;
-    accent-color: var(--gold);
-}
-
-.login-alt-admin-admin-login {
-    color: var(--gold);
-    font-size: 13px;
-    text-decoration: none;
-    transition: opacity .2s;
-}
-
-.login-alt-admin-admin-login:hover {
-    opacity: .9;
-}
-
-/* Buttons */
-.login-button-admin-admin-login {
-    width: 100%;
-    background: linear-gradient(180deg, var(--gold), var(--gold-2));
-    color: #111;
-    border: 0;
-    padding: 12px 16px;
-    border-radius: 14px;
-    font-weight: 850;
-    cursor: pointer;
-    box-shadow: 0 12px 24px rgba(255, 216, 77, .25);
-    transition: transform .06s, filter .18s, opacity .18s;
-}
-
-.login-button-admin-admin-login:disabled {
-    opacity: .75;
-    cursor: not-allowed;
-    filter: grayscale(.5);
-}
-
-.login-button-admin-admin-login:hover:not(:disabled) {
-    filter: brightness(1.05);
-}
-
-.login-button-admin-admin-login:active:not(:disabled) {
-    transform: translateY(1px);
-}
-
-.login-sep-admin-admin-login {
-    height: 1px;
-    width: 100%;
-    background: linear-gradient(90deg, transparent, rgba(255, 216, 77, .25), transparent);
-    margin: 8px 0;
-}
-
-.login-button-ghost-admin-admin-login {
-    background: transparent;
-    color: var(--text);
-    border: 1px solid rgba(255, 216, 77, 0.22);
-    box-shadow: none;
-}
-
-.login-button-ghost-admin-admin-login:hover {
-    background: rgba(255, 216, 77, 0.08);
-}
-
-/* Small screens polish */
-@media (max-width: 380px) {
-    .login-card-admin-admin-login {
-        width: calc(100vw - 24px);
-        padding: 20px;
-    }
-
-    .login-input-admin-admin-login {
-        padding-left: 36px;
-        padding-right: 40px;
-    }
-}
-
-/* iOS safe areas (prevents “white band” at top on notched devices) */
-@supports (padding: max(env(safe-area-inset-top), 0px)) {
-    .login-wrap-admin-admin-login {
-        padding-top: max(24px, env(safe-area-inset-top));
-        padding-bottom: max(24px, env(safe-area-inset-bottom));
-        padding-left: max(24px, env(safe-area-inset-left));
-        padding-right: max(24px, env(safe-area-inset-right));
-    }
+  .branch-login-input,
+  .branch-login-submit,
+  .branch-login-back {
+    height: 50px;
+  }
 }

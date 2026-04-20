@@ -1,80 +1,82 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
-import Navbar from './NavbarAdmin';
-import { useAuth } from './AdminAuth';
-import './POS.css';
+import React, { useEffect, useMemo, useRef, useState } from 'react'
+import Navbar from './NavbarAdmin'
+import { useAuth } from './AdminAuth'
+import './POS.css'
 
-const DEFAULT_API_BASE = 'https://taras-kart-backend.vercel.app';
+const DEFAULT_API_BASE = 'https://vandhana-shopping-mall-backend.vercel.app'
 const API_BASE =
   (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE) ||
   (typeof process !== 'undefined' && process.env?.REACT_APP_API_BASE) ||
-  DEFAULT_API_BASE;
+  DEFAULT_API_BASE
 
 const uuid = () =>
-  (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}_${Math.random().toString(36).slice(2)}`);
+  typeof crypto !== 'undefined' && crypto.randomUUID
+    ? crypto.randomUUID()
+    : `${Date.now()}_${Math.random().toString(36).slice(2)}`
 
 export default function POS() {
-  const { token, user } = useAuth();
-  const branchId = user?.branch_id || user?.branchId || null;
+  const { token, user } = useAuth()
+  const branchId = user?.branch_id || user?.branchId || null
 
-  const eanInputRef = useRef(null);
+  const eanInputRef = useRef(null)
 
-  const [saleId, setSaleId] = useState(uuid());
-  const [ean, setEan] = useState('');
-  const [items, setItems] = useState([]);
-  const [toast, setToast] = useState('');
-  const [searching, setSearching] = useState(false);
-  const [paying, setPaying] = useState(false);
-  const [successOpen, setSuccessOpen] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState('CASH');
-  const [paymentRef, setPaymentRef] = useState('');
-  const [error, setError] = useState('');
+  const [saleId, setSaleId] = useState(uuid())
+  const [ean, setEan] = useState('')
+  const [items, setItems] = useState([])
+  const [toast, setToast] = useState('')
+  const [searching, setSearching] = useState(false)
+  const [paying, setPaying] = useState(false)
+  const [successOpen, setSuccessOpen] = useState(false)
+  const [paymentMethod, setPaymentMethod] = useState('CASH')
+  const [paymentRef, setPaymentRef] = useState('')
+  const [error, setError] = useState('')
 
   useEffect(() => {
-    eanInputRef.current?.focus();
-  }, []);
+    eanInputRef.current?.focus()
+  }, [])
 
   const headers = useMemo(
     () => ({
       'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(token ? { Authorization: `Bearer ${token}` } : {})
     }),
     [token]
-  );
+  )
 
   const showToast = (msg) => {
-    setToast(msg);
-    setTimeout(() => setToast(''), 1800);
-  };
+    setToast(msg)
+    setTimeout(() => setToast(''), 1800)
+  }
 
   const totals = useMemo(() => {
-    let qty = 0;
-    let total = 0;
+    let qty = 0
+    let total = 0
     for (const it of items) {
-      qty += it.qty;
-      total += it.qty * Number(it.price || 0);
+      qty += it.qty
+      total += it.qty * Number(it.price || 0)
     }
-    return { qty, total };
-  }, [items]);
+    return { qty, total }
+  }, [items])
 
   const scanFlow = async (code) => {
-    const trimmed = String(code || '').trim();
-    if (!trimmed) return;
+    const trimmed = String(code || '').trim()
+    if (!trimmed) return
     if (!branchId) {
-      showToast('No branch selected');
-      return;
+      showToast('No branch selected')
+      return
     }
-    setSearching(true);
-    setError('');
+    setSearching(true)
+    setError('')
     try {
-      const res = await fetch(`${API_BASE}/api/barcodes/${encodeURIComponent(trimmed)}`);
+      const res = await fetch(`${API_BASE}/api/barcodes/${encodeURIComponent(trimmed)}`)
       if (!res.ok) {
-        showToast('Product not found');
-        return;
+        showToast('Product not found')
+        return
       }
-      const v = await res.json();
-      const price = Number(v?.sale_price ?? v?.mrp ?? 0);
-      const img = v?.image_url || '';
-      const variantId = Number(v?.variant_id);
+      const v = await res.json()
+      const price = Number(v?.sale_price ?? v?.mrp ?? 0)
+      const img = v?.image_url || ''
+      const variantId = Number(v?.variant_id)
 
       const reserve = await fetch(`${API_BASE}/api/inventory/scan`, {
         method: 'POST',
@@ -84,21 +86,21 @@ export default function POS() {
           ean_code: trimmed,
           qty: 1,
           sale_id: saleId,
-          client_action_id: uuid(),
-        }),
-      });
+          client_action_id: uuid()
+        })
+      })
       if (!reserve.ok) {
-        const j = await reserve.json().catch(() => ({}));
-        setError(j?.message || 'Scan failed');
-        return;
+        const j = await reserve.json().catch(() => ({}))
+        setError(j?.message || 'Scan failed')
+        return
       }
 
       setItems((prev) => {
-        const ix = prev.findIndex((p) => p.variant_id === variantId);
+        const ix = prev.findIndex((p) => p.variant_id === variantId)
         if (ix >= 0) {
-          const updated = [...prev];
-          updated[ix] = { ...updated[ix], qty: updated[ix].qty + 1 };
-          return updated;
+          const updated = [...prev]
+          updated[ix] = { ...updated[ix], qty: updated[ix].qty + 1 }
+          return updated
         }
         return [
           ...prev,
@@ -112,31 +114,31 @@ export default function POS() {
             price,
             mrp: v?.mrp ?? null,
             image_url: img,
-            qty: 1,
-          },
-        ];
-      });
-      showToast('Added');
+            qty: 1
+          }
+        ]
+      })
+      showToast('Added')
     } catch {
-      showToast('Network error');
+      showToast('Network error')
     } finally {
-      setSearching(false);
-      setEan('');
-      eanInputRef.current?.focus();
+      setSearching(false)
+      setEan('')
+      eanInputRef.current?.focus()
     }
-  };
+  }
 
   const handleManualAdd = () => {
-    if (!ean) return;
-    scanFlow(ean);
-  };
+    if (!ean) return
+    scanFlow(ean)
+  }
 
   const onKeyDown = (e) => {
     if (e.key === 'Enter') {
-      e.preventDefault();
-      handleManualAdd();
+      e.preventDefault()
+      handleManualAdd()
     }
-  };
+  }
 
   const addOneMore = async (row) => {
     try {
@@ -148,41 +150,51 @@ export default function POS() {
           ean_code: row.ean_code,
           qty: 1,
           sale_id: saleId,
-          client_action_id: uuid(),
-        }),
-      });
+          client_action_id: uuid()
+        })
+      })
       if (!reserve.ok) {
-        const j = await reserve.json().catch(() => ({}));
-        showToast(j?.message || 'Failed to add');
-        return;
+        const j = await reserve.json().catch(() => ({}))
+        showToast(j?.message || 'Failed to add')
+        return
       }
       setItems((prev) =>
         prev.map((p) => (p.variant_id === row.variant_id ? { ...p, qty: p.qty + 1 } : p))
-      );
+      )
     } catch {
-      showToast('Network error');
+      showToast('Network error')
     }
-  };
+  }
+
+  const removeOne = (row) => {
+    setItems((prev) =>
+      prev
+        .map((p) =>
+          p.variant_id === row.variant_id ? { ...p, qty: Math.max(0, p.qty - 1) } : p
+        )
+        .filter((p) => p.qty > 0)
+    )
+  }
 
   const newSale = () => {
-    setItems([]);
-    setSaleId(uuid());
-    setPaymentRef('');
-    setPaymentMethod('CASH');
-    setError('');
-    setPaying(false);
-    setSuccessOpen(false);
-    setEan('');
-    eanInputRef.current?.focus();
-  };
+    setItems([])
+    setSaleId(uuid())
+    setPaymentRef('')
+    setPaymentMethod('CASH')
+    setError('')
+    setPaying(false)
+    setSuccessOpen(false)
+    setEan('')
+    eanInputRef.current?.focus()
+  }
 
   const proceedToCheckout = () => {
-    if (!items.length) return;
-    setPaying(true);
-  };
+    if (!items.length) return
+    setPaying(true)
+  }
 
   const confirmPayment = async () => {
-    if (!items.length) return;
+    if (!items.length) return
     try {
       const res = await fetch(`${API_BASE}/api/sales/confirm`, {
         method: 'POST',
@@ -195,105 +207,165 @@ export default function POS() {
             variant_id: it.variant_id,
             ean_code: it.ean_code,
             qty: it.qty,
-            price: it.price,
+            price: it.price
           })),
-          client_action_id: uuid(),
-        }),
-      });
+          client_action_id: uuid()
+        })
+      })
       if (!res.ok) {
-        const j = await res.json().catch(() => ({}));
-        showToast(j?.message || 'Payment failed');
-        return;
+        const j = await res.json().catch(() => ({}))
+        showToast(j?.message || 'Payment failed')
+        return
       }
-      setPaying(false);
-      setSuccessOpen(true);
-      setItems([]);
-      setSaleId(uuid());
-      setPaymentRef('');
+      setPaying(false)
+      setSuccessOpen(true)
+      setItems([])
+      setSaleId(uuid())
+      setPaymentRef('')
     } catch {
-      showToast('Network error');
+      showToast('Network error')
     }
-  };
+  }
 
   return (
     <div className="pos-page">
       <Navbar />
-      <div className="pos-container">
-        <div className="pos-header">
-          <div className="pos-title">POS</div>
-          <div className="pos-sub">
-            <span>Branch: {branchId ?? '-'}</span>
-            <span>Sale: {saleId.slice(0, 8)}</span>
+
+      <div className="pos-shell">
+        <div className="pos-hero">
+          <div className="pos-hero-text">
+            <span className="pos-badge">Store Billing</span>
+            <h1 className="pos-title">Point of Sale</h1>
+            <p className="pos-subtitle">
+              Scan products, review the cart, and complete billing with a cleaner, brighter, and more polished layout.
+            </p>
+          </div>
+          <div className="pos-hero-meta">
+            <div className="pos-meta-card">
+              <span className="pos-meta-label">Branch</span>
+              <span className="pos-meta-value">{branchId ?? '-'}</span>
+            </div>
+            <div className="pos-meta-card">
+              <span className="pos-meta-label">Sale ID</span>
+              <span className="pos-meta-value">{saleId.slice(0, 8)}</span>
+            </div>
           </div>
         </div>
 
-        <div className="scan-row">
-          <input
-            ref={eanInputRef}
-            type="text"
-            placeholder="Scan EAN or type manually"
-            value={ean}
-            onChange={(e) => setEan(e.target.value.replace(/[^\d]/g, ''))}
-            onKeyDown={onKeyDown}
-          />
-          <button className="btn gold" onClick={handleManualAdd} disabled={searching || !ean}>
-            {searching ? 'Adding...' : 'Add'}
-          </button>
-        </div>
-
-        <div className="cart">
-          <div className="cart-head">
-            <div>Item</div>
-            <div>Details</div>
-            <div className="right">Price</div>
-            <div className="center">Qty</div>
-            <div className="right">Total</div>
-          </div>
-
-          {items.length === 0 ? (
-            <div className="cart-empty">Scan or type an EAN to add items</div>
-          ) : (
-            items.map((it) => (
-              <div className="cart-row" key={it.variant_id}>
-                <div className="thumb">
-                  {it.image_url ? (
-                    <img src={it.image_url} alt={it.name} />
-                  ) : (
-                    <div className="thumb-ph" />
-                  )}
-                </div>
-                <div className="info">
-                  <div className="name">{it.name}</div>
-                  <div className="meta">
-                    <span>{it.brand || '-'}</span>
-                    <span>Size: {it.size || '-'}</span>
-                    <span>Color: {it.colour || '-'}</span>
-                    <span>EAN: {it.ean_code}</span>
-                  </div>
-                </div>
-                <div className="right">₹{Number(it.price).toFixed(2)}</div>
-                <div className="center qty">
-                  <button className="btn small" onClick={() => addOneMore(it)}>+1</button>
-                  <div className="qty-box">{it.qty}</div>
-                </div>
-                <div className="right">₹{(it.qty * Number(it.price)).toFixed(2)}</div>
+        <div className="pos-main-grid">
+          <div className="pos-left">
+            <div className="pos-panel">
+              <div className="pos-panel-head">
+                <h2>Scan Product</h2>
+                <span>{searching ? 'Searching...' : 'Ready'}</span>
               </div>
-            ))
-          )}
-        </div>
 
-        <div className="footer-bar">
-          <div className="summary">
-            <div className="pill">
-              {totals.qty} {totals.qty === 1 ? 'Item' : 'Items'}
+              <div className="scan-row">
+                <input
+                  ref={eanInputRef}
+                  type="text"
+                  placeholder="Scan EAN or type manually"
+                  value={ean}
+                  onChange={(e) => setEan(e.target.value.replace(/[^\d]/g, ''))}
+                  onKeyDown={onKeyDown}
+                />
+                <button className="btn gold" onClick={handleManualAdd} disabled={searching || !ean}>
+                  {searching ? 'Adding...' : 'Add'}
+                </button>
+              </div>
+
+              {error ? <div className="error-text">{error}</div> : null}
             </div>
-            <div className="pill total">
-              Total ₹{totals.total.toFixed(2)}
+
+            <div className="pos-panel cart-panel">
+              <div className="pos-panel-head">
+                <h2>Cart Items</h2>
+                <span>{items.length} product{items.length === 1 ? '' : 's'}</span>
+              </div>
+
+              <div className="cart">
+                <div className="cart-head">
+                  <div>Item</div>
+                  <div>Details</div>
+                  <div className="right">Price</div>
+                  <div className="center">Qty</div>
+                  <div className="right">Total</div>
+                </div>
+
+                {items.length === 0 ? (
+                  <div className="cart-empty">Scan or type an EAN to add items</div>
+                ) : (
+                  items.map((it) => (
+                    <div className="cart-row" key={it.variant_id}>
+                      <div className="thumb">
+                        {it.image_url ? <img src={it.image_url} alt={it.name} /> : <div className="thumb-ph" />}
+                      </div>
+
+                      <div className="info">
+                        <div className="name">{it.name}</div>
+                        <div className="meta">
+                          <span>{it.brand || '-'}</span>
+                          <span>Size: {it.size || '-'}</span>
+                          <span>Color: {it.colour || '-'}</span>
+                          <span>EAN: {it.ean_code}</span>
+                        </div>
+                      </div>
+
+                      <div className="right price-cell">₹{Number(it.price).toFixed(2)}</div>
+
+                      <div className="center qty">
+                        <button className="btn qty-btn" onClick={() => removeOne(it)}>-1</button>
+                        <div className="qty-box">{it.qty}</div>
+                        <button className="btn qty-btn" onClick={() => addOneMore(it)}>+1</button>
+                      </div>
+
+                      <div className="right row-total">₹{(it.qty * Number(it.price)).toFixed(2)}</div>
+                    </div>
+                  ))
+                )}
+              </div>
             </div>
           </div>
-          <div className="actions">
-            <button className="btn ghost" onClick={newSale}>New Sale</button>
-            <button className="btn gold" onClick={proceedToCheckout} disabled={!items.length}>Proceed to Checkout</button>
+
+          <div className="pos-right">
+            <div className="pos-summary-card">
+              <div className="pos-panel-head">
+                <h2>Bill Summary</h2>
+              </div>
+
+              <div className="summary-list">
+                <div className="summary-row">
+                  <span>Total Items</span>
+                  <strong>{totals.qty}</strong>
+                </div>
+                <div className="summary-row">
+                  <span>Subtotal</span>
+                  <strong>₹{totals.total.toFixed(2)}</strong>
+                </div>
+                <div className="summary-row grand">
+                  <span>Grand Total</span>
+                  <strong>₹{totals.total.toFixed(2)}</strong>
+                </div>
+              </div>
+
+              <div className="summary-actions">
+                <button className="btn ghost" onClick={newSale}>
+                  New Sale
+                </button>
+                <button className="btn gold" onClick={proceedToCheckout} disabled={!items.length}>
+                  Proceed to Checkout
+                </button>
+              </div>
+            </div>
+
+            <div className="pos-note-card">
+              <h3>Quick Tips</h3>
+              <ul>
+                <li>Use Enter after typing the EAN for faster billing</li>
+                <li>Use +1 and -1 to adjust quantity instantly</li>
+                <li>Complete payment to start a fresh new sale</li>
+              </ul>
+            </div>
           </div>
         </div>
       </div>
@@ -302,6 +374,7 @@ export default function POS() {
         <div className="modal-overlay">
           <div className="modal">
             <div className="modal-title">Payment</div>
+
             <div className="payment-grid">
               <button
                 className={`pay-chip ${paymentMethod === 'CASH' ? 'active' : ''}`}
@@ -322,16 +395,28 @@ export default function POS() {
                 Online
               </button>
             </div>
+
             <input
               className="pay-input"
               placeholder="Reference (optional)"
               value={paymentRef}
               onChange={(e) => setPaymentRef(e.target.value)}
             />
-            <div className="modal-actions">
-              <button className="btn ghost" onClick={() => setPaying(false)}>Back</button>
-              <button className="btn gold" onClick={confirmPayment}>Confirm</button>
+
+            <div className="modal-total-box">
+              <span>Payable Amount</span>
+              <strong>₹{totals.total.toFixed(2)}</strong>
             </div>
+
+            <div className="modal-actions">
+              <button className="btn ghost" onClick={() => setPaying(false)}>
+                Back
+              </button>
+              <button className="btn gold" onClick={confirmPayment}>
+                Confirm
+              </button>
+            </div>
+
             {error ? <div className="error-text">{error}</div> : null}
           </div>
         </div>
@@ -343,7 +428,15 @@ export default function POS() {
             <div className="modal-title">Transaction Completed</div>
             <div className="success-text">Payment successful. Ready for next customer.</div>
             <div className="modal-actions">
-              <button className="btn gold" onClick={() => { setSuccessOpen(false); eanInputRef.current?.focus(); }}>OK</button>
+              <button
+                className="btn gold"
+                onClick={() => {
+                  setSuccessOpen(false)
+                  eanInputRef.current?.focus()
+                }}
+              >
+                OK
+              </button>
             </div>
           </div>
         </div>
@@ -351,5 +444,5 @@ export default function POS() {
 
       {toast && <div className="pos-toast">{toast}</div>}
     </div>
-  );
+  )
 }

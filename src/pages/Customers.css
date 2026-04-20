@@ -1,61 +1,210 @@
 .customers-page {
-  padding: 2rem;
+  min-height: 100vh;
+  padding: 118px 18px 28px;
   font-family: 'Segoe UI', sans-serif;
+  background: linear-gradient(180deg, #fffdf6 0%, #fff6d9 46%, #ffffff 100%);
+  box-sizing: border-box;
+}
+
+.customers-shell {
+  max-width: 1400px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.customers-hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  background: #ffffff;
+  border: 1px solid rgba(232, 199, 86, 0.4);
+  border-radius: 24px;
+  padding: 24px;
+  box-shadow: 0 16px 40px rgba(17, 17, 17, 0.07);
+}
+
+.customers-hero-text {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.customers-badge {
+  display: inline-flex;
+  width: fit-content;
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: #111111;
+  color: #ffd84d;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.customers-hero h1 {
+  margin: 0;
+  font-size: 32px;
+  line-height: 1.1;
+  color: #151515;
+}
+
+.customers-hero p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.7;
+  color: #666666;
+  max-width: 720px;
+}
+
+.customers-api-chip {
+  padding: 10px 14px;
+  border-radius: 999px;
+  background: #fff4bf;
+  color: #7a5a00;
+  font-size: 12px;
+  font-weight: 700;
+  border: 1px solid rgba(232, 199, 86, 0.45);
+  word-break: break-all;
+  text-align: center;
 }
 
 .customers-container {
-  background-color: #fff;
-  padding: 1.5rem;
-  border-radius: 10px;
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  background-color: #ffffff;
+  padding: 22px;
+  border-radius: 24px;
+  box-shadow: 0 16px 40px rgba(17, 17, 17, 0.07);
+  border: 1px solid rgba(232, 199, 86, 0.28);
 }
 
 .profile-tabs-wrapper {
   display: flex;
   justify-content: center;
-  margin-bottom: 2rem;
+  margin-bottom: 22px;
 }
 
 .profile-tabs {
   display: flex;
-  gap: 1rem;
+  gap: 12px;
+  flex-wrap: wrap;
+  background: #fff9e8;
+  padding: 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(232, 199, 86, 0.28);
 }
 
 .tab-btn {
-  padding: 10px 20px;
-  border: 1px solid #ccc;
-  background-color: #f2f2f2;
+  min-width: 150px;
+  padding: 12px 20px;
+  border: 1px solid transparent;
+  background-color: transparent;
   cursor: pointer;
-  border-radius: 5px;
-  font-size: 1rem;
+  border-radius: 999px;
+  font-size: 15px;
+  font-weight: 700;
+  color: #444444;
+  transition: 0.2s ease;
+}
+
+.tab-btn:hover {
+  background: #fff0b3;
+  color: #111111;
 }
 
 .tab-btn.active {
-  background-color: #000;
-  color: #fff;
-  border-color: #000;
+  background-color: #111111;
+  color: #ffd84d;
+  border-color: #111111;
 }
 
 .table-section {
-  margin-top: 2rem;
+  margin-top: 8px;
+}
+
+.table-card {
+  background: #ffffff;
+  border: 1px solid #ece3bf;
+  border-radius: 18px;
+  padding: 16px;
+  overflow: hidden;
 }
 
 .customers-container h2 {
   margin-bottom: 1rem;
+  color: #151515;
 }
 
 .customers-table {
   width: 100%;
   border-collapse: collapse;
+  background: #ffffff;
 }
 
 .customers-table th,
 .customers-table td {
-  border: 1px solid #ddd;
-  padding: 10px;
+  border: 1px solid #ececec;
+  padding: 12px 14px;
   text-align: left;
+  color: #222222;
 }
 
 .customers-table th {
-  background-color: #f8f8f8;
+  background-color: #fff3bf;
+  color: #111111;
+  font-weight: 700;
+}
+
+.customers-table tr:nth-child(even) td {
+  background: #fffdf7;
+}
+
+.customers-table tr:hover td {
+  background: #fff8de;
+}
+
+@media (max-width: 900px) {
+  .customers-page {
+    padding: 128px 14px 24px;
+  }
+
+  .customers-hero {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 20px;
+  }
+
+  .customers-api-chip {
+    width: 100%;
+  }
+
+  .customers-container {
+    padding: 18px;
+  }
+}
+
+@media (max-width: 600px) {
+  .customers-page {
+    padding: 136px 12px 20px;
+  }
+
+  .customers-hero h1 {
+    font-size: 26px;
+  }
+
+  .profile-tabs {
+    width: 100%;
+    border-radius: 18px;
+  }
+
+  .tab-btn {
+    width: 100%;
+    min-width: unset;
+  }
+
+  .table-card {
+    padding: 12px;
+  }
 }

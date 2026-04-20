@@ -27,7 +27,7 @@ export default function App() {
       <LoadingProvider>
         <Router>
           <Routes>
-            <Route path="/login" element={<LoginAdmin />} />
+            {/* <Route path="/login" element={<LoginAdmin />} /> */}
             <Route path="/" element={<RequireAuth><HomePage /></RequireAuth>} />
             <Route path="/transactions" element={<RequireAuth><Transaction /></RequireAuth>} />
             <Route path="/stocks" element={<RequireAuth><Stocks /></RequireAuth>} />

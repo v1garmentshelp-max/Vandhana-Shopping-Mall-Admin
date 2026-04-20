@@ -1,335 +1,534 @@
-.stocks-page {
-  color: gold;
+.stocks-page-vandana-stocks {
+  min-height: 100vh;
+  padding: 112px 18px 28px;
+  background: linear-gradient(180deg, #fffdf6 0%, #fff8db 45%, #ffffff 100%);
+  color: #151515;
   font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-  padding: 24px;
-  background-color: #000;
-  margin-top: 0;
+  box-sizing: border-box;
 }
 
-.stocks-toolbar {
+.stocks-shell-vandana-stocks {
+  width: 100%;
+  max-width: 1440px;
+  margin: 0 auto;
   display: flex;
   flex-direction: column;
-  gap: 14px;
-  margin-bottom: 16px;
+  gap: 18px;
 }
 
-.bar-row {
+.stocks-hero-vandana-stocks {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 24px;
+  border-radius: 22px;
+  background: #ffffff;
+  border: 1px solid #f1d472;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.06);
+}
+
+.stocks-title-vandana-stocks {
+  margin: 0 0 6px;
+  font-size: 30px;
+  font-weight: 800;
+  color: #111111;
+}
+
+.stocks-subtitle-vandana-stocks {
+  margin: 0;
+  color: #5e5e5e;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.stocks-hero-actions-vandana-stocks {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.stocks-toolbar-vandana-stocks {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.stocks-bar-row-vandana-stocks {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 12px;
+}
+
+.stocks-seg-vandana-stocks {
+  display: inline-flex;
+  flex-wrap: wrap;
+  background: #ffffff;
+  border: 1px solid #ead69a;
+  border-radius: 999px;
+  padding: 5px;
+  gap: 6px;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.05);
+}
+
+.stocks-seg-btn-vandana-stocks {
+  min-width: 82px;
+  padding: 10px 16px;
+  border: 0;
+  background: transparent;
+  color: #444444;
+  border-radius: 999px;
+  cursor: pointer;
+  font-weight: 700;
+  transition: 0.2s ease;
+}
+
+.stocks-seg-btn-vandana-stocks.active-vandana-stocks {
+  background: #111111;
+  color: #ffd84d;
+}
+
+.stocks-export-vandana-stocks,
+.stocks-refresh-vandana-stocks {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 46px;
+  padding: 0 18px;
+  border-radius: 12px;
+  text-decoration: none;
+  font-weight: 700;
+  cursor: pointer;
+  transition: 0.2s ease;
+  border: 1px solid #111111;
+  background: #111111;
+  color: #ffd84d;
+}
+
+.stocks-export-vandana-stocks:hover,
+.stocks-refresh-vandana-stocks:hover {
+  background: #ffd84d;
+  color: #111111;
+  border-color: #ffd84d;
+}
+
+.stocks-export-disabled-vandana-stocks {
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+.stocks-summary-cards-vandana-stocks {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(180px, 1fr));
+  gap: 14px;
+}
+
+.stocks-card-vandana-stocks {
+  background: #ffffff;
+  border: 1px solid #f1d472;
+  border-radius: 18px;
+  padding: 18px;
+  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.05);
+  min-width: 0;
+}
+
+.stocks-card-ok-vandana-stocks {
+  border-color: #65b26f;
+}
+
+.stocks-card-warn-vandana-stocks {
+  border-color: #efb826;
+}
+
+.stocks-card-danger-vandana-stocks {
+  border-color: #e56f6f;
+}
+
+.stocks-card-title-vandana-stocks {
+  font-size: 13px;
+  color: #666666;
+  margin-bottom: 8px;
+  line-height: 1.5;
+}
+
+.stocks-card-value-vandana-stocks {
+  font-size: 24px;
+  font-weight: 800;
+  color: #111111;
+  word-break: break-word;
+}
+
+.stocks-chips-vandana-stocks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.stocks-chip-vandana-stocks {
+  padding: 10px 16px;
+  background: #ffffff;
+  border: 1px solid #d7d7d7;
+  color: #2c2c2c;
+  border-radius: 999px;
+  cursor: pointer;
+  font-weight: 700;
+  transition: 0.2s ease;
+}
+
+.stocks-chip-vandana-stocks:hover {
+  border-color: #e2b93b;
+  background: #fff6cf;
+}
+
+.stocks-chip-vandana-stocks.active-vandana-stocks {
+  background: #111111;
+  color: #ffd84d;
+  border-color: #111111;
+}
+
+.stocks-control-row-vandana-stocks {
+  display: grid;
+  grid-template-columns: minmax(280px, 1.5fr) minmax(200px, 0.8fr) minmax(220px, 0.9fr);
+  gap: 14px;
+  align-items: center;
+}
+
+.stocks-search-wrap-vandana-stocks {
+  position: relative;
+  width: 100%;
+}
+
+.stocks-search-vandana-stocks,
+.stocks-select-vandana-stocks {
+  width: 100%;
+  height: 48px;
+  padding: 0 14px;
+  border-radius: 14px;
+  border: 1px solid #d7d7d7;
+  background: #ffffff;
+  color: #141414;
+  outline: none;
+  font-size: 14px;
+  box-sizing: border-box;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.04);
+}
+
+.stocks-search-vandana-stocks::placeholder {
+  color: #8a8a8a;
+}
+
+.stocks-search-vandana-stocks:focus,
+.stocks-select-vandana-stocks:focus,
+.stocks-threshold-vandana-stocks input:focus {
+  border-color: #e2b93b;
+  box-shadow: 0 0 0 4px rgba(226, 185, 59, 0.14);
+}
+
+.stocks-clear-vandana-stocks {
+  position: absolute;
+  top: 50%;
+  right: 10px;
+  transform: translateY(-50%);
+  width: 30px;
+  height: 30px;
+  border: 0;
+  border-radius: 50%;
+  background: #f5f5f5;
+  color: #444444;
+  cursor: pointer;
+}
+
+.stocks-clear-vandana-stocks:hover {
+  background: #ececec;
+}
+
+.stocks-thresholds-vandana-stocks {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.stocks-threshold-vandana-stocks {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #ffffff;
+  border: 1px solid #e9d594;
+  padding: 10px 12px;
+  border-radius: 14px;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.04);
+}
+
+.stocks-threshold-vandana-stocks label {
+  font-size: 13px;
+  color: #575757;
+  font-weight: 600;
+}
+
+.stocks-threshold-vandana-stocks input {
+  width: 100px;
+  height: 40px;
+  padding: 0 10px;
+  border-radius: 10px;
+  border: 1px solid #d7d7d7;
+  background: #ffffff;
+  color: #141414;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.stocks-section-table-vandana-stocks {
+  width: 100%;
+  background: #ffffff;
+  padding: 18px;
+  border-radius: 22px;
+  border: 1px solid #f1d472;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.06);
+  overflow: hidden;
+}
+
+.stocks-table-head-vandana-stocks {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-}
-
-.seg {
-  display: inline-flex;
-  background: #0f0f0f;
-  border: 1px solid rgba(255, 215, 0, 0.35);
-  border-radius: 999px;
-  padding: 4px;
-  gap: 4px;
-}
-
-.seg-btn {
-  padding: 8px 14px;
-  border: 0;
-  background: transparent;
-  color: #ddd;
-  border-radius: 999px;
-  cursor: pointer;
-  font-weight: 700;
-}
-
-.seg-btn.active {
-  background: gold;
-  color: #111;
-}
-
-.right-tools {
-  display: flex;
-  gap: 10px;
-}
-
-.export {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 16px;
-  border: 2px solid gold;
-  color: gold;
-  border-radius: 10px;
-  text-decoration: none;
-  font-weight: 700;
-}
-
-.export.disabled {
-  opacity: .6;
-  pointer-events: none;
-}
-
-.summary-cards {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(140px, 1fr));
-  gap: 12px;
-}
-
-.card {
-  background: #0d0d0d;
-  border: 1px solid gold;
-  border-radius: 12px;
-  padding: 12px 14px;
-  box-shadow: 0 0 8px rgba(255, 215, 0, 0.15);
-}
-
-.card.ok {
-  border-color: #3cb371;
-}
-
-.card.warn {
-  border-color: #ffbf00;
-}
-
-.card.danger {
-  border-color: #ff6b6b;
-}
-
-.card-title {
-  font-size: 12px;
-  color: #d9d9d9;
-  margin-bottom: 6px;
-}
-
-.card-value {
-  font-size: 22px;
-  font-weight: 700;
-  color: gold;
-}
-
-.chips {
-  display: flex;
+  margin-bottom: 14px;
   flex-wrap: wrap;
-  gap: 8px;
 }
 
-.chip {
-  padding: 8px 14px;
-  background: transparent;
-  border: 2px solid #888;
-  color: #eee;
+.stocks-table-head-vandana-stocks h3 {
+  margin: 0;
+  font-size: 20px;
+  color: #111111;
+}
+
+.stocks-table-head-vandana-stocks span {
+  font-size: 13px;
+  font-weight: 700;
+  color: #6b6b6b;
+  background: #fff6cf;
+  padding: 8px 12px;
   border-radius: 999px;
-  cursor: pointer;
-  font-weight: 700;
-  transition: .2s;
 }
 
-.chip:hover {
-  border-color: gold;
-  color: gold;
+.stocks-loading-vandana-stocks {
+  margin: 0;
+  padding: 18px 4px;
+  color: #666666;
+  font-weight: 600;
 }
 
-.chip.active {
-  border-color: gold;
-  background: #050505;
-  color: gold;
-}
-
-.control-row {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-  align-items: center;
-}
-
-.search-wrap {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-}
-
-.search,
-.select {
-  padding: 10px 12px;
-  border-radius: 10px;
-  border: 1px solid gold;
-  background: #0d0d0d;
-  color: white;
-  outline: none;
-  min-width: 260px;
-}
-
-.clear {
-  position: absolute;
-  right: 8px;
-  background: transparent;
-  border: 0;
-  color: #aaa;
-  cursor: pointer;
-  font-size: 14px;
-}
-
-.refresh {
-  padding: 10px 16px;
-  background: none;
-  border: 2px solid gold;
-  color: gold;
-  font-weight: 700;
-  border-radius: 10px;
-  cursor: pointer;
-  transition: .2s;
-}
-
-.refresh:hover {
-  background: gold;
-  color: black;
-}
-
-.thresholds {
-  display: flex;
-  gap: 12px;
-  flex-wrap: wrap;
-  align-items: center;
-}
-
-.threshold {
-  display: flex;
-  gap: 6px;
-  align-items: center;
-  background: #0d0d0d;
-  border: 1px solid gold;
-  padding: 8px 10px;
-  border-radius: 10px;
-}
-
-.threshold label {
-  font-size: 12px;
-  color: #d9d9d9;
-}
-
-.threshold input {
-  width: 90px;
-  padding: 6px 8px;
-  border-radius: 8px;
-  border: 1px solid gold;
-  background: #0d0d0d;
-  color: white;
-  outline: none;
-}
-
-.section-table {
-  width: 100%;
-  background-color: #0d0d0d;
-  padding: 16px;
-  border-radius: 12px;
-  box-shadow: 0 0 10px rgba(255, 215, 0, 0.2);
-}
-
-.section-table h3 {
-  font-size: 18px;
-  margin-bottom: 10px;
-  border-bottom: 2px solid gold;
-  padding-bottom: 6px;
-}
-
-.table-container {
+.stocks-table-container-vandana-stocks {
   width: 100%;
   overflow-x: auto;
-  border-radius: 10px;
-  border: 1px solid rgba(255, 215, 0, 0.35);
+  overflow-y: hidden;
+  border: 1px solid #ececec;
+  border-radius: 16px;
 }
 
-.stock-table {
+.stocks-stock-table-vandana-stocks {
   width: 100%;
   border-collapse: separate;
   border-spacing: 0;
-  color: #f3f3f3;
+  color: #1f1f1f;
   table-layout: fixed;
-  min-width: 1200px;
+  min-width: 1600px;
+  background: #ffffff;
 }
 
-.stock-table thead th {
+.stocks-stock-table-vandana-stocks thead th {
   position: sticky;
   top: 0;
-  background-color: #1a1a1a;
-  color: gold;
-  font-weight: 700;
+  background: #fff2b8;
+  color: #111111;
+  font-weight: 800;
   z-index: 2;
-  border-bottom: 1px solid gold;
+  border-bottom: 1px solid #ecd57a;
 }
 
-.stock-table th,
-.stock-table td {
-  padding: 10px 8px;
-  border-right: 1px solid rgba(255, 215, 0, 0.25);
-  border-bottom: 1px solid rgba(255, 215, 0, 0.2);
+.stocks-stock-table-vandana-stocks th,
+.stocks-stock-table-vandana-stocks td {
+  padding: 12px 10px;
+  border-right: 1px solid #efefef;
+  border-bottom: 1px solid #efefef;
   vertical-align: middle;
   font-size: 14px;
 }
 
-.stock-table th:last-child,
-.stock-table td:last-child {
+.stocks-stock-table-vandana-stocks th:last-child,
+.stocks-stock-table-vandana-stocks td:last-child {
   border-right: 0;
 }
 
-.al {
+.stocks-stock-table-vandana-stocks tbody tr:nth-child(even) td {
+  background: #fffdf7;
+}
+
+.stocks-stock-table-vandana-stocks tbody tr:hover td {
+  background: #fff8de;
+}
+
+.stocks-al-vandana-stocks {
   text-align: left;
 }
 
-.ar {
+.stocks-ar-vandana-stocks {
   text-align: right;
 }
 
-.mono {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+.stocks-mono-vandana-stocks {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
 }
 
-.truncate {
+.stocks-truncate-vandana-stocks {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.status {
-  display: inline-block;
-  padding: 4px 10px;
+.stocks-status-vandana-stocks {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 64px;
+  padding: 6px 10px;
   border-radius: 999px;
   font-size: 12px;
+  font-weight: 800;
   border: 1px solid currentColor;
   line-height: 1;
 }
 
-.status.ok {
-  color: #3cb371;
+.stocks-status-vandana-stocks.ok {
+  color: #2f8a57;
+  background: rgba(47, 138, 87, 0.08);
 }
 
-.status.low {
-  color: #ffbf00;
+.stocks-status-vandana-stocks.low {
+  color: #c08a00;
+  background: rgba(240, 177, 0, 0.12);
 }
 
-.status.high {
-  color: #1e90ff;
+.stocks-status-vandana-stocks.high {
+  color: #1f6fd8;
+  background: rgba(31, 111, 216, 0.08);
 }
 
-.status.out {
-  color: #ff6b6b;
+.stocks-status-vandana-stocks.out {
+  color: #d24f4f;
+  background: rgba(210, 79, 79, 0.08);
 }
 
-tr.row-low td {
-  background: rgba(255, 191, 0, 0.05);
+.stocks-row-low-vandana-stocks td {
+  background: rgba(255, 193, 7, 0.06);
 }
 
-tr.row-high td {
-  background: rgba(30, 144, 255, 0.05);
+.stocks-row-high-vandana-stocks td {
+  background: rgba(33, 150, 243, 0.05);
 }
 
-tr.row-out td {
-  background: rgba(255, 107, 107, 0.06);
+.stocks-row-out-vandana-stocks td {
+  background: rgba(244, 67, 54, 0.06);
 }
 
-@media (max-width: 1200px) {
-  .summary-cards {
-    grid-template-columns: repeat(2, minmax(140px, 1fr));
+.stocks-empty-vandana-stocks {
+  padding: 18px;
+  text-align: center;
+  color: #7a7a7a;
+  font-weight: 700;
+}
+
+@media (max-width: 1280px) {
+  .stocks-summary-cards-vandana-stocks {
+    grid-template-columns: repeat(3, minmax(180px, 1fr));
   }
 
-  .search {
-    min-width: 200px;
+  .stocks-control-row-vandana-stocks {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .stocks-control-row-vandana-stocks .stocks-search-wrap-vandana-stocks {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 900px) {
+  .stocks-page-vandana-stocks {
+    padding: 124px 14px 24px;
+  }
+
+  .stocks-hero-vandana-stocks {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .stocks-hero-actions-vandana-stocks {
+    width: 100%;
+  }
+
+  .stocks-summary-cards-vandana-stocks {
+    grid-template-columns: repeat(2, minmax(160px, 1fr));
+  }
+
+  .stocks-control-row-vandana-stocks {
+    grid-template-columns: 1fr;
+  }
+
+  .stocks-export-vandana-stocks,
+  .stocks-refresh-vandana-stocks {
+    flex: 1 1 160px;
+  }
+}
+
+@media (max-width: 600px) {
+  .stocks-page-vandana-stocks {
+    padding: 132px 12px 20px;
+  }
+
+  .stocks-hero-vandana-stocks,
+  .stocks-section-table-vandana-stocks {
+    padding: 16px;
+  }
+
+  .stocks-title-vandana-stocks {
+    font-size: 24px;
+  }
+
+  .stocks-summary-cards-vandana-stocks {
+    grid-template-columns: 1fr;
+  }
+
+  .stocks-seg-vandana-stocks {
+    width: 100%;
+    border-radius: 18px;
+  }
+
+  .stocks-seg-btn-vandana-stocks {
+    flex: 1 1 calc(50% - 6px);
+  }
+
+  .stocks-chips-vandana-stocks {
+    gap: 8px;
+  }
+
+  .stocks-chip-vandana-stocks {
+    width: 100%;
+    text-align: center;
+  }
+
+  .stocks-thresholds-vandana-stocks {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .stocks-threshold-vandana-stocks {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .stocks-threshold-vandana-stocks input {
+    width: 120px;
   }
 }

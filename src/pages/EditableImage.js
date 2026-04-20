@@ -1,20 +1,20 @@
 import React, { useRef, useState } from 'react'
 import './EditableImage.css'
 
-const API_BASE = process.env.REACT_APP_API_BASE_URL || 'https://taras-kart-backend.vercel.app'
+const API_BASE = process.env.REACT_APP_API_BASE_URL || 'https://vandhana-shopping-mall-backend.vercel.app'
 const MAX_FILE_SIZE_BYTES = 3.5 * 1024 * 1024
 
 export default function EditableImage({ slotId, section, imageUrl, defaultUrl, altText, onUpdated }) {
   const inputRef = useRef(null)
   const [uploading, setUploading] = useState(false)
 
-  const handleClick = e => {
+  const handleClick = (e) => {
     e.preventDefault()
     e.stopPropagation()
     if (inputRef.current) inputRef.current.click()
   }
 
-  const handleChange = async e => {
+  const handleChange = async (e) => {
     const file = e.target.files && e.target.files[0]
     if (!file) return
 
@@ -37,7 +37,7 @@ export default function EditableImage({ slotId, section, imageUrl, defaultUrl, a
 
       if (!uploadRes.ok) {
         if (uploadRes.status === 413) {
-          alert('Image is too large for the server. Please upload a smaller image (under 3.5 MB).')
+          alert('Image is too large for the server. Please upload a smaller image under 3.5 MB.')
         } else {
           alert('Failed to upload image.')
         }
@@ -70,7 +70,7 @@ export default function EditableImage({ slotId, section, imageUrl, defaultUrl, a
 
       const updated = await patchRes.json()
       if (onUpdated) onUpdated(updated)
-    } catch (err) {
+    } catch {
       alert('Something went wrong while uploading. Please try again.')
     } finally {
       setUploading(false)
@@ -82,12 +82,26 @@ export default function EditableImage({ slotId, section, imageUrl, defaultUrl, a
 
   return (
     <div className="editable-image-wrapper">
-      <img src={imageUrl || defaultUrl} alt={altText || ''} className="editable-image-img" />
+      <img
+        src={imageUrl || defaultUrl}
+        alt={altText || ''}
+        className="editable-image-img"
+      />
+
       <div className="editable-image-overlay">
-        <button type="button" className="editable-image-btn" onClick={handleClick} disabled={uploading}>
-          {label}
-        </button>
+        <div className="editable-image-overlay-content">
+          <span className="editable-image-badge">Editable</span>
+          <button
+            type="button"
+            className="editable-image-btn"
+            onClick={handleClick}
+            disabled={uploading}
+          >
+            {label}
+          </button>
+        </div>
       </div>
+
       <input
         ref={inputRef}
         type="file"

@@ -3,7 +3,7 @@ import './Stocks.css'
 import Navbar from './NavbarAdmin'
 import { useAuth } from './AdminAuth'
 
-const DEFAULT_API_BASE = 'https://taras-kart-backend.vercel.app'
+const DEFAULT_API_BASE = 'https://vandhana-shopping-mall-backend.vercel.app'
 const API_BASE_RAW =
   (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_BASE) ||
   (typeof process !== 'undefined' && process.env && process.env.REACT_APP_API_BASE) ||
@@ -18,11 +18,15 @@ const num = (v) => {
 const safe = (v) => (v == null ? '' : String(v))
 const nf = (v) => {
   const n = Number(v)
-  return Number.isFinite(n) ? n.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 }) : '-'
+  return Number.isFinite(n)
+    ? n.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })
+    : '-'
 }
 const cf = (v) => {
   const n = Number(v)
-  return Number.isFinite(n) ? n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '-'
+  return Number.isFinite(n)
+    ? n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    : '-'
 }
 
 export default function Stocks() {
@@ -56,11 +60,14 @@ export default function Stocks() {
       const token = localStorage.getItem('auth_token') || localStorage.getItem('admin_token') || ''
       const params = new URLSearchParams()
       if (gender !== 'ALL') params.set('gender', gender)
-      const res = await fetch(`${API_BASE}/api/branch/${encodeURIComponent(branchId)}/stock${params.toString() ? `?${params.toString()}` : ''}`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-        credentials: 'omit',
-        mode: 'cors'
-      })
+      const res = await fetch(
+        `${API_BASE}/api/branch/${encodeURIComponent(branchId)}/stock${params.toString() ? `?${params.toString()}` : ''}`,
+        {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+          credentials: 'omit',
+          mode: 'cors'
+        }
+      )
       const data = res.ok ? await res.json() : []
       setRaw(toArray(data))
     } catch {
@@ -120,7 +127,9 @@ export default function Stocks() {
     if (search.trim()) {
       const q = search.trim().toLowerCase()
       list = list.filter((r) =>
-        [r.brand, r.product, r.pattern, r.fit, r.mark, r.color, r.size, r.ean].some((x) => x.toLowerCase().includes(q))
+        [r.brand, r.product, r.pattern, r.fit, r.mark, r.color, r.size, r.ean].some((x) =>
+          x.toLowerCase().includes(q)
+        )
       )
     }
     const sorted = [...list]
@@ -192,185 +201,237 @@ export default function Stocks() {
   }
 
   return (
-    <div className="stocks-page">
+    <div className="stocks-page-vandana-stocks">
       <Navbar />
-      <div className="stocks-toolbar">
-        <div className="bar-row">
-          <div className="seg">
-            <button className={`seg-btn ${gender === 'ALL' ? 'active' : ''}`} onClick={() => onGenderChange('ALL')}>All</button>
-            <button className={`seg-btn ${gender === 'MEN' ? 'active' : ''}`} onClick={() => onGenderChange('MEN')}>Men</button>
-            <button className={`seg-btn ${gender === 'WOMEN' ? 'active' : ''}`} onClick={() => onGenderChange('WOMEN')}>Women</button>
-            <button className={`seg-btn ${gender === 'KIDS' ? 'active' : ''}`} onClick={() => onGenderChange('KIDS')}>Kids</button>
+
+      <div className="stocks-shell-vandana-stocks">
+        <div className="stocks-hero-vandana-stocks">
+          <div>
+            <h2 className="stocks-title-vandana-stocks">Stocks</h2>
+            <p className="stocks-subtitle-vandana-stocks">Live overview of branch inventory with clear stock alerts and smooth filtering.</p>
           </div>
-          <div className="right-tools">
+          <div className="stocks-hero-actions-vandana-stocks">
             {csvUrl ? (
-              <a className="export" href={csvUrl} download={`stock_${gender.toLowerCase()}.csv`}>Export CSV</a>
+              <a className="stocks-export-vandana-stocks" href={csvUrl} download={`stock_${gender.toLowerCase()}.csv`}>
+                Export CSV
+              </a>
             ) : (
-              <button className="export disabled" disabled>Export CSV</button>
+              <button className="stocks-export-vandana-stocks stocks-export-disabled-vandana-stocks" disabled>
+                Export CSV
+              </button>
             )}
-            <button className="refresh" onClick={fetchStocks}>{loading ? 'Loading...' : 'Refresh'}</button>
-          </div>
-        </div>
-
-        <div className="summary-cards">
-          <div className="card">
-            <div className="card-title">Total SKUs</div>
-            <div className="card-value">{nf(counts.totalSkus)}</div>
-          </div>
-          <div className="card">
-            <div className="card-title">Total Units</div>
-            <div className="card-value">{nf(counts.totalUnits)}</div>
-          </div>
-          <div className="card warn">
-            <div className="card-title">Low Stock</div>
-            <div className="card-value">{nf(counts.low)}</div>
-          </div>
-          <div className="card danger">
-            <div className="card-title">Out of Stock</div>
-            <div className="card-value">{nf(counts.out)}</div>
-          </div>
-          <div className="card ok">
-            <div className="card-title">High Stock</div>
-            <div className="card-value">{nf(counts.high)}</div>
-          </div>
-        </div>
-
-        <div className="chips">
-          {['All', 'Alerts', 'Low Stock', 'High Stock', 'Out of Stock'].map((c) => (
-            <button key={c} className={`chip ${chip === c ? 'active' : ''}`} onClick={() => setChip(c)}>
-              {c}
+            <button className="stocks-refresh-vandana-stocks" onClick={fetchStocks}>
+              {loading ? 'Loading...' : 'Refresh'}
             </button>
-          ))}
+          </div>
         </div>
 
-        <div className="control-row">
-          <div className="search-wrap">
-            <input
-              ref={searchRef}
-              className="search"
-              placeholder="Search brand, product, pattern, fit, mark, color, size, EAN"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-            {search && <button className="clear" onClick={clearSearch}>✕</button>}
+        <div className="stocks-toolbar-vandana-stocks">
+          <div className="stocks-bar-row-vandana-stocks">
+            <div className="stocks-seg-vandana-stocks">
+              <button
+                className={`stocks-seg-btn-vandana-stocks ${gender === 'ALL' ? 'active-vandana-stocks' : ''}`}
+                onClick={() => onGenderChange('ALL')}
+              >
+                All
+              </button>
+              <button
+                className={`stocks-seg-btn-vandana-stocks ${gender === 'MEN' ? 'active-vandana-stocks' : ''}`}
+                onClick={() => onGenderChange('MEN')}
+              >
+                Men
+              </button>
+              <button
+                className={`stocks-seg-btn-vandana-stocks ${gender === 'WOMEN' ? 'active-vandana-stocks' : ''}`}
+                onClick={() => onGenderChange('WOMEN')}
+              >
+                Women
+              </button>
+              <button
+                className={`stocks-seg-btn-vandana-stocks ${gender === 'KIDS' ? 'active-vandana-stocks' : ''}`}
+                onClick={() => onGenderChange('KIDS')}
+              >
+                Kids
+              </button>
+            </div>
           </div>
-          <select className="select" value={brand} onChange={(e) => setBrand(e.target.value)}>
-            {brands.map((b) => (
-              <option key={b} value={b}>
-                {b}
-              </option>
+
+          <div className="stocks-summary-cards-vandana-stocks">
+            <div className="stocks-card-vandana-stocks">
+              <div className="stocks-card-title-vandana-stocks">Total SKUs</div>
+              <div className="stocks-card-value-vandana-stocks">{nf(counts.totalSkus)}</div>
+            </div>
+            <div className="stocks-card-vandana-stocks">
+              <div className="stocks-card-title-vandana-stocks">Total Units</div>
+              <div className="stocks-card-value-vandana-stocks">{nf(counts.totalUnits)}</div>
+            </div>
+            <div className="stocks-card-vandana-stocks stocks-card-warn-vandana-stocks">
+              <div className="stocks-card-title-vandana-stocks">Low Stock</div>
+              <div className="stocks-card-value-vandana-stocks">{nf(counts.low)}</div>
+            </div>
+            <div className="stocks-card-vandana-stocks stocks-card-danger-vandana-stocks">
+              <div className="stocks-card-title-vandana-stocks">Out of Stock</div>
+              <div className="stocks-card-value-vandana-stocks">{nf(counts.out)}</div>
+            </div>
+            <div className="stocks-card-vandana-stocks stocks-card-ok-vandana-stocks">
+              <div className="stocks-card-title-vandana-stocks">High Stock</div>
+              <div className="stocks-card-value-vandana-stocks">{nf(counts.high)}</div>
+            </div>
+          </div>
+
+          <div className="stocks-chips-vandana-stocks">
+            {['All', 'Alerts', 'Low Stock', 'High Stock', 'Out of Stock'].map((c) => (
+              <button
+                key={c}
+                className={`stocks-chip-vandana-stocks ${chip === c ? 'active-vandana-stocks' : ''}`}
+                onClick={() => setChip(c)}
+              >
+                {c}
+              </button>
             ))}
-          </select>
-          <select className="select" value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
-            <option value="recent">Sort: Recent</option>
-            <option value="qty_desc">Qty: High → Low</option>
-            <option value="qty_asc">Qty: Low → High</option>
-            <option value="mrp_desc">MRP: High → Low</option>
-            <option value="mrp_asc">MRP: Low → High</option>
-            <option value="sale_desc">Sale Price: High → Low</option>
-            <option value="sale_asc">Sale Price: Low → High</option>
-            <option value="brand_asc">Brand: A → Z</option>
-          </select>
+          </div>
+
+          <div className="stocks-control-row-vandana-stocks">
+            <div className="stocks-search-wrap-vandana-stocks">
+              <input
+                ref={searchRef}
+                className="stocks-search-vandana-stocks"
+                placeholder="Search brand, product, pattern, fit, mark, color, size, EAN"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+              {search && (
+                <button className="stocks-clear-vandana-stocks" onClick={clearSearch}>
+                  ✕
+                </button>
+              )}
+            </div>
+
+            <select className="stocks-select-vandana-stocks" value={brand} onChange={(e) => setBrand(e.target.value)}>
+              {brands.map((b) => (
+                <option key={b} value={b}>
+                  {b}
+                </option>
+              ))}
+            </select>
+
+            <select className="stocks-select-vandana-stocks" value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
+              <option value="recent">Sort: Recent</option>
+              <option value="qty_desc">Qty: High to Low</option>
+              <option value="qty_asc">Qty: Low to High</option>
+              <option value="mrp_desc">MRP: High to Low</option>
+              <option value="mrp_asc">MRP: Low to High</option>
+              <option value="sale_desc">Sale Price: High to Low</option>
+              <option value="sale_asc">Sale Price: Low to High</option>
+              <option value="brand_asc">Brand: A to Z</option>
+            </select>
+          </div>
+
+          <div className="stocks-thresholds-vandana-stocks">
+            <div className="stocks-threshold-vandana-stocks">
+              <label>Low ≤</label>
+              <input
+                type="number"
+                min="0"
+                value={lowThreshold}
+                onChange={(e) => setLowThreshold(Math.max(0, parseInt(e.target.value || '0', 10)))}
+              />
+            </div>
+            <div className="stocks-threshold-vandana-stocks">
+              <label>High ≥</label>
+              <input
+                type="number"
+                min="0"
+                value={highThreshold}
+                onChange={(e) => setHighThreshold(Math.max(0, parseInt(e.target.value || '0', 10)))}
+              />
+            </div>
+          </div>
         </div>
 
-        <div className="thresholds">
-          <div className="threshold">
-            <label>Low ≤</label>
-            <input
-              type="number"
-              min="0"
-              value={lowThreshold}
-              onChange={(e) => setLowThreshold(Math.max(0, parseInt(e.target.value || '0', 10)))}
-            />
+        <div className="stocks-section-table-vandana-stocks">
+          <div className="stocks-table-head-vandana-stocks">
+            <h3>Live Stock Overview</h3>
+            <span>{nf(filtered.length)} records</span>
           </div>
-          <div className="threshold">
-            <label>High ≥</label>
-            <input
-              type="number"
-              min="0"
-              value={highThreshold}
-              onChange={(e) => setHighThreshold(Math.max(0, parseInt(e.target.value || '0', 10)))}
-            />
-          </div>
-        </div>
-      </div>
 
-      <div className="section-table">
-        <h3>Live Stock Overview</h3>
-        {loading ? (
-          <p>Loading stocks...</p>
-        ) : (
-          <div className="table-container">
-            <table className="stock-table">
-              <colgroup>
-                <col style={{ width: '70px' }} />
-                <col style={{ width: '90px' }} />
-                <col style={{ width: '160px' }} />
-                <col style={{ width: '220px' }} />
-                <col style={{ width: '120px' }} />
-                <col style={{ width: '120px' }} />
-                <col style={{ width: '110px' }} />
-                <col style={{ width: '90px' }} />
-                <col style={{ width: '160px' }} />
-                <col style={{ width: '160px' }} />
-                <col style={{ width: '120px' }} />
-                <col style={{ width: '130px' }} />
-                <col style={{ width: '130px' }} />
-                <col style={{ width: '100px' }} />
-                <col style={{ width: '110px' }} />
-              </colgroup>
-              <thead>
-                <tr>
-                  <th>Sl. No</th>
-                  <th>Status</th>
-                  <th className="al">Brand</th>
-                  <th className="al">Product</th>
-                  <th className="al">Pattern</th>
-                  <th className="al">Fit</th>
-                  <th className="al">Mark</th>
-                  <th>Size</th>
-                  <th className="al">Colour</th>
-                  <th className="al">EAN</th>
-                  <th className="ar">MRP</th>
-                  <th className="ar">Sale Price</th>
-                  <th className="ar">Cost Price</th>
-                  <th className="ar">Qty</th>
-                  <th className="ar">Reserved</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map((s, index) => (
-                  <tr key={s.id} className={`row-${s.status}`}>
-                    <td className="mono">{index + 1}</td>
-                    <td>
-                      <span className={`status ${s.status}`}>
-                        {s.status === 'out' ? 'Out' : s.status === 'low' ? 'Low' : s.status === 'high' ? 'High' : 'OK'}
-                      </span>
-                    </td>
-                    <td className="al truncate" title={s.brand}>{s.brand || '-'}</td>
-                    <td className="al truncate" title={s.product}>{s.product || '-'}</td>
-                    <td className="al truncate" title={s.pattern}>{s.pattern || '-'}</td>
-                    <td className="al truncate" title={s.fit}>{s.fit || '-'}</td>
-                    <td className="al truncate" title={s.mark}>{s.mark || '-'}</td>
-                    <td className="mono">{s.size || '-'}</td>
-                    <td className="al truncate" title={s.color}>{s.color || '-'}</td>
-                    <td className="al mono truncate" title={s.ean}>{s.ean || '-'}</td>
-                    <td className="ar">{cf(s.mrp)}</td>
-                    <td className="ar">{cf(s.sale)}</td>
-                    <td className="ar">{cf(s.cost)}</td>
-                    <td className="ar">{nf(s.quantity)}</td>
-                    <td className="ar">{nf(s.reserved)}</td>
-                  </tr>
-                ))}
-                {!filtered.length && (
+          {loading ? (
+            <p className="stocks-loading-vandana-stocks">Loading stocks...</p>
+          ) : (
+            <div className="stocks-table-container-vandana-stocks">
+              <table className="stocks-stock-table-vandana-stocks">
+                <colgroup>
+                  <col style={{ width: '70px' }} />
+                  <col style={{ width: '100px' }} />
+                  <col style={{ width: '160px' }} />
+                  <col style={{ width: '220px' }} />
+                  <col style={{ width: '120px' }} />
+                  <col style={{ width: '120px' }} />
+                  <col style={{ width: '110px' }} />
+                  <col style={{ width: '90px' }} />
+                  <col style={{ width: '160px' }} />
+                  <col style={{ width: '160px' }} />
+                  <col style={{ width: '120px' }} />
+                  <col style={{ width: '130px' }} />
+                  <col style={{ width: '130px' }} />
+                  <col style={{ width: '100px' }} />
+                  <col style={{ width: '110px' }} />
+                </colgroup>
+                <thead>
                   <tr>
-                    <td colSpan="15" style={{ padding: 16, color: 'gold' }}>No matching records</td>
+                    <th>Sl. No</th>
+                    <th>Status</th>
+                    <th className="stocks-al-vandana-stocks">Brand</th>
+                    <th className="stocks-al-vandana-stocks">Product</th>
+                    <th className="stocks-al-vandana-stocks">Pattern</th>
+                    <th className="stocks-al-vandana-stocks">Fit</th>
+                    <th className="stocks-al-vandana-stocks">Mark</th>
+                    <th>Size</th>
+                    <th className="stocks-al-vandana-stocks">Colour</th>
+                    <th className="stocks-al-vandana-stocks">EAN</th>
+                    <th className="stocks-ar-vandana-stocks">MRP</th>
+                    <th className="stocks-ar-vandana-stocks">Sale Price</th>
+                    <th className="stocks-ar-vandana-stocks">Cost Price</th>
+                    <th className="stocks-ar-vandana-stocks">Qty</th>
+                    <th className="stocks-ar-vandana-stocks">Reserved</th>
                   </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        )}
+                </thead>
+                <tbody>
+                  {filtered.map((s, index) => (
+                    <tr key={s.id} className={`stocks-row-${s.status}-vandana-stocks`}>
+                      <td className="stocks-mono-vandana-stocks">{index + 1}</td>
+                      <td>
+                        <span className={`stocks-status-vandana-stocks ${s.status}`}>
+                          {s.status === 'out' ? 'Out' : s.status === 'low' ? 'Low' : s.status === 'high' ? 'High' : 'OK'}
+                        </span>
+                      </td>
+                      <td className="stocks-al-vandana-stocks stocks-truncate-vandana-stocks" title={s.brand}>{s.brand || '-'}</td>
+                      <td className="stocks-al-vandana-stocks stocks-truncate-vandana-stocks" title={s.product}>{s.product || '-'}</td>
+                      <td className="stocks-al-vandana-stocks stocks-truncate-vandana-stocks" title={s.pattern}>{s.pattern || '-'}</td>
+                      <td className="stocks-al-vandana-stocks stocks-truncate-vandana-stocks" title={s.fit}>{s.fit || '-'}</td>
+                      <td className="stocks-al-vandana-stocks stocks-truncate-vandana-stocks" title={s.mark}>{s.mark || '-'}</td>
+                      <td className="stocks-mono-vandana-stocks">{s.size || '-'}</td>
+                      <td className="stocks-al-vandana-stocks stocks-truncate-vandana-stocks" title={s.color}>{s.color || '-'}</td>
+                      <td className="stocks-al-vandana-stocks stocks-mono-vandana-stocks stocks-truncate-vandana-stocks" title={s.ean}>{s.ean || '-'}</td>
+                      <td className="stocks-ar-vandana-stocks">{cf(s.mrp)}</td>
+                      <td className="stocks-ar-vandana-stocks">{cf(s.sale)}</td>
+                      <td className="stocks-ar-vandana-stocks">{cf(s.cost)}</td>
+                      <td className="stocks-ar-vandana-stocks">{nf(s.quantity)}</td>
+                      <td className="stocks-ar-vandana-stocks">{nf(s.reserved)}</td>
+                    </tr>
+                  ))}
+                  {!filtered.length && (
+                    <tr>
+                      <td colSpan="15" className="stocks-empty-vandana-stocks">
+                        No matching records
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   )
