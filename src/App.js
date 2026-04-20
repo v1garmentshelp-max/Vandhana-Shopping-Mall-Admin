@@ -13,10 +13,17 @@ import POS from './pages/POS'
 import AdminHomepageImages from './pages/AdminHomepageImages'
 import OrderIssues from './pages/OrderIssues'
 import ReturnReview from './pages/ReturnReview'
+import LoginAdmin from './pages/LoginAdmin'
 
 function RequireAuth({ children }) {
   const { token } = useAuth()
   if (!token) return <Navigate to="/login" replace />
+  return children
+}
+
+function PublicRoute({ children }) {
+  const { token } = useAuth()
+  if (token) return <Navigate to="/" replace />
   return children
 }
 
@@ -26,17 +33,104 @@ export default function App() {
       <LoadingProvider>
         <Router>
           <Routes>
-            <Route path="/" element={<RequireAuth><HomePage /></RequireAuth>} />
-            <Route path="/transactions" element={<RequireAuth><Transaction /></RequireAuth>} />
-            <Route path="/stocks" element={<RequireAuth><Stocks /></RequireAuth>} />
-            <Route path="/sales" element={<RequireAuth><Sales /></RequireAuth>} />
-            <Route path="/customers" element={<RequireAuth><Customers /></RequireAuth>} />
-            <Route path="/pos" element={<RequireAuth><POS /></RequireAuth>} />
-            <Route path="/import" element={<RequireAuth><ImportStock /></RequireAuth>} />
-            <Route path="/homepage-images" element={<RequireAuth><AdminHomepageImages /></RequireAuth>} />
-            <Route path="/order-issues" element={<RequireAuth><OrderIssues /></RequireAuth>} />
-            <Route path="/returns/:id" element={<RequireAuth><ReturnReview /></RequireAuth>} />
-            <Route path="/b2b-orders" element={<RequireAuth><B2BOrders /></RequireAuth>} />
+            <Route
+              path="/login"
+              element={
+                <PublicRoute>
+                  <LoginAdmin />
+                </PublicRoute>
+              }
+            />
+
+            <Route
+              path="/"
+              element={
+                <RequireAuth>
+                  <HomePage />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/transactions"
+              element={
+                <RequireAuth>
+                  <Transaction />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/stocks"
+              element={
+                <RequireAuth>
+                  <Stocks />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/sales"
+              element={
+                <RequireAuth>
+                  <Sales />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/customers"
+              element={
+                <RequireAuth>
+                  <Customers />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/pos"
+              element={
+                <RequireAuth>
+                  <POS />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/import"
+              element={
+                <RequireAuth>
+                  <ImportStock />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/homepage-images"
+              element={
+                <RequireAuth>
+                  <AdminHomepageImages />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/order-issues"
+              element={
+                <RequireAuth>
+                  <OrderIssues />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/returns/:id"
+              element={
+                <RequireAuth>
+                  <ReturnReview />
+                </RequireAuth>
+              }
+            />
+            <Route
+              path="/b2b-orders"
+              element={
+                <RequireAuth>
+                  <B2BOrders />
+                </RequireAuth>
+              }
+            />
+
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Router>
