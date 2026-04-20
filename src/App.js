@@ -8,7 +8,6 @@ import Transaction from './pages/Transaction'
 import Stocks from './pages/Stocks'
 import Sales from './pages/Sales'
 import Customers from './pages/Customers'
-import LoginAdmin from './pages/LoginAdmin'
 import ImportStock from './pages/ImportStock'
 import POS from './pages/POS'
 import AdminHomepageImages from './pages/AdminHomepageImages'
@@ -27,7 +26,6 @@ export default function App() {
       <LoadingProvider>
         <Router>
           <Routes>
-            {/* <Route path="/login" element={<LoginAdmin />} /> */}
             <Route path="/" element={<RequireAuth><HomePage /></RequireAuth>} />
             <Route path="/transactions" element={<RequireAuth><Transaction /></RequireAuth>} />
             <Route path="/stocks" element={<RequireAuth><Stocks /></RequireAuth>} />
