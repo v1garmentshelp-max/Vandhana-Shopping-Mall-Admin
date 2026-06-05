@@ -10,7 +10,7 @@ import Sales from './pages/Sales'
 import Customers from './pages/Customers'
 import ImportStock from './pages/ImportStock'
 import POS from './pages/POS'
-import AdminHomepageImages from './pages/AdminHomepageImages'
+/*import AdminHomepageImages from './pages/AdminHomepageImages' */
 import OrderIssues from './pages/OrderIssues'
 import ReturnReview from './pages/ReturnReview'
 import LoginAdmin from './pages/LoginAdmin'
@@ -41,7 +41,6 @@ export default function App() {
                 </PublicRoute>
               }
             />
-
             <Route
               path="/"
               element={
@@ -98,14 +97,14 @@ export default function App() {
                 </RequireAuth>
               }
             />
-            <Route
+           {/* <Route
               path="/homepage-images"
               element={
                 <RequireAuth>
                   <AdminHomepageImages />
                 </RequireAuth>
               }
-            />
+            /> */}
             <Route
               path="/order-issues"
               element={
@@ -130,7 +129,6 @@ export default function App() {
                 </RequireAuth>
               }
             />
-
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Router>
