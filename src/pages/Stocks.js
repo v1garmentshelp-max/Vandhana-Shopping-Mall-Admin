@@ -9,19 +9,33 @@ const API_BASE_RAW =
   (typeof process !== 'undefined' && process.env && process.env.REACT_APP_API_BASE) ||
   DEFAULT_API_BASE
 const API_BASE = API_BASE_RAW.replace(/\/+$/, '')
+const DEFAULT_BRANCH_ID = 3
 
-const toArray = (x) => (Array.isArray(x) ? x : [])
+const toArray = (x) => {
+  if (Array.isArray(x)) return x
+  if (Array.isArray(x?.data)) return x.data
+  if (Array.isArray(x?.rows)) return x.rows
+  if (Array.isArray(x?.items)) return x.items
+  if (Array.isArray(x?.stock)) return x.stock
+  if (Array.isArray(x?.stocks)) return x.stocks
+  if (Array.isArray(x?.products)) return x.products
+  return []
+}
+
 const num = (v) => {
   const n = typeof v === 'number' ? v : parseFloat(String(v ?? '').trim())
   return Number.isFinite(n) ? n : 0
 }
+
 const safe = (v) => (v == null ? '' : String(v))
+
 const nf = (v) => {
   const n = Number(v)
   return Number.isFinite(n)
     ? n.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })
     : '-'
 }
+
 const cf = (v) => {
   const n = Number(v)
   return Number.isFinite(n)
@@ -29,9 +43,22 @@ const cf = (v) => {
     : '-'
 }
 
+const normalizeGender = (value) => {
+  const v = String(value || '').trim().toUpperCase()
+  if (v.includes('WOMEN') || v === 'FEMALE') return 'WOMEN'
+  if (v.includes('KID') || v.includes('CHILD')) return 'KIDS'
+  if (v.includes('MEN') || v === 'MALE') return 'MEN'
+  return v || 'ALL'
+}
+
 export default function Stocks() {
-  const { user } = useAuth()
-  const branchId = user?.branch_id
+  const { user, token } = useAuth()
+  const role = String(user?.role_enum || user?.role || '').toUpperCase()
+  const userBranchId = Number(user?.branch_id || 0)
+  const isSuper = role === 'SUPER_ADMIN'
+  const initialBranchId = userBranchId || Number(localStorage.getItem('stocks_branch_id') || DEFAULT_BRANCH_ID)
+
+  const [selectedBranchId, setSelectedBranchId] = useState(initialBranchId)
   const [raw, setRaw] = useState([])
   const [loading, setLoading] = useState(true)
   const [chip, setChip] = useState('All')
@@ -41,41 +68,68 @@ export default function Stocks() {
   const [lowThreshold, setLowThreshold] = useState(10)
   const [highThreshold, setHighThreshold] = useState(100)
   const [gender, setGender] = useState('ALL')
-  const searchRef = useRef(null)
   const [csvUrl, setCsvUrl] = useState('')
+  const [error, setError] = useState('')
+  const searchRef = useRef(null)
+
+  const branchId = userBranchId || selectedBranchId || DEFAULT_BRANCH_ID
 
   useEffect(() => {
     const g = localStorage.getItem('stocks_gender') || 'ALL'
     setGender(g)
   }, [])
 
+  useEffect(() => {
+    if (userBranchId) setSelectedBranchId(userBranchId)
+  }, [userBranchId])
+
   const fetchStocks = useCallback(async () => {
-    if (!branchId) {
+    const activeBranchId = Number(branchId || DEFAULT_BRANCH_ID)
+
+    if (!activeBranchId) {
       setRaw([])
       setLoading(false)
+      setError('Branch ID is missing')
       return
     }
+
     setLoading(true)
+    setError('')
+
     try {
-      const token = localStorage.getItem('auth_token') || localStorage.getItem('admin_token') || ''
+      const storedToken =
+        token ||
+        localStorage.getItem('auth_token') ||
+        localStorage.getItem('admin_token') ||
+        ''
+
       const params = new URLSearchParams()
       if (gender !== 'ALL') params.set('gender', gender)
+
       const res = await fetch(
-        `${API_BASE}/api/branch/${encodeURIComponent(branchId)}/stock${params.toString() ? `?${params.toString()}` : ''}`,
+        `${API_BASE}/api/branch/${encodeURIComponent(activeBranchId)}/stock${params.toString() ? `?${params.toString()}` : ''}`,
         {
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
+          method: 'GET',
+          headers: storedToken ? { Authorization: `Bearer ${storedToken}` } : {},
           credentials: 'omit',
           mode: 'cors'
         }
       )
-      const data = res.ok ? await res.json() : []
+
+      const data = await res.json().catch(() => [])
+
+      if (!res.ok) {
+        throw new Error(data?.message || `Unable to load stocks. Status ${res.status}`)
+      }
+
       setRaw(toArray(data))
-    } catch {
+    } catch (err) {
       setRaw([])
+      setError(err?.message || 'Unable to load stocks')
     } finally {
       setLoading(false)
     }
-  }, [branchId, gender])
+  }, [branchId, gender, token])
 
   useEffect(() => {
     fetchStocks()
@@ -84,30 +138,56 @@ export default function Stocks() {
   const rows = useMemo(
     () =>
       toArray(raw).map((s, idx) => {
-        const id = s.variant_id ?? idx + 1
-        const brand = safe(s.brand_name)
-        const product = safe(s.product_name)
-        const pattern = safe(s.pattern_code)
-        const fit = safe(s.fit_type)
-        const mark = safe(s.mark_code)
-        const color = safe(s.colour)
-        const size = safe(s.size)
-        const ean = safe(s.ean_code)
-        const mrp = num(s.mrp)
-        const sale = num(s.sale_price)
-        const cost = num(s.cost_price)
-        const quantity = num(s.on_hand)
-        const reserved = num(s.reserved)
+        const id = Number(s.variant_id ?? s.variantId ?? s.id ?? idx + 1)
+        const brand = safe(s.brand_name ?? s.brand ?? s.brandName)
+        const product = safe(s.product_name ?? s.name ?? s.product ?? s.title)
+        const pattern = safe(s.pattern_code ?? s.patternCode)
+        const fit = safe(s.fit_type ?? s.fit ?? s.fitType)
+        const mark = safe(s.mark_code ?? s.markCode)
+        const color = safe(s.colour ?? s.color ?? s.selected_color)
+        const size = safe(s.size ?? s.selected_size)
+        const ean = safe(s.ean_code ?? s.ean ?? s.barcode ?? s.barcode_value)
+        const rowGender = normalizeGender(s.gender)
+        const mrp = num(s.mrp ?? s.original_price_b2c ?? s.originalPrice)
+        const sale = num(s.sale_price ?? s.final_price_b2c ?? s.salePrice ?? s.price)
+        const cost = num(s.cost_price ?? s.final_price_b2b ?? s.costPrice)
+        const quantity = num(s.on_hand ?? s.stock ?? s.qty ?? s.quantity)
+        const reserved = num(s.reserved ?? s.reserved_qty ?? s.reservedQty)
         let status = 'ok'
+
         if (quantity <= 0) status = 'out'
         else if (quantity <= lowThreshold) status = 'low'
         else if (quantity >= highThreshold) status = 'high'
-        return { id, brand, product, pattern, fit, mark, color, size, ean, mrp, sale, cost, quantity, reserved, status }
+
+        return {
+          id,
+          brand,
+          product,
+          pattern,
+          fit,
+          mark,
+          color,
+          size,
+          ean,
+          gender: rowGender,
+          mrp,
+          sale,
+          cost,
+          quantity,
+          reserved,
+          status
+        }
       }),
     [raw, lowThreshold, highThreshold]
   )
 
-  const brands = useMemo(() => ['All', ...Array.from(new Set(rows.map((r) => r.brand).filter(Boolean))).sort()], [rows])
+  const brands = useMemo(() => {
+    return ['All', ...Array.from(new Set(rows.map((r) => r.brand).filter(Boolean))).sort()]
+  }, [rows])
+
+  useEffect(() => {
+    if (brand !== 'All' && !brands.includes(brand)) setBrand('All')
+  }, [brand, brands])
 
   const counts = useMemo(() => {
     const totalUnits = rows.reduce((a, b) => a + b.quantity, 0)
@@ -119,20 +199,24 @@ export default function Stocks() {
 
   const filtered = useMemo(() => {
     let list = rows
+
     if (chip === 'Alerts') list = list.filter((r) => r.status === 'out' || r.status === 'low')
     if (chip === 'Low Stock') list = list.filter((r) => r.status === 'low')
     if (chip === 'High Stock') list = list.filter((r) => r.status === 'high')
     if (chip === 'Out of Stock') list = list.filter((r) => r.status === 'out')
     if (brand !== 'All') list = list.filter((r) => r.brand === brand)
+
     if (search.trim()) {
       const q = search.trim().toLowerCase()
       list = list.filter((r) =>
-        [r.brand, r.product, r.pattern, r.fit, r.mark, r.color, r.size, r.ean].some((x) =>
-          x.toLowerCase().includes(q)
+        [r.brand, r.product, r.pattern, r.fit, r.mark, r.color, r.size, r.ean, r.gender].some((x) =>
+          String(x || '').toLowerCase().includes(q)
         )
       )
     }
+
     const sorted = [...list]
+
     if (sortBy === 'recent') sorted.sort((a, b) => b.id - a.id)
     if (sortBy === 'qty_desc') sorted.sort((a, b) => b.quantity - a.quantity)
     if (sortBy === 'qty_asc') sorted.sort((a, b) => a.quantity - b.quantity)
@@ -141,6 +225,7 @@ export default function Stocks() {
     if (sortBy === 'sale_desc') sorted.sort((a, b) => b.sale - a.sale)
     if (sortBy === 'sale_asc') sorted.sort((a, b) => a.sale - b.sale)
     if (sortBy === 'brand_asc') sorted.sort((a, b) => a.brand.localeCompare(b.brand))
+
     return sorted
   }, [rows, chip, brand, search, sortBy])
 
@@ -152,11 +237,14 @@ export default function Stocks() {
       })
       return
     }
-    const header = ['Sl. No,Status,Brand,Product,Pattern,Fit,Mark,Size,Colour,EAN,MRP,Sale Price,Cost Price,Qty,Reserved']
+
+    const header = ['Sl. No,Status,Gender,Brand,Product,Pattern,Fit,Mark,Size,Colour,EAN,MRP,Sale Price,Cost Price,Qty,Reserved']
+
     const lines = filtered.map((s, i) =>
       [
         i + 1,
         s.status.toUpperCase(),
+        `"${(s.gender || '').replace(/"/g, '""')}"`,
         `"${(s.brand || '').replace(/"/g, '""')}"`,
         `"${(s.product || '').replace(/"/g, '""')}"`,
         `"${(s.pattern || '').replace(/"/g, '""')}"`,
@@ -172,13 +260,16 @@ export default function Stocks() {
         s.reserved
       ].join(',')
     )
+
     const csv = [...header, ...lines].join('\n')
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
     const url = URL.createObjectURL(blob)
+
     setCsvUrl((prev) => {
       if (prev) URL.revokeObjectURL(prev)
       return url
     })
+
     return () => {
       URL.revokeObjectURL(url)
     }
@@ -192,12 +283,28 @@ export default function Stocks() {
 
   const onGenderChange = (g) => {
     setGender(g)
+    setChip('All')
+    setBrand('All')
+    setSearch('')
     localStorage.setItem('stocks_gender', g)
+  }
+
+  const onBranchChange = (value) => {
+    const next = Math.max(1, parseInt(value || DEFAULT_BRANCH_ID, 10) || DEFAULT_BRANCH_ID)
+    setSelectedBranchId(next)
+    localStorage.setItem('stocks_branch_id', String(next))
   }
 
   const clearSearch = () => {
     setSearch('')
     searchRef.current?.focus()
+  }
+
+  const resetFilters = () => {
+    setChip('All')
+    setSearch('')
+    setBrand('All')
+    setSortBy('recent')
   }
 
   return (
@@ -208,11 +315,25 @@ export default function Stocks() {
         <div className="stocks-hero-vandana-stocks">
           <div>
             <h2 className="stocks-title-vandana-stocks">Stocks</h2>
-            <p className="stocks-subtitle-vandana-stocks">Live overview of branch inventory with clear stock alerts and smooth filtering.</p>
+            <p className="stocks-subtitle-vandana-stocks">
+              Live overview of branch inventory with clear stock alerts and smooth filtering.
+            </p>
           </div>
+
           <div className="stocks-hero-actions-vandana-stocks">
+            {isSuper ? (
+              <input
+                className="stocks-select-vandana-stocks"
+                type="number"
+                min="1"
+                value={selectedBranchId}
+                onChange={(e) => onBranchChange(e.target.value)}
+                style={{ maxWidth: 120 }}
+              />
+            ) : null}
+
             {csvUrl ? (
-              <a className="stocks-export-vandana-stocks" href={csvUrl} download={`stock_${gender.toLowerCase()}.csv`}>
+              <a className="stocks-export-vandana-stocks" href={csvUrl} download={`stock_branch_${branchId}_${gender.toLowerCase()}.csv`}>
                 Export CSV
               </a>
             ) : (
@@ -220,6 +341,7 @@ export default function Stocks() {
                 Export CSV
               </button>
             )}
+
             <button className="stocks-refresh-vandana-stocks" onClick={fetchStocks}>
               {loading ? 'Loading...' : 'Refresh'}
             </button>
@@ -229,30 +351,15 @@ export default function Stocks() {
         <div className="stocks-toolbar-vandana-stocks">
           <div className="stocks-bar-row-vandana-stocks">
             <div className="stocks-seg-vandana-stocks">
-              <button
-                className={`stocks-seg-btn-vandana-stocks ${gender === 'ALL' ? 'active-vandana-stocks' : ''}`}
-                onClick={() => onGenderChange('ALL')}
-              >
-                All
-              </button>
-              <button
-                className={`stocks-seg-btn-vandana-stocks ${gender === 'MEN' ? 'active-vandana-stocks' : ''}`}
-                onClick={() => onGenderChange('MEN')}
-              >
-                Men
-              </button>
-              <button
-                className={`stocks-seg-btn-vandana-stocks ${gender === 'WOMEN' ? 'active-vandana-stocks' : ''}`}
-                onClick={() => onGenderChange('WOMEN')}
-              >
-                Women
-              </button>
-              <button
-                className={`stocks-seg-btn-vandana-stocks ${gender === 'KIDS' ? 'active-vandana-stocks' : ''}`}
-                onClick={() => onGenderChange('KIDS')}
-              >
-                Kids
-              </button>
+              {['ALL', 'MEN', 'WOMEN', 'KIDS'].map((g) => (
+                <button
+                  key={g}
+                  className={`stocks-seg-btn-vandana-stocks ${gender === g ? 'active-vandana-stocks' : ''}`}
+                  onClick={() => onGenderChange(g)}
+                >
+                  {g === 'ALL' ? 'All' : g === 'MEN' ? 'Men' : g === 'WOMEN' ? 'Women' : 'Kids'}
+                </button>
+              ))}
             </div>
           </div>
 
@@ -300,11 +407,11 @@ export default function Stocks() {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
-              {search && (
+              {search ? (
                 <button className="stocks-clear-vandana-stocks" onClick={clearSearch}>
                   ✕
                 </button>
-              )}
+              ) : null}
             </div>
 
             <select className="stocks-select-vandana-stocks" value={brand} onChange={(e) => setBrand(e.target.value)}>
@@ -325,6 +432,10 @@ export default function Stocks() {
               <option value="sale_asc">Sale Price: Low to High</option>
               <option value="brand_asc">Brand: A to Z</option>
             </select>
+
+            <button className="stocks-refresh-vandana-stocks" onClick={resetFilters}>
+              Reset
+            </button>
           </div>
 
           <div className="stocks-thresholds-vandana-stocks">
@@ -347,6 +458,12 @@ export default function Stocks() {
               />
             </div>
           </div>
+
+          {error ? (
+            <div style={{ marginTop: 12, color: '#b91c1c', fontWeight: 700 }}>
+              {error}
+            </div>
+          ) : null}
         </div>
 
         <div className="stocks-section-table-vandana-stocks">
@@ -362,6 +479,7 @@ export default function Stocks() {
               <table className="stocks-stock-table-vandana-stocks">
                 <colgroup>
                   <col style={{ width: '70px' }} />
+                  <col style={{ width: '100px' }} />
                   <col style={{ width: '100px' }} />
                   <col style={{ width: '160px' }} />
                   <col style={{ width: '220px' }} />
@@ -381,6 +499,7 @@ export default function Stocks() {
                   <tr>
                     <th>Sl. No</th>
                     <th>Status</th>
+                    <th>Gender</th>
                     <th className="stocks-al-vandana-stocks">Brand</th>
                     <th className="stocks-al-vandana-stocks">Product</th>
                     <th className="stocks-al-vandana-stocks">Pattern</th>
@@ -398,13 +517,14 @@ export default function Stocks() {
                 </thead>
                 <tbody>
                   {filtered.map((s, index) => (
-                    <tr key={s.id} className={`stocks-row-${s.status}-vandana-stocks`}>
+                    <tr key={`${s.id}-${s.ean}-${index}`} className={`stocks-row-${s.status}-vandana-stocks`}>
                       <td className="stocks-mono-vandana-stocks">{index + 1}</td>
                       <td>
                         <span className={`stocks-status-vandana-stocks ${s.status}`}>
                           {s.status === 'out' ? 'Out' : s.status === 'low' ? 'Low' : s.status === 'high' ? 'High' : 'OK'}
                         </span>
                       </td>
+                      <td className="stocks-mono-vandana-stocks">{s.gender || '-'}</td>
                       <td className="stocks-al-vandana-stocks stocks-truncate-vandana-stocks" title={s.brand}>{s.brand || '-'}</td>
                       <td className="stocks-al-vandana-stocks stocks-truncate-vandana-stocks" title={s.product}>{s.product || '-'}</td>
                       <td className="stocks-al-vandana-stocks stocks-truncate-vandana-stocks" title={s.pattern}>{s.pattern || '-'}</td>
@@ -420,13 +540,14 @@ export default function Stocks() {
                       <td className="stocks-ar-vandana-stocks">{nf(s.reserved)}</td>
                     </tr>
                   ))}
-                  {!filtered.length && (
+
+                  {!filtered.length ? (
                     <tr>
-                      <td colSpan="15" className="stocks-empty-vandana-stocks">
-                        No matching records
+                      <td colSpan={16} className="stocks-empty-vandana-stocks">
+                        {rows.length ? 'No matching records. Clear filters or search.' : `No stock records found for branch ${branchId}.`}
                       </td>
                     </tr>
-                  )}
+                  ) : null}
                 </tbody>
               </table>
             </div>

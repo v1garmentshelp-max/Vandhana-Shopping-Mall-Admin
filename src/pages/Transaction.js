@@ -1,10 +1,15 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import './Transaction.css'
 import NavbarAdmin from './NavbarAdmin'
+import { useAuth } from './AdminAuth'
 
-const API_BASE =
+const DEFAULT_API_BASE = 'https://vandhana-shopping-mall-backend.vercel.app'
+const API_BASE_RAW =
+  (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_BASE) ||
+  (typeof process !== 'undefined' && process.env && process.env.REACT_APP_API_BASE) ||
   process.env.REACT_APP_API_BASE_URL ||
-  'https://vandhana-shopping-mall-backend.vercel.app/api'
+  DEFAULT_API_BASE
+const API_BASE = API_BASE_RAW.replace(/\/+$/, '').replace(/\/api$/, '')
 
 function asNum(v) {
   const n = Number(v)
@@ -18,7 +23,7 @@ function normStr(v) {
 function toDateStr(iso) {
   const d = iso ? new Date(iso) : null
   if (!d || Number.isNaN(d.getTime())) return ''
-  return d.toLocaleString()
+  return d.toLocaleString('en-IN')
 }
 
 function safeUpper(v) {
@@ -27,58 +32,83 @@ function safeUpper(v) {
 
 function money(n) {
   const x = asNum(n)
-  return x.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  return x.toLocaleString('en-IN', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  })
+}
+
+function parseTotals(value) {
+  if (!value) return {}
+  if (typeof value === 'object') return value
+  try {
+    return JSON.parse(value)
+  } catch {
+    return {}
+  }
+}
+
+function getPayable(row) {
+  const totals = parseTotals(row?.totals)
+  return asNum(
+    totals.payable ??
+      totals.total ??
+      totals.subtotal ??
+      totals.bagTotal ??
+      row?.total ??
+      0
+  )
 }
 
 function derivePaymentMeta(row) {
   const paymentStatus = safeUpper(row.payment_status)
   const paymentRef = normStr(row.payment_ref)
   const paymentMethod = safeUpper(row.payment_method)
-  const source = safeUpper(row.source)
+  const source = safeUpper(row.source) || 'WEB'
 
   const isCOD = paymentStatus === 'COD' || paymentMethod === 'COD'
-  const isPaid = paymentStatus === 'PAID'
-  const isPending = paymentStatus === 'PENDING'
-  const isFailed = paymentStatus === 'FAILED'
+  const isPaid = paymentStatus === 'PAID' || paymentStatus === 'SUCCESS' || paymentStatus === 'PAYMENT_SUCCESS'
+  const isFailed = paymentStatus === 'FAILED' || paymentStatus === 'CANCELLED'
+  const isPending = paymentStatus === 'PENDING' || paymentStatus === 'CREATED' || paymentStatus === 'INITIATED'
 
-  let paymentType = isCOD ? 'COD' : 'PREPAID'
-
-  if (!isCOD && isPaid && !paymentRef && paymentMethod === 'COD') paymentType = 'COD'
-  if (!isCOD && isPaid && paymentRef) paymentType = 'PREPAID'
+  const paymentType = isCOD ? 'COD' : 'PREPAID'
 
   let receivedFrom = paymentType === 'COD' ? 'Shiprocket' : 'Razorpay'
 
-  if (paymentType === 'PREPAID' && paymentMethod && paymentMethod !== 'RAZORPAY') {
+  if (paymentType === 'PREPAID' && paymentMethod && paymentMethod !== 'ONLINE') {
     receivedFrom = paymentMethod
   }
 
-  let paymentReceived = false
-  if (paymentType === 'COD') {
-    paymentReceived = isPaid
-  } else {
-    paymentReceived = isPaid
+  if (paymentRef && paymentType === 'PREPAID') {
+    receivedFrom = paymentMethod || 'Razorpay'
   }
 
   let paymentState = 'PENDING'
+
   if (isFailed) paymentState = 'FAILED'
-  if (isPending) paymentState = 'PENDING'
-  if (isPaid) paymentState = 'RECEIVED'
-  if (paymentType === 'COD' && paymentStatus === 'COD') paymentState = 'NOT_RECEIVED'
+  else if (isPaid) paymentState = 'RECEIVED'
+  else if (isCOD && paymentStatus === 'COD') paymentState = 'NOT_RECEIVED'
+  else if (isPending) paymentState = 'PENDING'
 
-  const channel = source || 'WEB'
-
-  return { paymentType, receivedFrom, paymentReceived, paymentState, channel }
+  return {
+    paymentType,
+    receivedFrom,
+    paymentReceived: paymentState === 'RECEIVED',
+    paymentState,
+    channel: source
+  }
 }
 
 function statusPillClass(v) {
   const s = safeUpper(v)
-  if (s === 'CANCELLED' || s === 'FAILED' || s === 'RTO') return 'danger'
-  if (s === 'DELIVERED' || s === 'RECEIVED' || s === 'PAID') return 'ok'
-  if (s === 'PLACED' || s === 'CONFIRMED' || s === 'PENDING') return 'info'
+  if (s === 'CANCELLED' || s === 'FAILED' || s === 'RTO' || s === 'NOT_RECEIVED') return 'danger'
+  if (s === 'DELIVERED' || s === 'RECEIVED' || s === 'PAID' || s === 'SUCCESS') return 'ok'
+  if (s === 'PLACED' || s === 'CONFIRMED' || s === 'PENDING' || s === 'COD') return 'info'
   return 'warn'
 }
 
 export default function Transaction() {
+  const { token, user } = useAuth()
   const [rows, setRows] = useState([])
   const [loading, setLoading] = useState(false)
   const [err, setErr] = useState('')
@@ -96,57 +126,65 @@ export default function Transaction() {
     dateTo: ''
   })
 
-  const token =
+  const authToken =
+    token ||
+    localStorage.getItem('auth_token') ||
+    localStorage.getItem('admin_token') ||
     localStorage.getItem('token') ||
     localStorage.getItem('adminToken') ||
     localStorage.getItem('accessToken') ||
     ''
 
+  const fetchJson = async (url) => {
+    const res = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(authToken ? { Authorization: `Bearer ${authToken}` } : {})
+      },
+      credentials: 'omit',
+      mode: 'cors'
+    })
+
+    const data = await res.json().catch(() => null)
+
+    if (!res.ok) {
+      throw new Error(data?.message || `Request failed with status ${res.status}`)
+    }
+
+    return data
+  }
+
   const fetchTx = useCallback(async () => {
     setLoading(true)
     setErr('')
+
     try {
-      const res = await fetch(`${API_BASE}/orders`, {
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: token ? `Bearer ${token}` : ''
-        },
-        credentials: 'include'
-      })
-      const data = await res.json().catch(() => null)
-      if (!res.ok) {
-        setRows([])
-        setErr(data?.message || 'Failed to load transactions')
-        setLoading(false)
-        return
+      let data = null
+
+      try {
+        data = await fetchJson(`${API_BASE}/api/orders`)
+      } catch {
+        data = await fetchJson(`${API_BASE}/api/sales/admin`)
       }
+
       setRows(Array.isArray(data) ? data : [])
-      setLoading(false)
-    } catch {
+    } catch (e) {
       setRows([])
-      setErr('Failed to load transactions')
+      setErr(e?.message || 'Failed to load transactions')
+    } finally {
       setLoading(false)
     }
-  }, [token])
+  }, [authToken])
 
   useEffect(() => {
     fetchTx()
   }, [fetchTx])
 
   const enriched = useMemo(() => {
-    return (rows || []).map(r => {
-      const totals =
-        typeof r.totals === 'string'
-          ? (() => {
-              try {
-                return JSON.parse(r.totals)
-              } catch {
-                return null
-              }
-            })()
-          : r.totals
-
-      const payable = totals?.payable != null ? asNum(totals.payable) : asNum(r.total)
+    return (rows || []).map((r) => {
+      const totals = parseTotals(r.totals)
+      const payable = getPayable(r)
       const meta = derivePaymentMeta(r)
 
       return {
@@ -167,11 +205,12 @@ export default function Transaction() {
     const chip = safeUpper(activeChip)
 
     if (chip === 'ALL') return list
-    if (chip === 'COD') return list.filter(x => x._paymentType === 'COD')
-    if (chip === 'PREPAID') return list.filter(x => x._paymentType === 'PREPAID')
-    if (chip === 'RECEIVED') return list.filter(x => x._paymentState === 'RECEIVED')
-    if (chip === 'PENDING') return list.filter(x => x._paymentState === 'PENDING' || x._paymentState === 'NOT_RECEIVED')
-    if (chip === 'CANCELLED') return list.filter(x => safeUpper(x.status) === 'CANCELLED')
+    if (chip === 'COD') return list.filter((x) => x._paymentType === 'COD')
+    if (chip === 'PREPAID') return list.filter((x) => x._paymentType === 'PREPAID')
+    if (chip === 'RECEIVED') return list.filter((x) => x._paymentState === 'RECEIVED')
+    if (chip === 'PENDING') return list.filter((x) => x._paymentState === 'PENDING' || x._paymentState === 'NOT_RECEIVED')
+    if (chip === 'CANCELLED') return list.filter((x) => safeUpper(x.status) === 'CANCELLED')
+
     return list
   }, [enriched, activeChip])
 
@@ -197,7 +236,7 @@ export default function Transaction() {
       if (!Number.isNaN(d.getTime())) toTs = d.getTime() + 24 * 60 * 60 * 1000 - 1
     }
 
-    return chipFiltered.filter(r => {
+    return chipFiltered.filter((r) => {
       const rowStatus = safeUpper(r.status)
       const rowEmail = safeUpper(r.customer_email)
       const rowName = safeUpper(r.customer_name)
@@ -212,7 +251,7 @@ export default function Transaction() {
           rowEmail.includes(q) ||
           rowName.includes(q) ||
           rowMobile.includes(q) ||
-          rowId.includes(filters.q)
+          rowId.toUpperCase().includes(q)
 
         if (!hit) return false
       }
@@ -226,6 +265,7 @@ export default function Transaction() {
 
       if (fromTs || toTs) {
         const t = new Date(r.created_at).getTime()
+        if (!Number.isFinite(t)) return false
         if (fromTs && t < fromTs) return false
         if (toTs && t > toTs) return false
       }
@@ -236,17 +276,16 @@ export default function Transaction() {
 
   const stats = useMemo(() => {
     const list = filtered
+
     const count = list.length
-
-    const cod = list.filter(x => x._paymentType === 'COD').length
-    const prepaid = list.filter(x => x._paymentType === 'PREPAID').length
-    const received = list.filter(x => x._paymentState === 'RECEIVED').length
-    const pending = list.filter(x => x._paymentState !== 'RECEIVED').length
-    const cancelled = list.filter(x => safeUpper(x.status) === 'CANCELLED').length
-
+    const cod = list.filter((x) => x._paymentType === 'COD').length
+    const prepaid = list.filter((x) => x._paymentType === 'PREPAID').length
+    const received = list.filter((x) => x._paymentState === 'RECEIVED').length
+    const pending = list.filter((x) => x._paymentState !== 'RECEIVED').length
+    const cancelled = list.filter((x) => safeUpper(x.status) === 'CANCELLED').length
     const totalAmount = list.reduce((a, x) => a + asNum(x._payable), 0)
     const receivedAmount = list
-      .filter(x => x._paymentState === 'RECEIVED')
+      .filter((x) => x._paymentState === 'RECEIVED')
       .reduce((a, x) => a + asNum(x._payable), 0)
 
     return {
@@ -283,10 +322,7 @@ export default function Transaction() {
       <div className="transaction-wrapper">
         <div className="transaction-header">
           <h2>Transactions</h2>
-          <p>
-            COD is counted as received only when payment status is PAID. Prepaid is counted as
-            received only when payment status is PAID.
-          </p>
+          <p>View website and admin transactions with COD, prepaid, received, and pending payment tracking.</p>
         </div>
 
         <div className="stats-row">
@@ -306,6 +342,21 @@ export default function Transaction() {
           </div>
 
           <div className="stat-card">
+            <div className="stat-title">COD</div>
+            <div className="stat-value">{stats.cod}</div>
+          </div>
+
+          <div className="stat-card">
+            <div className="stat-title">Prepaid</div>
+            <div className="stat-value">{stats.prepaid}</div>
+          </div>
+
+          <div className="stat-card danger">
+            <div className="stat-title">Cancelled</div>
+            <div className="stat-value">{stats.cancelled}</div>
+          </div>
+
+          <div className="stat-card">
             <div className="stat-title">Total Amount</div>
             <div className="stat-value">₹ {money(stats.totalAmount)}</div>
           </div>
@@ -317,7 +368,7 @@ export default function Transaction() {
         </div>
 
         <div className="chip-bar">
-          {['ALL', 'COD', 'PREPAID', 'RECEIVED', 'PENDING', 'CANCELLED'].map(c => (
+          {['ALL', 'COD', 'PREPAID', 'RECEIVED', 'PENDING', 'CANCELLED'].map((c) => (
             <button
               key={c}
               className={`chip ${activeChip === c ? 'active' : ''}`}
@@ -337,29 +388,31 @@ export default function Transaction() {
           <div className="filter-grid">
             <input
               value={filters.q}
-              onChange={e => setFilters(s => ({ ...s, q: e.target.value }))}
+              onChange={(e) => setFilters((s) => ({ ...s, q: e.target.value }))}
               placeholder="Search by name, email, mobile or order id"
             />
 
             <input
               value={filters.email}
-              onChange={e => setFilters(s => ({ ...s, email: e.target.value }))}
+              onChange={(e) => setFilters((s) => ({ ...s, email: e.target.value }))}
               placeholder="Exact Email"
             />
 
             <input
               value={filters.mobile}
-              onChange={e => setFilters(s => ({ ...s, mobile: e.target.value }))}
+              onChange={(e) => setFilters((s) => ({ ...s, mobile: e.target.value }))}
               placeholder="Exact Mobile"
             />
 
             <select
               value={filters.status}
-              onChange={e => setFilters(s => ({ ...s, status: e.target.value }))}
+              onChange={(e) => setFilters((s) => ({ ...s, status: e.target.value }))}
             >
               <option value="">Order Status</option>
               <option value="PLACED">PLACED</option>
               <option value="CONFIRMED">CONFIRMED</option>
+              <option value="PACKED">PACKED</option>
+              <option value="SHIPPED">SHIPPED</option>
               <option value="DELIVERED">DELIVERED</option>
               <option value="CANCELLED">CANCELLED</option>
               <option value="RTO">RTO</option>
@@ -367,7 +420,7 @@ export default function Transaction() {
 
             <select
               value={filters.paymentType}
-              onChange={e => setFilters(s => ({ ...s, paymentType: e.target.value }))}
+              onChange={(e) => setFilters((s) => ({ ...s, paymentType: e.target.value }))}
             >
               <option value="">Payment Type</option>
               <option value="COD">COD</option>
@@ -376,7 +429,7 @@ export default function Transaction() {
 
             <select
               value={filters.paymentState}
-              onChange={e => setFilters(s => ({ ...s, paymentState: e.target.value }))}
+              onChange={(e) => setFilters((s) => ({ ...s, paymentState: e.target.value }))}
             >
               <option value="">Payment State</option>
               <option value="RECEIVED">RECEIVED</option>
@@ -387,24 +440,25 @@ export default function Transaction() {
 
             <select
               value={filters.channel}
-              onChange={e => setFilters(s => ({ ...s, channel: e.target.value }))}
+              onChange={(e) => setFilters((s) => ({ ...s, channel: e.target.value }))}
             >
               <option value="">Channel</option>
               <option value="WEB">WEB</option>
               <option value="POS">POS</option>
               <option value="ADMIN">ADMIN</option>
+              <option value="B2B">B2B</option>
             </select>
 
             <input
               type="date"
               value={filters.dateFrom}
-              onChange={e => setFilters(s => ({ ...s, dateFrom: e.target.value }))}
+              onChange={(e) => setFilters((s) => ({ ...s, dateFrom: e.target.value }))}
             />
 
             <input
               type="date"
               value={filters.dateTo}
-              onChange={e => setFilters(s => ({ ...s, dateTo: e.target.value }))}
+              onChange={(e) => setFilters((s) => ({ ...s, dateTo: e.target.value }))}
             />
 
             <button type="button" onClick={fetchTx}>
@@ -442,14 +496,20 @@ export default function Transaction() {
               </thead>
 
               <tbody>
-                {filtered.length === 0 ? (
+                {loading ? (
                   <tr>
                     <td colSpan="10" className="empty-cell">
-                      No transactions found
+                      Loading transactions...
+                    </td>
+                  </tr>
+                ) : filtered.length === 0 ? (
+                  <tr>
+                    <td colSpan="10" className="empty-cell">
+                      {rows.length ? 'No matching transactions found' : 'No transactions found'}
                     </td>
                   </tr>
                 ) : (
-                  filtered.map(r => {
+                  filtered.map((r) => {
                     const orderShort = normStr(r.id).slice(0, 8)
                     const customer = normStr(r.customer_name) || 'Unknown'
                     const email = normStr(r.customer_email)
@@ -461,7 +521,7 @@ export default function Transaction() {
                     return (
                       <tr key={r.id}>
                         <td>{toDateStr(r.created_at)}</td>
-                        <td>{orderShort}</td>
+                        <td title={normStr(r.id)}>{orderShort}</td>
                         <td>{r._channel}</td>
                         <td>
                           <div className="customer-box">
@@ -484,12 +544,12 @@ export default function Transaction() {
                         </td>
                         <td>
                           <span className={`status-pill ${statusPillClass(orderStatus)}`}>
-                            {orderStatus}
+                            {orderStatus || '-'}
                           </span>
                         </td>
                         <td>
                           <span className={`status-pill ${statusPillClass(paymentStatus)}`}>
-                            {paymentStatus}
+                            {paymentStatus || '-'}
                           </span>
                         </td>
                       </tr>

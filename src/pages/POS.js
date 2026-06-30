@@ -4,20 +4,74 @@ import { useAuth } from './AdminAuth'
 import './POS.css'
 
 const DEFAULT_API_BASE = 'https://vandhana-shopping-mall-backend.vercel.app'
-const API_BASE =
+const API_BASE_RAW =
   (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE) ||
   (typeof process !== 'undefined' && process.env?.REACT_APP_API_BASE) ||
+  process.env.REACT_APP_API_BASE_URL ||
   DEFAULT_API_BASE
+
+const API_BASE = API_BASE_RAW.replace(/\/+$/, '').replace(/\/api$/, '')
+const DEFAULT_BRANCH_ID = 3
 
 const uuid = () =>
   typeof crypto !== 'undefined' && crypto.randomUUID
     ? crypto.randomUUID()
     : `${Date.now()}_${Math.random().toString(36).slice(2)}`
 
-export default function POS() {
-  const { token, user } = useAuth()
-  const branchId = user?.branch_id || user?.branchId || null
+const num = (v) => {
+  const n = Number(v)
+  return Number.isFinite(n) ? n : 0
+}
 
+const str = (v) => String(v == null ? '' : v).trim()
+
+const money = (v) =>
+  num(v).toLocaleString('en-IN', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  })
+
+const toArray = (x) => {
+  if (Array.isArray(x)) return x
+  if (Array.isArray(x?.data)) return x.data
+  if (Array.isArray(x?.rows)) return x.rows
+  if (Array.isArray(x?.items)) return x.items
+  if (Array.isArray(x?.stock)) return x.stock
+  if (Array.isArray(x?.stocks)) return x.stocks
+  if (Array.isArray(x?.products)) return x.products
+  return []
+}
+
+const normalizeProduct = (v, code) => {
+  if (!v) return null
+
+  const variantId = num(v.variant_id ?? v.variantId ?? v.id ?? v.product_id)
+  const eanCode = str(v.ean_code ?? v.ean ?? v.barcode ?? v.barcode_value ?? code)
+  const price = num(v.sale_price ?? v.final_price_b2c ?? v.retail_price ?? v.final_price ?? v.price ?? v.mrp)
+  const mrp = num(v.mrp ?? v.original_price_b2c ?? v.originalPrice ?? v.price ?? price)
+  const stockValue = v.on_hand ?? v.stock ?? v.qty ?? v.quantity
+  const stock = stockValue == null || stockValue === '' ? null : num(stockValue)
+
+  if (!variantId || !eanCode) return null
+
+  return {
+    variant_id: variantId,
+    ean_code: eanCode,
+    name: str(v.product_name ?? v.name ?? v.title ?? 'Product'),
+    brand: str(v.brand_name ?? v.brand ?? ''),
+    size: str(v.size ?? v.selected_size ?? ''),
+    colour: str(v.colour ?? v.color ?? v.selected_color ?? ''),
+    price: price || mrp,
+    mrp: mrp || price,
+    image_url: str(v.image_url ?? v.image ?? v.thumbnail ?? ''),
+    stock,
+    qty: 1
+  }
+}
+
+export default function POS() {
+  const { token } = useAuth()
+  const branchId = DEFAULT_BRANCH_ID
   const eanInputRef = useRef(null)
 
   const [saleId, setSaleId] = useState(uuid())
@@ -30,97 +84,169 @@ export default function POS() {
   const [paymentMethod, setPaymentMethod] = useState('CASH')
   const [paymentRef, setPaymentRef] = useState('')
   const [error, setError] = useState('')
+  const [confirming, setConfirming] = useState(false)
+
+  const authToken =
+    token ||
+    localStorage.getItem('auth_token') ||
+    localStorage.getItem('admin_token') ||
+    localStorage.getItem('token') ||
+    localStorage.getItem('adminToken') ||
+    localStorage.getItem('accessToken') ||
+    ''
 
   useEffect(() => {
+    localStorage.setItem('pos_branch_id', String(DEFAULT_BRANCH_ID))
     eanInputRef.current?.focus()
   }, [])
 
   const headers = useMemo(
     () => ({
       'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {})
+      ...(authToken ? { Authorization: `Bearer ${authToken}` } : {})
     }),
-    [token]
+    [authToken]
   )
 
   const showToast = (msg) => {
     setToast(msg)
-    setTimeout(() => setToast(''), 1800)
+    setTimeout(() => setToast(''), 2000)
   }
 
   const totals = useMemo(() => {
     let qty = 0
-    let total = 0
+    let subtotal = 0
+    let mrpTotal = 0
+
     for (const it of items) {
-      qty += it.qty
-      total += it.qty * Number(it.price || 0)
+      const itemQty = num(it.qty)
+      qty += itemQty
+      subtotal += itemQty * num(it.price)
+      mrpTotal += itemQty * num(it.mrp || it.price)
     }
-    return { qty, total }
+
+    const discount = Math.max(0, mrpTotal - subtotal)
+
+    return {
+      qty,
+      subtotal,
+      mrpTotal,
+      discount,
+      total: subtotal
+    }
   }, [items])
 
-  const scanFlow = async (code) => {
-    const trimmed = String(code || '').trim()
-    if (!trimmed) return
-    if (!branchId) {
-      showToast('No branch selected')
-      return
+  const apiGet = async (path) => {
+    const res = await fetch(`${API_BASE}${path}`, {
+      method: 'GET',
+      headers,
+      credentials: 'omit',
+      mode: 'cors'
+    })
+
+    const data = await res.json().catch(() => null)
+
+    if (!res.ok) {
+      throw new Error(data?.message || data?.error || `Request failed with status ${res.status}`)
     }
+
+    return data
+  }
+
+  const apiPost = async (path, body) => {
+    const res = await fetch(`${API_BASE}${path}`, {
+      method: 'POST',
+      headers,
+      credentials: 'omit',
+      mode: 'cors',
+      body: JSON.stringify(body)
+    })
+
+    const data = await res.json().catch(() => null)
+
+    if (!res.ok) {
+      throw new Error(data?.message || data?.error || `Request failed with status ${res.status}`)
+    }
+
+    return data
+  }
+
+  const findProductByStock = async (code) => {
+    const data = await apiGet(`/api/branch/${branchId}/stock`)
+    const list = toArray(data)
+    const found = list.find((x) => str(x.ean_code ?? x.ean ?? x.barcode ?? x.barcode_value) === code)
+    return normalizeProduct(found, code)
+  }
+
+  const findProductByBarcode = async (code) => {
+    const paths = [
+      `/api/barcodes/${encodeURIComponent(code)}`,
+      `/api/products/barcode/${encodeURIComponent(code)}`,
+      `/api/products/by-barcode/${encodeURIComponent(code)}`,
+      `/api/inventory/scan?branch_id=${branchId}&ean_code=${encodeURIComponent(code)}`
+    ]
+
+    for (const path of paths) {
+      try {
+        const data = await apiGet(path)
+        const product = normalizeProduct(Array.isArray(data) ? data[0] : data?.data || data?.product || data?.variant || data?.item || data, code)
+        if (product) return product
+      } catch {}
+    }
+
+    try {
+      const product = await findProductByStock(code)
+      if (product) return product
+    } catch {}
+
+    return null
+  }
+
+  const scanFlow = async (code) => {
+    const trimmed = str(code)
+    if (!trimmed) return
+
     setSearching(true)
     setError('')
+
     try {
-      const res = await fetch(`${API_BASE}/api/barcodes/${encodeURIComponent(trimmed)}`)
-      if (!res.ok) {
+      const product = await findProductByBarcode(trimmed)
+
+      if (!product) {
         showToast('Product not found')
         return
       }
-      const v = await res.json()
-      const price = Number(v?.sale_price ?? v?.mrp ?? 0)
-      const img = v?.image_url || ''
-      const variantId = Number(v?.variant_id)
 
-      const reserve = await fetch(`${API_BASE}/api/inventory/scan`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({
-          branch_id: branchId,
-          ean_code: trimmed,
-          qty: 1,
-          sale_id: saleId,
-          client_action_id: uuid()
-        })
-      })
-      if (!reserve.ok) {
-        const j = await reserve.json().catch(() => ({}))
-        setError(j?.message || 'Scan failed')
+      if (product.stock != null && product.stock <= 0) {
+        showToast('Product is out of stock')
         return
       }
 
       setItems((prev) => {
-        const ix = prev.findIndex((p) => p.variant_id === variantId)
+        const ix = prev.findIndex((p) => p.variant_id === product.variant_id)
+
         if (ix >= 0) {
+          const existing = prev[ix]
+          const nextQty = existing.qty + 1
+
+          if (existing.stock != null && nextQty > existing.stock) {
+            showToast(`Only ${existing.stock} units available`)
+            return prev
+          }
+
           const updated = [...prev]
-          updated[ix] = { ...updated[ix], qty: updated[ix].qty + 1 }
+          updated[ix] = { ...updated[ix], qty: nextQty }
           return updated
         }
-        return [
-          ...prev,
-          {
-            variant_id: variantId,
-            ean_code: trimmed,
-            name: v?.product_name || 'Product',
-            brand: v?.brand_name || '',
-            size: v?.size || '',
-            colour: v?.colour || v?.color || '',
-            price,
-            mrp: v?.mrp ?? null,
-            image_url: img,
-            qty: 1
-          }
-        ]
+
+        return [...prev, product]
       })
+
       showToast('Added')
-    } catch {
-      showToast('Network error')
+    } catch (e) {
+      const msg = e?.message || 'Scan failed'
+      setError(msg)
+      showToast(msg)
     } finally {
       setSearching(false)
       setEan('')
@@ -140,30 +266,20 @@ export default function POS() {
     }
   }
 
-  const addOneMore = async (row) => {
-    try {
-      const reserve = await fetch(`${API_BASE}/api/inventory/scan`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({
-          branch_id: branchId,
-          ean_code: row.ean_code,
-          qty: 1,
-          sale_id: saleId,
-          client_action_id: uuid()
-        })
+  const addOneMore = (row) => {
+    setItems((prev) =>
+      prev.map((p) => {
+        if (p.variant_id !== row.variant_id) return p
+        const nextQty = p.qty + 1
+
+        if (p.stock != null && nextQty > p.stock) {
+          showToast(`Only ${p.stock} units available`)
+          return p
+        }
+
+        return { ...p, qty: nextQty }
       })
-      if (!reserve.ok) {
-        const j = await reserve.json().catch(() => ({}))
-        showToast(j?.message || 'Failed to add')
-        return
-      }
-      setItems((prev) =>
-        prev.map((p) => (p.variant_id === row.variant_id ? { ...p, qty: p.qty + 1 } : p))
-      )
-    } catch {
-      showToast('Network error')
-    }
+    )
   }
 
   const removeOne = (row) => {
@@ -193,37 +309,117 @@ export default function POS() {
     setPaying(true)
   }
 
-  const confirmPayment = async () => {
-    if (!items.length) return
-    try {
-      const res = await fetch(`${API_BASE}/api/sales/confirm`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({
-          sale_id: saleId,
-          branch_id: branchId,
-          payment: { method: paymentMethod, ref: paymentRef || null },
-          items: items.map((it) => ({
-            variant_id: it.variant_id,
-            ean_code: it.ean_code,
-            qty: it.qty,
-            price: it.price
-          })),
-          client_action_id: uuid()
+  const markPaymentPaid = async (backendSaleId) => {
+    if (!backendSaleId) return
+
+    const paths = ['/api/sales/web/set-payment-status', '/api/orders/web/set-payment-status']
+
+    for (const path of paths) {
+      try {
+        await apiPost(path, {
+          sale_id: backendSaleId,
+          status: 'PAID'
         })
-      })
-      if (!res.ok) {
-        const j = await res.json().catch(() => ({}))
-        showToast(j?.message || 'Payment failed')
         return
+      } catch {}
+    }
+  }
+
+  const confirmPayment = async () => {
+    if (!items.length || confirming) return
+
+    setError('')
+    setConfirming(true)
+
+    try {
+      const payload = {
+        sale_id: saleId,
+        branch_id: branchId,
+        branchId,
+        selected_branch_id: branchId,
+        selectedBranchId: branchId,
+        pickup_branch_id: branchId,
+        payment: {
+          method: paymentMethod,
+          ref: paymentRef || null,
+          amount: totals.total
+        },
+        payment_method: `POS_${paymentMethod}`,
+        payment_status: 'PENDING',
+        payment_ref: paymentRef || null,
+        source: 'POS',
+        customer_name: 'POS Customer',
+        customer_email: 'pos@vandana.local',
+        login_email: 'pos@vandana.local',
+        customer_mobile: '',
+        shipping_address: {
+          full_name: 'POS Customer',
+          phone: '',
+          address: 'Branch POS Counter',
+          city: 'Srikakulam',
+          state: 'Andhra Pradesh',
+          pincode: '532001'
+        },
+        totals: {
+          bagTotal: totals.mrpTotal || totals.total,
+          discountTotal: totals.discount,
+          couponPct: 0,
+          couponDiscount: 0,
+          convenience: 0,
+          giftWrap: 0,
+          payable: totals.total
+        },
+        items: items.map((it) => ({
+          variant_id: it.variant_id,
+          product_id: it.variant_id,
+          ean_code: it.ean_code,
+          barcode_value: it.ean_code,
+          qty: it.qty,
+          price: it.price,
+          mrp: it.mrp || it.price,
+          size: it.size || null,
+          colour: it.colour || null,
+          image_url: it.image_url || null,
+          name: it.name
+        })),
+        client_action_id: uuid()
       }
+
+      const paths = ['/api/sales/web/place', '/api/orders/web/place']
+      let lastError = null
+      let result = null
+
+      for (const path of paths) {
+        try {
+          result = await apiPost(path, payload)
+          break
+        } catch (e) {
+          lastError = e
+        }
+      }
+
+      if (!result) {
+        throw lastError || new Error('Payment failed')
+      }
+
+      const backendSaleId = result?.id || result?.sale_id || result?.sale?.id
+
+      if (backendSaleId) {
+        await markPaymentPaid(backendSaleId)
+      }
+
       setPaying(false)
       setSuccessOpen(true)
       setItems([])
       setSaleId(uuid())
       setPaymentRef('')
-    } catch {
-      showToast('Network error')
+      setPaymentMethod('CASH')
+    } catch (e) {
+      const msg = e?.message || 'Payment failed'
+      setError(msg)
+      showToast(msg)
+    } finally {
+      setConfirming(false)
     }
   }
 
@@ -243,7 +439,7 @@ export default function POS() {
           <div className="pos-hero-meta">
             <div className="pos-meta-card">
               <span className="pos-meta-label">Branch</span>
-              <span className="pos-meta-value">{branchId ?? '-'}</span>
+              <span className="pos-meta-value">{branchId}</span>
             </div>
             <div className="pos-meta-card">
               <span className="pos-meta-label">Sale ID</span>
@@ -308,10 +504,11 @@ export default function POS() {
                           <span>Size: {it.size || '-'}</span>
                           <span>Color: {it.colour || '-'}</span>
                           <span>EAN: {it.ean_code}</span>
+                          {it.stock != null ? <span>Stock: {it.stock}</span> : null}
                         </div>
                       </div>
 
-                      <div className="right price-cell">₹{Number(it.price).toFixed(2)}</div>
+                      <div className="right price-cell">₹{money(it.price)}</div>
 
                       <div className="center qty">
                         <button className="btn qty-btn" onClick={() => removeOne(it)}>-1</button>
@@ -319,7 +516,7 @@ export default function POS() {
                         <button className="btn qty-btn" onClick={() => addOneMore(it)}>+1</button>
                       </div>
 
-                      <div className="right row-total">₹{(it.qty * Number(it.price)).toFixed(2)}</div>
+                      <div className="right row-total">₹{money(it.qty * num(it.price))}</div>
                     </div>
                   ))
                 )}
@@ -340,11 +537,11 @@ export default function POS() {
                 </div>
                 <div className="summary-row">
                   <span>Subtotal</span>
-                  <strong>₹{totals.total.toFixed(2)}</strong>
+                  <strong>₹{money(totals.total)}</strong>
                 </div>
                 <div className="summary-row grand">
                   <span>Grand Total</span>
-                  <strong>₹{totals.total.toFixed(2)}</strong>
+                  <strong>₹{money(totals.total)}</strong>
                 </div>
               </div>
 
@@ -361,9 +558,9 @@ export default function POS() {
             <div className="pos-note-card">
               <h3>Quick Tips</h3>
               <ul>
-                <li>Use Enter after typing the EAN for faster billing</li>
+                <li>Adding items does not reduce stock</li>
+                <li>Stock reduces only after payment confirmation</li>
                 <li>Use +1 and -1 to adjust quantity instantly</li>
-                <li>Complete payment to start a fresh new sale</li>
               </ul>
             </div>
           </div>
@@ -405,15 +602,15 @@ export default function POS() {
 
             <div className="modal-total-box">
               <span>Payable Amount</span>
-              <strong>₹{totals.total.toFixed(2)}</strong>
+              <strong>₹{money(totals.total)}</strong>
             </div>
 
             <div className="modal-actions">
-              <button className="btn ghost" onClick={() => setPaying(false)}>
+              <button className="btn ghost" onClick={() => setPaying(false)} disabled={confirming}>
                 Back
               </button>
-              <button className="btn gold" onClick={confirmPayment}>
-                Confirm
+              <button className="btn gold" onClick={confirmPayment} disabled={confirming}>
+                {confirming ? 'Confirming...' : 'Confirm'}
               </button>
             </div>
 

@@ -1,6 +1,6 @@
 .transaction-page {
   min-height: 100vh;
-  padding: 110px 20px 30px;
+  padding: 58px 10px 16px;
   background: linear-gradient(180deg, #fffdf5 0%, #fff7d6 52%, #ffffff 100%);
   color: #111111;
   font-family: Arial, sans-serif;
@@ -13,44 +13,53 @@
   margin: 0 auto;
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 6px;
 }
 
 .transaction-header {
   background: #ffffff;
   border: 1px solid #f0d56b;
-  border-radius: 20px;
-  padding: 24px;
-  text-align: center;
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.06);
+  border-radius: 12px;
+  padding: 7px 12px;
+  text-align: left;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.035);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
 }
 
 .transaction-header h2 {
-  margin: 0 0 10px;
-  font-size: 32px;
+  margin: 0;
+  font-size: 22px;
   font-weight: 700;
   color: #111111;
+  line-height: 1.1;
+  white-space: nowrap;
 }
 
 .transaction-header p {
   margin: 0;
-  font-size: 14px;
-  line-height: 1.7;
+  font-size: 12px;
+  line-height: 1.2;
   color: #555555;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .stats-row {
   display: grid;
-  grid-template-columns: repeat(5, minmax(180px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(8, minmax(115px, 1fr));
+  gap: 6px;
 }
 
 .stat-card {
   background: #ffffff;
   border: 1px solid #f1d265;
-  border-radius: 18px;
-  padding: 18px;
-  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.05);
+  border-radius: 11px;
+  padding: 7px 9px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.035);
   min-width: 0;
 }
 
@@ -71,27 +80,33 @@
 }
 
 .stat-title {
-  font-size: 13px;
+  font-size: 11px;
   color: #666666;
-  margin-bottom: 8px;
-  line-height: 1.5;
+  margin-bottom: 2px;
+  line-height: 1.15;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .stat-value {
-  font-size: 24px;
+  font-size: 17px;
   font-weight: 700;
   color: #111111;
   word-break: break-word;
+  line-height: 1.1;
 }
 
 .chip-bar {
   display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
+  gap: 5px;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  padding-bottom: 1px;
 }
 
 .chip {
-  padding: 10px 18px;
+  padding: 5px 11px;
   background: #ffffff;
   border: 1px solid #d8d8d8;
   color: black !important;
@@ -99,6 +114,9 @@
   cursor: pointer;
   font-weight: 700;
   transition: 0.2s ease;
+  white-space: nowrap;
+  flex: 0 0 auto;
+  font-size: 12px;
 }
 
 .chip:hover {
@@ -117,27 +135,32 @@
 .transaction-table {
   background: #ffffff;
   border: 1px solid #f0d56b;
-  border-radius: 20px;
-  padding: 22px;
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.06);
+  border-radius: 12px;
+  padding: 7px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.035);
   overflow: hidden;
 }
 
 .section-head {
-  margin-bottom: 16px;
+  margin-bottom: 5px;
 }
 
 .section-head h3 {
   margin: 0;
-  font-size: 22px;
+  font-size: 15px;
+  font-weight: 700;
   color: #111111;
+  line-height: 1.1;
 }
 
 .filter-grid {
   display: grid;
-  grid-template-columns: repeat(5, minmax(180px, 1fr));
-  gap: 14px;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(135px, 1fr);
+  gap: 6px;
   align-items: center;
+  overflow-x: auto;
+  padding-bottom: 1px;
 }
 
 .filter-grid input,
@@ -145,15 +168,16 @@
 .filter-grid button {
   width: 100%;
   min-width: 0;
-  height: 46px;
-  padding: 0 14px;
-  border-radius: 12px;
+  height: 32px;
+  padding: 0 9px;
+  border-radius: 8px;
   border: 1px solid #d8d8d8;
   background: #fffef8;
   color: #111111;
   outline: none;
-  font-size: 14px;
+  font-size: 12px;
   box-sizing: border-box;
+  white-space: nowrap;
 }
 
 .filter-grid input::placeholder {
@@ -163,7 +187,7 @@
 .filter-grid input:focus,
 .filter-grid select:focus {
   border-color: #e1be39;
-  box-shadow: 0 0 0 3px rgba(225, 190, 57, 0.14);
+  box-shadow: 0 0 0 2px rgba(225, 190, 57, 0.12);
 }
 
 .filter-grid button {
@@ -194,9 +218,9 @@
 }
 
 .error-text {
-  margin-top: 14px;
+  margin: 5px 0 0;
   color: #d93025;
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 600;
 }
 
@@ -204,7 +228,7 @@
   width: 100%;
   overflow-x: auto;
   overflow-y: hidden;
-  border-radius: 16px;
+  border-radius: 10px;
   border: 1px solid #ececec;
 }
 
@@ -218,7 +242,7 @@ table {
 
 th,
 td {
-  padding: 14px 12px;
+  padding: 9px 9px;
   border-bottom: 1px solid #eeeeee;
   text-align: center;
   vertical-align: middle;
@@ -229,7 +253,7 @@ th {
   background: #fff4b8;
   color: #111111;
   font-weight: 700;
-  font-size: 14px;
+  font-size: 12px;
   position: sticky;
   top: 0;
   z-index: 1;
@@ -238,7 +262,7 @@ th {
 td {
   background: #ffffff;
   color: #222222;
-  font-size: 14px;
+  font-size: 13px;
 }
 
 tbody tr:nth-child(even) td {
@@ -252,7 +276,7 @@ tbody tr:hover td {
 .customer-box {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
   align-items: flex-start;
   min-width: 180px;
   white-space: normal;
@@ -263,24 +287,27 @@ tbody tr:hover td {
   font-weight: 700;
   color: #111111;
   word-break: break-word;
+  line-height: 1.15;
 }
 
 .customer-sub {
-  font-size: 12px;
+  font-size: 11px;
   color: #666666;
   word-break: break-word;
+  line-height: 1.15;
 }
 
 .status-pill {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 6px 12px;
+  padding: 4px 8px;
   border-radius: 999px;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 700;
   border: 1px solid currentColor;
   white-space: nowrap;
+  line-height: 1;
 }
 
 .status-pill.ok {
@@ -305,18 +332,18 @@ tbody tr:hover td {
 
 .empty-cell {
   text-align: center;
-  padding: 22px;
+  padding: 12px;
   color: #666666;
   font-weight: 600;
 }
 
 .delete-btn {
-  padding: 8px 12px;
+  padding: 5px 9px;
   background-color: #d93025;
   color: #ffffff;
   border: none;
-  border-radius: 8px;
-  font-size: 14px;
+  border-radius: 7px;
+  font-size: 12px;
   cursor: pointer;
   transition: 0.2s ease;
 }
@@ -334,12 +361,12 @@ tbody tr:hover td {
   transform: translate(-50%, -50%);
   background-color: #ffffff;
   color: #111111;
-  padding: 24px;
-  border-radius: 16px;
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.18);
+  padding: 14px;
+  border-radius: 12px;
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.16);
   z-index: 1000;
   text-align: center;
-  font-size: 16px;
+  font-size: 14px;
   border: 1px solid #f0d56b;
 }
 
@@ -348,21 +375,21 @@ tbody tr:hover td {
 }
 
 .popup-actions {
-  margin-top: 16px;
+  margin-top: 10px;
   display: flex;
   justify-content: center;
-  gap: 12px;
+  gap: 7px;
   flex-wrap: wrap;
 }
 
 .popup-actions button {
-  min-width: 110px;
-  padding: 10px 16px;
+  min-width: 96px;
+  padding: 7px 12px;
   font-weight: 700;
   border: none;
-  border-radius: 10px;
+  border-radius: 8px;
   cursor: pointer;
-  font-size: 14px;
+  font-size: 12px;
   transition: 0.2s ease;
 }
 
@@ -387,78 +414,80 @@ tbody tr:hover td {
 
 @media (max-width: 1280px) {
   .stats-row {
-    grid-template-columns: repeat(3, minmax(180px, 1fr));
-  }
-
-  .filter-grid {
-    grid-template-columns: repeat(3, minmax(180px, 1fr));
+    grid-template-columns: repeat(4, minmax(145px, 1fr));
   }
 }
 
 @media (max-width: 900px) {
   .transaction-page {
-    padding: 120px 14px 24px;
+    padding: 72px 10px 14px;
   }
 
   .transaction-header {
-    padding: 20px 16px;
+    padding: 8px 10px;
   }
 
   .transaction-header h2 {
-    font-size: 26px;
+    font-size: 20px;
+  }
+
+  .transaction-header p {
+    font-size: 11px;
   }
 
   .stats-row {
-    grid-template-columns: repeat(2, minmax(150px, 1fr));
-  }
-
-  .filter-grid {
-    grid-template-columns: repeat(2, minmax(150px, 1fr));
+    grid-template-columns: repeat(2, minmax(145px, 1fr));
   }
 
   .transaction-filter,
   .transaction-table {
-    padding: 16px;
+    padding: 7px;
   }
 }
 
 @media (max-width: 600px) {
   .transaction-page {
-    padding: 130px 12px 20px;
+    padding: 76px 8px 12px;
+  }
+
+  .transaction-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
   }
 
   .transaction-header h2 {
-    font-size: 22px;
-  }
-
-  .transaction-header p {
-    font-size: 13px;
-  }
-
-  .stats-row,
-  .filter-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .chip-bar {
-    gap: 8px;
-  }
-
-  .chip {
-    width: 100%;
-    text-align: center;
-  }
-
-  .section-head h3 {
     font-size: 20px;
   }
 
+  .transaction-header p {
+    white-space: normal;
+    font-size: 11px;
+  }
+
+  .stats-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .stat-card {
+    padding: 7px;
+  }
+
   .stat-value {
-    font-size: 22px;
+    font-size: 16px;
+  }
+
+  .chip {
+    padding: 5px 9px;
+    font-size: 11px;
+  }
+
+  .section-head h3 {
+    font-size: 14px;
   }
 
   th,
   td {
-    padding: 12px 10px;
+    padding: 8px 7px;
   }
 }
