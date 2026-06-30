@@ -108,7 +108,7 @@ function statusPillClass(v) {
 }
 
 export default function Transaction() {
-  const { token, user } = useAuth()
+  const { token } = useAuth()
   const [rows, setRows] = useState([])
   const [loading, setLoading] = useState(false)
   const [err, setErr] = useState('')
@@ -135,25 +135,28 @@ export default function Transaction() {
     localStorage.getItem('accessToken') ||
     ''
 
-  const fetchJson = async (url) => {
-    const res = await fetch(url, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(authToken ? { Authorization: `Bearer ${authToken}` } : {})
-      },
-      credentials: 'omit',
-      mode: 'cors'
-    })
+  const fetchJson = useCallback(
+    async (url) => {
+      const res = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(authToken ? { Authorization: `Bearer ${authToken}` } : {})
+        },
+        credentials: 'omit',
+        mode: 'cors'
+      })
 
-    const data = await res.json().catch(() => null)
+      const data = await res.json().catch(() => null)
 
-    if (!res.ok) {
-      throw new Error(data?.message || `Request failed with status ${res.status}`)
-    }
+      if (!res.ok) {
+        throw new Error(data?.message || `Request failed with status ${res.status}`)
+      }
 
-    return data
-  }
+      return data
+    },
+    [authToken]
+  )
 
   const fetchTx = useCallback(async () => {
     setLoading(true)
@@ -175,7 +178,7 @@ export default function Transaction() {
     } finally {
       setLoading(false)
     }
-  }, [authToken])
+  }, [fetchJson])
 
   useEffect(() => {
     fetchTx()
