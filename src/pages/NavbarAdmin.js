@@ -47,9 +47,7 @@ const NavbarAdmin = () => {
     <nav className="navbar-final">
       <div className="top-row-final">
         <div className="logo-final">
-          <video autoPlay loop muted playsInline>
-            <source src="/images/logo.mp4" type="video/mp4" />
-          </video>
+            <source src="/images/main.svg" />
         </div>
 
         <div

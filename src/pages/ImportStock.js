@@ -17,6 +17,26 @@ function normalizeKey(k) {
     .trim()
 }
 
+function normalizeBarcode(v) {
+  return String(v ?? '')
+    .trim()
+    .replace(/^"|"$/g, '')
+    .replace(/\s+/g, '')
+    .toUpperCase()
+    .replace(/[^A-Z0-9._-]/g, '')
+}
+
+function normalizeImageType(v) {
+  const s = String(v || '')
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9_-]/g, '')
+  if (s.includes('front')) return 'front'
+  if (s.includes('back')) return 'back'
+  if (s.includes('main')) return 'main'
+  return s || 'main'
+}
+
 function pickValue(row, candidates) {
   const keys = Object.keys(row || {})
   for (const c of candidates) {
@@ -118,7 +138,7 @@ function parseCsvLine(line) {
 }
 
 function baseNameNoExt(name) {
-  const n = name.split('/').pop() || name
+  const n = String(name || '').split('/').pop() || String(name || '')
   const i = n.lastIndexOf('.')
   return i > 0 ? n.slice(0, i) : n
 }
@@ -128,10 +148,20 @@ function isImagePath(p) {
   return n.endsWith('.jpg') || n.endsWith('.jpeg') || n.endsWith('.png') || n.endsWith('.webp')
 }
 
-function extractEANFromPath(path) {
+function extractBarcodeFromPath(path) {
   const base = baseNameNoExt(path)
-  const m = String(base).match(/(\d{12,14})/)
-  return m ? m[1] : ''
+  if (base.includes('__')) return normalizeBarcode(base.split('__')[0])
+  const dotMatch = base.match(/^(.+)\.(front|back|main)$/i)
+  if (dotMatch) return normalizeBarcode(dotMatch[1])
+  return normalizeBarcode(base)
+}
+
+function extractImageTypeFromPath(path) {
+  const base = baseNameNoExt(path)
+  if (base.includes('__')) return normalizeImageType(base.split('__').slice(1).join('__'))
+  const dotMatch = base.match(/^(.+)\.(front|back|main)$/i)
+  if (dotMatch) return normalizeImageType(dotMatch[2])
+  return 'main'
 }
 
 async function cleanExcelOrCsvFile(inputFile) {
@@ -216,7 +246,7 @@ export default function ImportStock() {
   const [refreshing, setRefreshing] = useState(false)
   const [progress, setProgress] = useState(null)
   const [imageProgress, setImageProgress] = useState({ done: 0, total: 0 })
-  const [eanSet, setEanSet] = useState(null)
+  const [barcodeSet, setBarcodeSet] = useState(null)
   const [matchStats, setMatchStats] = useState({ matched: 0, total: 0, skipped: 0 })
   const [unmatchedList, setUnmatchedList] = useState([])
   const [b2cDiscount, setB2cDiscount] = useState('')
@@ -352,6 +382,7 @@ export default function ImportStock() {
         const job = await apiUpload(`/api/branch/${encodeURIComponent(branchId)}/import`, fd)
         setMessage('Uploaded. Starting processing…')
         setFile(null)
+        setBarcodeSet(null)
 
         await processJob(job.id, setProgress)
         await fetchJobs()
@@ -368,38 +399,44 @@ export default function ImportStock() {
 
   async function uploadToCloudinary(blob, publicIdBase) {
     const form = new FormData()
+    const uniquePublicId = `${publicIdBase}__${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
+
     form.append('file', blob)
     form.append('upload_preset', UPLOAD_PRESET)
     form.append('folder', 'products')
-    form.append('public_id', publicIdBase)
+    form.append('public_id', uniquePublicId)
 
     const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`, {
       method: 'POST',
       body: form
     })
 
-    if (!res.ok) throw new Error(`Cloudinary upload failed (${res.status})`)
-    return res.json()
-  }
+    const data = await res.json()
 
-  const ensureEanSet = useCallback(async () => {
-    if (eanSet) return eanSet
+    if (!res.ok) {
+      throw new Error(data?.error?.message || `Cloudinary upload failed (${res.status})`)
+    }
+
+    return data
+  }
+  const ensureBarcodeSet = useCallback(async () => {
+    if (barcodeSet) return barcodeSet
 
     try {
       const list = await apiGet(`/api/products?limit=100000`)
       const s = new Set(
         (Array.isArray(list) ? list : [])
-          .map(p => String(p.ean_code || '').trim())
+          .map(p => normalizeBarcode(p.barcode || p.ean_code || ''))
           .filter(Boolean)
       )
-      setEanSet(s)
+      setBarcodeSet(s)
       return s
     } catch {
       const s = new Set()
-      setEanSet(s)
+      setBarcodeSet(s)
       return s
     }
-  }, [eanSet])
+  }, [barcodeSet])
 
   const onUploadImages = useCallback(
     async e => {
@@ -418,44 +455,86 @@ export default function ImportStock() {
       show()
 
       try {
-        const eans = await ensureEanSet()
+        const barcodes = await ensureBarcodeSet()
         const zip = await JSZip.loadAsync(imageZip)
         const entries = Object.values(zip.files).filter(f => !f.dir && isImagePath(f.name))
         const total = entries.length
         let done = 0
         let matched = 0
         const unmatched = []
+        const uploadedImages = []
+        const seenImageKeys = new Set()
 
         for (const f of entries) {
-          const ean = extractEANFromPath(f.name).trim()
+          const barcode = extractBarcodeFromPath(f.name)
+          const imageType = extractImageTypeFromPath(f.name)
+          const imageKey = `${barcode}__${imageType}`
 
-          if (!ean || !eans.has(ean)) {
-            unmatched.push({ file: f.name, ean: ean || '(none)' })
+          if (!barcode || !barcodes.has(barcode)) {
+            unmatched.push({ file: f.name, barcode: barcode || '(none)', reason: 'Barcode not found' })
             done += 1
             setImageProgress({ done, total })
             continue
           }
 
+          if (seenImageKeys.has(imageKey)) {
+            unmatched.push({ file: f.name, barcode, reason: `Duplicate ${imageType} image` })
+            done += 1
+            setImageProgress({ done, total })
+            continue
+          }
+
+          seenImageKeys.add(imageKey)
+
           const blob = await f.async('blob')
-          await uploadToCloudinary(blob, ean)
+          const publicIdBase = `${barcode}__${imageType}`
+          const uploaded = await uploadToCloudinary(blob, publicIdBase)
+
+          uploadedImages.push({
+            barcode,
+            image_type: imageType,
+            secure_url: uploaded.secure_url || uploaded.url || '',
+            public_id: uploaded.public_id || '',
+            original_filename: f.name
+          })
+
           matched += 1
           done += 1
           setImageProgress({ done, total })
         }
 
-        setMatchStats({ matched, total, skipped: total - matched })
-        setUnmatchedList(unmatched)
-        setImageMessage(`Finished. Uploaded ${matched}/${total}. Unmatched ${unmatched.length}.`)
+        let saved = 0
+        let serverUnmatched = []
+        if (uploadedImages.length) {
+          const confirm = await apiPost(`/api/branch/${encodeURIComponent(branchId)}/images/confirm`, {
+            images: uploadedImages
+          })
+          saved = Number(confirm?.totalUpdated || 0)
+          serverUnmatched = Array.isArray(confirm?.unmatched) ? confirm.unmatched : []
+        }
+
+        const finalUnmatched = [
+          ...unmatched,
+          ...serverUnmatched.map(u => ({
+            file: u.original_filename || '',
+            barcode: u.barcode || '(none)',
+            reason: u.reason || 'Not saved'
+          }))
+        ]
+
+        setMatchStats({ matched: saved, total, skipped: total - saved })
+        setUnmatchedList(finalUnmatched)
+        setImageMessage(`Finished. Uploaded ${matched}/${total}. Saved ${saved}. Unmatched ${finalUnmatched.length}.`)
         setImageZip(null)
       } catch (err) {
-        setImageMessage(err?.message || 'Image upload failed')
+        setImageMessage(err?.payload?.message || err?.message || 'Image upload failed')
       } finally {
         setUploadingImages(false)
         hide()
         setTimeout(() => setImageMessage(''), 5000)
       }
     },
-    [imageZip, branchId, show, hide, ensureEanSet]
+    [imageZip, branchId, show, hide, ensureBarcodeSet]
   )
 
   const onSaveDiscounts = useCallback(
@@ -559,9 +638,9 @@ export default function ImportStock() {
         </div>
 
         <div className="import-card-admin">
-          <div className="import-title-admin">Upload Product Images (ZIP by EAN)</div>
+          <div className="import-title-admin">Upload Product Images (ZIP by Barcode)</div>
           <div className="import-subtitle-admin">
-            Images will be matched by EAN across all categories. Only unmatched EANs will be listed below.
+            Use barcode__front.jpg and barcode__back.jpg. Images will be matched by barcode across all categories.
           </div>
           <form className="import-form-admin" onSubmit={e => e.preventDefault()}>
             <div className="zip-block">
@@ -588,19 +667,19 @@ export default function ImportStock() {
                 {imageMessage ? <div className="import-msg-admin">{imageMessage}</div> : null}
 
                 <div className="image-stats">
-                  <span>Matched: {matchStats.matched}</span>
+                  <span>Saved: {matchStats.matched}</span>
                   <span>Unmatched: {matchStats.skipped}</span>
                   <span>Total: {matchStats.total}</span>
                 </div>
 
                 {!!unmatchedList.length && (
                   <div className="unmatched-wrap">
-                    <div className="unmatched-title">Unmatched EANs</div>
+                    <div className="unmatched-title">Unmatched / Skipped Images</div>
                     <ul className="unmatched-list">
                       {unmatchedList.map((u, i) => (
                         <li key={`${u.file}-${i}`}>
-                          <span className="unmatched-ean">{u.ean}</span>
-                          <span className="unmatched-file">{u.file}</span>
+                          <span className="unmatched-ean">{u.barcode}</span>
+                          <span className="unmatched-file">{u.file} {u.reason ? `- ${u.reason}` : ''}</span>
                         </li>
                       ))}
                     </ul>
