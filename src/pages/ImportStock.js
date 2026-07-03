@@ -260,15 +260,14 @@ export default function ImportStock() {
   const [discountMessage, setDiscountMessage] = useState('')
 
   const branchId = useMemo(() => {
-    const savedBranchId = typeof window !== 'undefined' ? localStorage.getItem('branch_id') || localStorage.getItem('branchId') : null
-    return (
-      normalizeBranchId(user?.branch_id) ||
-      normalizeBranchId(user?.branchId) ||
-      normalizeBranchId(user?.branch?.id) ||
-      normalizeBranchId(savedBranchId) ||
-      1
-    )
-  }, [user])
+  const savedBranchId = typeof window !== 'undefined' ? localStorage.getItem('branch_id') || localStorage.getItem('branchId') : null
+  return (
+    normalizeBranchId(user?.branch_id) ||
+    normalizeBranchId(user?.branchId) ||
+    normalizeBranchId(user?.branch?.id) ||
+    normalizeBranchId(savedBranchId)
+  )
+}, [user])
 
   const canUpload = useMemo(() => !!file && !!branchId && !uploading && !!gender, [file, branchId, uploading, gender])
   const canUploadImages = useMemo(() => !!imageZip && !!branchId && !uploadingImages, [imageZip, branchId, uploadingImages])
