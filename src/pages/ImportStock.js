@@ -9,6 +9,7 @@ import './ImportStock.css'
 const CLOUD_NAME = 'digu2krba'
 const UPLOAD_PRESET = 'unsigned_ean'
 const PROCESS_LIMIT = 500
+const DEFAULT_BRANCH_ID = 3
 
 function normalizeKey(k) {
   return String(k || '')
@@ -260,14 +261,16 @@ export default function ImportStock() {
   const [discountMessage, setDiscountMessage] = useState('')
 
   const branchId = useMemo(() => {
-  const savedBranchId = typeof window !== 'undefined' ? localStorage.getItem('branch_id') || localStorage.getItem('branchId') : null
-  return (
-    normalizeBranchId(user?.branch_id) ||
-    normalizeBranchId(user?.branchId) ||
-    normalizeBranchId(user?.branch?.id) ||
-    normalizeBranchId(savedBranchId)
-  )
-}, [user])
+    const savedBranchId = typeof window !== 'undefined' ? localStorage.getItem('branch_id') || localStorage.getItem('branchId') : null
+
+    return (
+      normalizeBranchId(user?.branch_id) ||
+      normalizeBranchId(user?.branchId) ||
+      normalizeBranchId(user?.branch?.id) ||
+      normalizeBranchId(savedBranchId) ||
+      DEFAULT_BRANCH_ID
+    )
+  }, [user])
 
   const canUpload = useMemo(() => !!file && !!branchId && !uploading && !!gender, [file, branchId, uploading, gender])
   const canUploadImages = useMemo(() => !!imageZip && !!branchId && !uploadingImages, [imageZip, branchId, uploadingImages])
@@ -286,7 +289,8 @@ export default function ImportStock() {
   useEffect(() => {
     const saved = localStorage.getItem('import_gender') || ''
     setGender(saved)
-  }, [])
+    localStorage.setItem('branch_id', String(branchId))
+  }, [branchId])
 
   const fetchJobs = useCallback(async () => {
     if (!branchId) return
