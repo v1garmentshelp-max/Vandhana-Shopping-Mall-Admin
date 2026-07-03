@@ -37,6 +37,11 @@ function normalizeImageType(v) {
   return s || 'main'
 }
 
+function normalizeBranchId(v) {
+  const n = Number(v)
+  return Number.isInteger(n) && n > 0 ? n : null
+}
+
 function pickValue(row, candidates) {
   const keys = Object.keys(row || {})
   for (const c of candidates) {
@@ -254,7 +259,16 @@ export default function ImportStock() {
   const [savingDiscounts, setSavingDiscounts] = useState(false)
   const [discountMessage, setDiscountMessage] = useState('')
 
-  const branchId = user?.branch_id
+  const branchId = useMemo(() => {
+    const savedBranchId = typeof window !== 'undefined' ? localStorage.getItem('branch_id') || localStorage.getItem('branchId') : null
+    return (
+      normalizeBranchId(user?.branch_id) ||
+      normalizeBranchId(user?.branchId) ||
+      normalizeBranchId(user?.branch?.id) ||
+      normalizeBranchId(savedBranchId) ||
+      1
+    )
+  }, [user])
 
   const canUpload = useMemo(() => !!file && !!branchId && !uploading && !!gender, [file, branchId, uploading, gender])
   const canUploadImages = useMemo(() => !!imageZip && !!branchId && !uploadingImages, [imageZip, branchId, uploadingImages])
@@ -362,7 +376,13 @@ export default function ImportStock() {
   const onUpload = useCallback(
     async e => {
       e.preventDefault()
-      if (!file || !branchId || !gender) {
+
+      if (!branchId) {
+        setMessage('Branch not found')
+        return
+      }
+
+      if (!file || !gender) {
         setMessage('Please select a category and choose a file.')
         return
       }
@@ -378,6 +398,7 @@ export default function ImportStock() {
         fd.append('file', cleaned)
         fd.append('gender', gender)
         localStorage.setItem('import_gender', gender)
+        localStorage.setItem('branch_id', String(branchId))
 
         const job = await apiUpload(`/api/branch/${encodeURIComponent(branchId)}/import`, fd)
         setMessage('Uploaded. Starting processing…')
@@ -419,6 +440,7 @@ export default function ImportStock() {
 
     return data
   }
+
   const ensureBarcodeSet = useCallback(async () => {
     if (barcodeSet) return barcodeSet
 
@@ -442,7 +464,12 @@ export default function ImportStock() {
     async e => {
       e.preventDefault()
 
-      if (!imageZip || !branchId) {
+      if (!branchId) {
+        setImageMessage('Branch not found')
+        return
+      }
+
+      if (!imageZip) {
         setImageMessage('Please choose a ZIP file.')
         return
       }
@@ -455,6 +482,8 @@ export default function ImportStock() {
       show()
 
       try {
+        localStorage.setItem('branch_id', String(branchId))
+
         const barcodes = await ensureBarcodeSet()
         const zip = await JSZip.loadAsync(imageZip)
         const entries = Object.values(zip.files).filter(f => !f.dir && isImagePath(f.name))
@@ -505,6 +534,7 @@ export default function ImportStock() {
 
         let saved = 0
         let serverUnmatched = []
+
         if (uploadedImages.length) {
           const confirm = await apiPost(`/api/branch/${encodeURIComponent(branchId)}/images/confirm`, {
             images: uploadedImages
@@ -559,6 +589,8 @@ export default function ImportStock() {
       show()
 
       try {
+        localStorage.setItem('branch_id', String(branchId))
+
         await apiPost(`/api/branch/${encodeURIComponent(branchId)}/discounts`, {
           b2c_discount_pct: b2c,
           b2b_discount_pct: b2b
@@ -659,7 +691,7 @@ export default function ImportStock() {
                 <button
                   className="import-btn-admin"
                   onClick={onUploadImages}
-                  disabled={!canUploadImages || uploadingImages}
+                  disabled={!canUploadImages}
                 >
                   {uploadingImages ? `Uploading ${imageProgress.done}/${imageProgress.total}…` : 'Upload Images ZIP'}
                 </button>
