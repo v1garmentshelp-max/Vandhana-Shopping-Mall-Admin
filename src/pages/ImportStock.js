@@ -252,7 +252,6 @@ export default function ImportStock() {
   const [refreshing, setRefreshing] = useState(false)
   const [progress, setProgress] = useState(null)
   const [imageProgress, setImageProgress] = useState({ done: 0, total: 0 })
-  const [barcodeSet, setBarcodeSet] = useState(null)
   const [matchStats, setMatchStats] = useState({ matched: 0, total: 0, skipped: 0 })
   const [unmatchedList, setUnmatchedList] = useState([])
   const [b2cDiscount, setB2cDiscount] = useState('')
@@ -406,7 +405,6 @@ export default function ImportStock() {
         const job = await apiUpload(`/api/branch/${encodeURIComponent(branchId)}/import`, fd)
         setMessage('Uploaded. Starting processing…')
         setFile(null)
-        setBarcodeSet(null)
 
         await processJob(job.id, setProgress)
         await fetchJobs()
@@ -444,25 +442,6 @@ export default function ImportStock() {
     return data
   }
 
-  const ensureBarcodeSet = useCallback(async () => {
-    if (barcodeSet) return barcodeSet
-
-    try {
-      const list = await apiGet(`/api/products?limit=100000`)
-      const s = new Set(
-        (Array.isArray(list) ? list : [])
-          .map(p => normalizeBarcode(p.barcode || p.ean_code || ''))
-          .filter(Boolean)
-      )
-      setBarcodeSet(s)
-      return s
-    } catch {
-      const s = new Set()
-      setBarcodeSet(s)
-      return s
-    }
-  }, [barcodeSet])
-
   const onUploadImages = useCallback(
     async e => {
       e.preventDefault()
@@ -487,12 +466,11 @@ export default function ImportStock() {
       try {
         localStorage.setItem('branch_id', String(branchId))
 
-        const barcodes = await ensureBarcodeSet()
         const zip = await JSZip.loadAsync(imageZip)
         const entries = Object.values(zip.files).filter(f => !f.dir && isImagePath(f.name))
         const total = entries.length
         let done = 0
-        let matched = 0
+        let uploadedCount = 0
         const unmatched = []
         const uploadedImages = []
         const seenImageKeys = new Set()
@@ -502,8 +480,8 @@ export default function ImportStock() {
           const imageType = extractImageTypeFromPath(f.name)
           const imageKey = `${barcode}__${imageType}`
 
-          if (!barcode || !barcodes.has(barcode)) {
-            unmatched.push({ file: f.name, barcode: barcode || '(none)', reason: 'Barcode not found' })
+          if (!barcode) {
+            unmatched.push({ file: f.name, barcode: '(none)', reason: 'Barcode not found in filename' })
             done += 1
             setImageProgress({ done, total })
             continue
@@ -530,7 +508,7 @@ export default function ImportStock() {
             original_filename: f.name
           })
 
-          matched += 1
+          uploadedCount += 1
           done += 1
           setImageProgress({ done, total })
         }
@@ -555,9 +533,9 @@ export default function ImportStock() {
           }))
         ]
 
-        setMatchStats({ matched: saved, total, skipped: total - saved })
+        setMatchStats({ matched: saved, total, skipped: finalUnmatched.length })
         setUnmatchedList(finalUnmatched)
-        setImageMessage(`Finished. Uploaded ${matched}/${total}. Saved ${saved}. Unmatched ${finalUnmatched.length}.`)
+        setImageMessage(`Finished. Uploaded ${uploadedCount}/${total}. Saved ${saved}. Unmatched ${finalUnmatched.length}.`)
         setImageZip(null)
       } catch (err) {
         setImageMessage(err?.payload?.message || err?.message || 'Image upload failed')
@@ -567,7 +545,7 @@ export default function ImportStock() {
         setTimeout(() => setImageMessage(''), 5000)
       }
     },
-    [imageZip, branchId, show, hide, ensureBarcodeSet]
+    [imageZip, branchId, show, hide]
   )
 
   const onSaveDiscounts = useCallback(
@@ -675,7 +653,7 @@ export default function ImportStock() {
         <div className="import-card-admin">
           <div className="import-title-admin">Upload Product Images (ZIP by Barcode)</div>
           <div className="import-subtitle-admin">
-            Use barcode__front.jpg and barcode__back.jpg. Images will be matched by barcode across all categories.
+            Use barcode__front.jpg and barcode__back.jpg. Images will be verified by backend barcode records.
           </div>
           <form className="import-form-admin" onSubmit={e => e.preventDefault()}>
             <div className="zip-block">
