@@ -22,6 +22,28 @@ const coerceNumber = (v) => {
   return Number.isFinite(n) ? n : 0;
 };
 
+const cleanText = (v) => String(v ?? '').replace(/\s+/g, ' ').trim();
+
+const normalizeKey = (v) => cleanText(v).toLowerCase();
+
+const hasGroupedVariantValue = (v) => cleanText(v).includes(',');
+
+const getBranchId = () => {
+  if (typeof window === 'undefined') return '';
+  return (
+    localStorage.getItem('branch_id') ||
+    localStorage.getItem('branchId') ||
+    localStorage.getItem('selectedBranchId') ||
+    ''
+  );
+};
+
+const withBranch = (url) => {
+  const branchId = getBranchId();
+  if (!branchId) return url;
+  return `${url}${url.includes('?') ? '&' : '?'}branch_id=${encodeURIComponent(branchId)}`;
+};
+
 const normalizeAssetUrl = (maybeRelative) => {
   if (!maybeRelative) return '';
   if (/^https?:\/\//i.test(maybeRelative)) return maybeRelative;
@@ -36,22 +58,155 @@ const computeFinal = (price, discount) => {
   return Number((p - (p * d) / 100).toFixed(2));
 };
 
-const mapRow = (p) => ({
-  id: p.id || p.product_id || p._id || p.uuid,
-  category: p.category || '',
-  brand: p.brand || '',
-  product_name: p.product_name || '',
-  color: p.color || '',
-  size: p.size || '',
-  original_price_b2b: coerceNumber(p.original_price_b2b),
-  discount_b2b: coerceNumber(p.discount_b2b),
-  final_price_b2b: coerceNumber(p.final_price_b2b),
-  original_price_b2c: coerceNumber(p.original_price_b2c),
-  discount_b2c: coerceNumber(p.discount_b2c),
-  final_price_b2c: coerceNumber(p.final_price_b2c),
-  total_count: coerceNumber(p.total_count),
-  image_url: normalizeAssetUrl(p.image_url || p.image || p.imageUrl || p.path || '')
-});
+const makeGroupKey = (row) =>
+  [
+    cleanText(row.product_id),
+    normalizeKey(row.category),
+    normalizeKey(row.brand),
+    normalizeKey(row.product_name)
+  ].join('||');
+
+const makeVariantKey = (row) =>
+  cleanText(row.variant_id || row.id) ||
+  [
+    makeGroupKey(row),
+    normalizeKey(row.color),
+    normalizeKey(row.size),
+    normalizeKey(row.barcode)
+  ].join('||');
+
+const mapVariantRow = (product, variant) => {
+  const productId = product.product_id ?? product.id ?? variant.product_id ?? '';
+  const variantId = variant.variant_id ?? variant.id ?? '';
+  const color = cleanText(variant.color || variant.colour);
+  const size = cleanText(variant.size);
+
+  if (!variantId || !color || !size) return null;
+  if (hasGroupedVariantValue(color) || hasGroupedVariantValue(size)) return null;
+
+  const originalPriceB2c =
+    variant.original_price_b2c ??
+    variant.mrp ??
+    variant.price ??
+    variant.sale_price ??
+    product.original_price_b2c ??
+    product.mrp ??
+    product.price ??
+    0;
+
+  const discountB2c =
+    variant.discount_b2c ??
+    variant.b2c_discount_pct ??
+    product.discount_b2c ??
+    product.b2c_discount_pct ??
+    0;
+
+  const originalPriceB2b =
+    variant.original_price_b2b ??
+    variant.cost_price ??
+    variant.original_price_b2c ??
+    product.original_price_b2b ??
+    product.original_price_b2c ??
+    0;
+
+  const discountB2b =
+    variant.discount_b2b ??
+    variant.b2b_discount_pct ??
+    product.discount_b2b ??
+    product.b2b_discount_pct ??
+    0;
+
+  const mapped = {
+    id: variantId,
+    variant_id: variantId,
+    product_id: productId,
+    category: cleanText(product.category || product.gender),
+    brand: cleanText(product.brand || product.brand_name),
+    product_name: cleanText(product.product_name || product.name),
+    color,
+    colour: color,
+    size,
+    barcode: cleanText(variant.barcode || variant.ean_code),
+    original_price_b2b: coerceNumber(originalPriceB2b),
+    discount_b2b: coerceNumber(discountB2b),
+    final_price_b2b: coerceNumber(variant.final_price_b2b || product.final_price_b2b),
+    original_price_b2c: coerceNumber(originalPriceB2c),
+    discount_b2c: coerceNumber(discountB2c),
+    final_price_b2c: coerceNumber(variant.final_price_b2c || product.final_price_b2c),
+    total_count: coerceNumber(variant.on_hand ?? variant.total_count ?? variant.available_qty ?? 0),
+    image_url: normalizeAssetUrl(variant.image_url || product.image_url || product.image || product.imageUrl || product.path || '')
+  };
+
+  return {
+    ...mapped,
+    group_key: makeGroupKey(mapped),
+    variant_key: makeVariantKey(mapped)
+  };
+};
+
+const mapSingleRow = (p) => {
+  const productId = p.product_id ?? p.id ?? p._id ?? p.uuid ?? '';
+  const variantId = p.variant_id ?? p.primary_variant_id ?? p.id ?? '';
+  const color = cleanText(p.color || p.colour);
+  const size = cleanText(p.size);
+
+  if (!variantId || !color || !size) return null;
+  if (hasGroupedVariantValue(color) || hasGroupedVariantValue(size)) return null;
+
+  const mapped = {
+    id: variantId,
+    variant_id: variantId,
+    product_id: productId,
+    category: cleanText(p.category || p.gender),
+    brand: cleanText(p.brand || p.brand_name),
+    product_name: cleanText(p.product_name || p.name),
+    color,
+    colour: color,
+    size,
+    barcode: cleanText(p.barcode || p.ean_code),
+    original_price_b2b: coerceNumber(p.original_price_b2b),
+    discount_b2b: coerceNumber(p.discount_b2b || p.b2b_discount_pct),
+    final_price_b2b: coerceNumber(p.final_price_b2b),
+    original_price_b2c: coerceNumber(p.original_price_b2c || p.mrp),
+    discount_b2c: coerceNumber(p.discount_b2c || p.b2c_discount_pct),
+    final_price_b2c: coerceNumber(p.final_price_b2c),
+    total_count: coerceNumber(p.total_count || p.on_hand || p.available_qty),
+    image_url: normalizeAssetUrl(p.image_url || p.image || p.imageUrl || p.path || '')
+  };
+
+  return {
+    ...mapped,
+    group_key: makeGroupKey(mapped),
+    variant_key: makeVariantKey(mapped)
+  };
+};
+
+const flattenProducts = (items) => {
+  const out = [];
+
+  for (const product of Array.isArray(items) ? items : []) {
+    const variants = Array.isArray(product.variants) ? product.variants : [];
+
+    if (variants.length) {
+      for (const variant of variants) {
+        const mapped = mapVariantRow(product, variant);
+        if (mapped) out.push(mapped);
+      }
+    } else {
+      const mapped = mapSingleRow(product);
+      if (mapped) out.push(mapped);
+    }
+  }
+
+  const seen = new Set();
+
+  return out.filter((item) => {
+    const key = item.variant_key;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+};
 
 const getItemsFromResponse = (data) => {
   if (Array.isArray(data)) return data;
@@ -83,18 +238,17 @@ const fetchJson = async (url) => {
 
 const fetchAllProducts = async () => {
   const directUrls = [
-    `${API_BASE}/api/products?all=true`,
-    `${API_BASE}/api/products?limit=50000`,
-    `${API_BASE}/api/products`
+    withBranch(`${API_BASE}/api/products?all=true&limit=50000`),
+    withBranch(`${API_BASE}/api/products?limit=50000`),
+    withBranch(`${API_BASE}/api/products`)
   ];
 
   for (const url of directUrls) {
     try {
       const data = await fetchJson(url);
       const items = getItemsFromResponse(data);
-      if (Array.isArray(items) && items.length > 1000) {
-        return items.map(mapRow);
-      }
+      const rows = flattenProducts(items);
+      if (rows.length > 0) return rows;
     } catch {}
   }
 
@@ -106,10 +260,10 @@ const fetchAllProducts = async () => {
 
   while (hasMore) {
     const pageUrls = [
-      `${API_BASE}/api/products?page=${page}&limit=${pageSize}`,
-      `${API_BASE}/api/products?page=${page}&pageSize=${pageSize}`,
-      `${API_BASE}/api/products?page=${page}&per_page=${pageSize}`,
-      `${API_BASE}/api/products?offset=${(page - 1) * pageSize}&limit=${pageSize}`
+      withBranch(`${API_BASE}/api/products?page=${page}&limit=${pageSize}`),
+      withBranch(`${API_BASE}/api/products?page=${page}&pageSize=${pageSize}`),
+      withBranch(`${API_BASE}/api/products?page=${page}&per_page=${pageSize}`),
+      withBranch(`${API_BASE}/api/products?offset=${(page - 1) * pageSize}&limit=${pageSize}`)
     ];
 
     let pageItems = [];
@@ -129,14 +283,13 @@ const fetchAllProducts = async () => {
 
     if (!pageItems.length) break;
 
+    const rows = flattenProducts(pageItems);
     let addedThisRound = 0;
 
-    for (const item of pageItems) {
-      const mapped = mapRow(item);
-      const key = String(mapped.id ?? `${mapped.product_name}-${mapped.color}-${mapped.size}`);
-      if (!seen.has(key)) {
-        seen.add(key);
-        all.push(mapped);
+    for (const item of rows) {
+      if (!seen.has(item.variant_key)) {
+        seen.add(item.variant_key);
+        all.push(item);
         addedThisRound += 1;
       }
     }
@@ -149,19 +302,82 @@ const fetchAllProducts = async () => {
     if (page > 1000) break;
   }
 
-  if (all.length > 0) return all;
+  return all;
+};
 
-  for (const url of directUrls) {
+const uniqueValues = (values) => {
+  const seen = new Set();
+  const result = [];
+
+  values.forEach((value) => {
+    const text = cleanText(value);
+    const key = normalizeKey(text);
+    if (text && !seen.has(key)) {
+      seen.add(key);
+      result.push(text);
+    }
+  });
+
+  return result.sort((a, b) => {
+    const na = parseFloat(String(a).replace(/[^\d.]/g, ''));
+    const nb = parseFloat(String(b).replace(/[^\d.]/g, ''));
+    if (Number.isFinite(na) && Number.isFinite(nb) && na !== nb) return na - nb;
+    return String(a).localeCompare(String(b), undefined, { numeric: true });
+  });
+};
+
+const buildDeleteItem = (group, color, size) => {
+  const variant =
+    group.variants.find(
+      (v) => normalizeKey(v.color) === normalizeKey(color) && normalizeKey(v.size) === normalizeKey(size)
+    ) ||
+    group.variants.find((v) => normalizeKey(v.color) === normalizeKey(color)) ||
+    group.variants[0];
+
+  if (!variant) return null;
+
+  return {
+    ...variant,
+    color: cleanText(color || variant.color),
+    colour: cleanText(color || variant.color),
+    size: cleanText(size || variant.size),
+    group_key: group.group_key,
+    variant_key: makeVariantKey({
+      ...variant,
+      color: cleanText(color || variant.color),
+      size: cleanText(size || variant.size)
+    })
+  };
+};
+
+const deleteVariantRequest = async (item) => {
+  const variantId = item.variant_id || item.id;
+
+  if (!variantId) throw new Error('Variant id missing');
+
+  const query = new URLSearchParams();
+  const branchId = getBranchId();
+
+  if (branchId) query.set('branch_id', branchId);
+
+  const suffix = query.toString() ? `?${query.toString()}` : '';
+
+  const res = await fetch(`${API_BASE}/api/products/variant/${encodeURIComponent(variantId)}${suffix}`, {
+    method: 'DELETE'
+  });
+
+  if (!res.ok) {
+    let message = 'Variant delete failed';
+
     try {
-      const data = await fetchJson(url);
-      const items = getItemsFromResponse(data);
-      if (Array.isArray(items) && items.length > 0) {
-        return items.map(mapRow);
-      }
+      const data = await res.json();
+      message = data?.message || message;
     } catch {}
+
+    throw new Error(message);
   }
 
-  return [];
+  return true;
 };
 
 const DeleteProduct = () => {
@@ -172,17 +388,28 @@ const DeleteProduct = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [popupMessage, setPopupMessage] = useState('');
   const [popupType, setPopupType] = useState('');
-  const [confirmIds, setConfirmIds] = useState([]);
+  const [confirmItems, setConfirmItems] = useState([]);
   const [showConfirm, setShowConfirm] = useState(false);
-  const [selectedIds, setSelectedIds] = useState(new Set());
+  const [selectedMap, setSelectedMap] = useState({});
+  const [variantChoices, setVariantChoices] = useState({});
+
+  const showPopup = (message, type = 'success', time = 1800) => {
+    setPopupMessage(message);
+    setPopupType(type);
+    setTimeout(() => setPopupMessage(''), time);
+  };
 
   const fetchAll = async () => {
     setIsLoading(true);
     try {
       const allRows = await fetchAllProducts();
       setRows(allRows);
+      setSelectedMap({});
+      setVariantChoices({});
     } catch {
       setRows([]);
+      setSelectedMap({});
+      setVariantChoices({});
     } finally {
       setIsLoading(false);
     }
@@ -206,7 +433,8 @@ const DeleteProduct = () => {
           (r.brand || '').toLowerCase().includes(q) ||
           (r.product_name || '').toLowerCase().includes(q) ||
           (r.color || '').toLowerCase().includes(q) ||
-          (r.size || '').toLowerCase().includes(q)
+          (r.size || '').toLowerCase().includes(q) ||
+          (r.barcode || '').toLowerCase().includes(q)
       );
     }
 
@@ -214,9 +442,10 @@ const DeleteProduct = () => {
 
     if (sortBy === 'recent') {
       sorted.sort((a, b) => {
-        const av = Number(a.id) || 0;
-        const bv = Number(b.id) || 0;
-        return bv - av;
+        const av = Number(a.product_id || a.id) || 0;
+        const bv = Number(b.product_id || b.id) || 0;
+        if (bv !== av) return bv - av;
+        return (Number(b.variant_id) || 0) - (Number(a.variant_id) || 0);
       });
     } else if (sortBy === 'price_b2c_asc') {
       sorted.sort(
@@ -235,62 +464,186 @@ const DeleteProduct = () => {
     return sorted;
   }, [rows, filter, search, sortBy]);
 
-  const askDelete = (ids) => {
-    if (!ids.length) {
-      setPopupMessage('Select at least one product');
-      setPopupType('error');
-      setTimeout(() => setPopupMessage(''), 1800);
+  const groupedRows = useMemo(() => {
+    const groupMap = new Map();
+
+    filteredSortedRows.forEach((row) => {
+      const key = row.group_key;
+
+      if (!groupMap.has(key)) {
+        groupMap.set(key, {
+          group_key: key,
+          product_id: row.product_id,
+          category: row.category,
+          brand: row.brand,
+          product_name: row.product_name,
+          image_url: row.image_url,
+          variants: []
+        });
+      }
+
+      const group = groupMap.get(key);
+
+      if (!group.variants.some((v) => v.variant_key === row.variant_key)) {
+        group.variants.push(row);
+      }
+    });
+
+    return Array.from(groupMap.values()).map((group) => {
+      const colors = uniqueValues(group.variants.map((v) => v.color));
+      const fallbackColor = colors[0] || '';
+      const savedColor = variantChoices[group.group_key]?.color;
+      const selectedColor = colors.some((c) => normalizeKey(c) === normalizeKey(savedColor)) ? savedColor : fallbackColor;
+
+      const sizes = uniqueValues(
+        group.variants
+          .filter((v) => normalizeKey(v.color) === normalizeKey(selectedColor))
+          .map((v) => v.size)
+      );
+
+      const fallbackSize = sizes[0] || '';
+      const savedSize = variantChoices[group.group_key]?.size;
+      const selectedSize = sizes.some((s) => normalizeKey(s) === normalizeKey(savedSize)) ? savedSize : fallbackSize;
+      const currentItem = buildDeleteItem(group, selectedColor, selectedSize);
+
+      return {
+        ...group,
+        colors,
+        sizes,
+        selectedColor,
+        selectedSize,
+        currentItem
+      };
+    });
+  }, [filteredSortedRows, variantChoices]);
+
+  const selectedItems = useMemo(() => Object.values(selectedMap), [selectedMap]);
+
+  const removeSelectionsForGroup = (groupKey) => {
+    setSelectedMap((prev) => {
+      const next = {};
+      Object.entries(prev).forEach(([key, value]) => {
+        if (value.group_key !== groupKey) next[key] = value;
+      });
+      return next;
+    });
+  };
+
+  const handleColorChange = (group, color) => {
+    const sizes = uniqueValues(
+      group.variants
+        .filter((v) => normalizeKey(v.color) === normalizeKey(color))
+        .map((v) => v.size)
+    );
+
+    setVariantChoices((prev) => ({
+      ...prev,
+      [group.group_key]: {
+        color,
+        size: sizes[0] || ''
+      }
+    }));
+
+    removeSelectionsForGroup(group.group_key);
+  };
+
+  const handleSizeChange = (group, size) => {
+    setVariantChoices((prev) => ({
+      ...prev,
+      [group.group_key]: {
+        color: group.selectedColor,
+        size
+      }
+    }));
+
+    removeSelectionsForGroup(group.group_key);
+  };
+
+  const askDelete = (items) => {
+    const validItems = items.filter(Boolean);
+
+    if (!validItems.length) {
+      showPopup('Select at least one product', 'error');
       return;
     }
-    setConfirmIds(ids);
+
+    const invalid = validItems.find((item) => !cleanText(item.color) || !cleanText(item.size) || !cleanText(item.variant_id));
+
+    if (invalid) {
+      showPopup('Select color and size before deleting', 'error', 2000);
+      return;
+    }
+
+    setConfirmItems(validItems);
     setShowConfirm(true);
   };
 
   const confirmDelete = async (ok) => {
     setShowConfirm(false);
-    if (!ok) return;
+
+    if (!ok) {
+      setConfirmItems([]);
+      return;
+    }
 
     try {
-      await Promise.all(
-        confirmIds.map((id) =>
-          fetch(`${API_BASE}/api/products/${encodeURIComponent(id)}`, { method: 'DELETE' })
-        )
-      );
+      await Promise.all(confirmItems.map((item) => deleteVariantRequest(item)));
 
-      setRows((prev) => prev.filter((r) => !confirmIds.includes(r.id)));
-      setSelectedIds(new Set());
-      setPopupMessage('Deleted successfully');
-      setPopupType('success');
-      setTimeout(() => setPopupMessage(''), 1800);
-    } catch {
-      setPopupMessage('Failed to delete some items');
-      setPopupType('error');
-      setTimeout(() => setPopupMessage(''), 2000);
+      const deletedKeys = new Set(confirmItems.map((item) => item.variant_key));
+
+      setRows((prev) => prev.filter((row) => !deletedKeys.has(row.variant_key)));
+
+      setSelectedMap((prev) => {
+        const next = { ...prev };
+        confirmItems.forEach((item) => {
+          delete next[item.variant_key];
+        });
+        return next;
+      });
+
+      showPopup(confirmItems.length > 1 ? 'Selected variants deleted successfully' : 'Variant deleted successfully', 'success');
+    } catch (err) {
+      showPopup(err?.message || 'Delete failed', 'error', 2400);
     } finally {
-      setConfirmIds([]);
+      setConfirmItems([]);
     }
   };
 
-  const toggleSelect = (id) => {
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
+  const toggleSelect = (item) => {
+    if (!item) return;
+
+    setSelectedMap((prev) => {
+      const next = { ...prev };
+
+      if (next[item.variant_key]) {
+        delete next[item.variant_key];
+      } else {
+        next[item.variant_key] = item;
+      }
+
       return next;
     });
   };
 
   const toggleSelectAllVisible = () => {
-    const visibleIds = filteredSortedRows.map((r) => r.id);
-    const allSelected = visibleIds.length > 0 && visibleIds.every((id) => selectedIds.has(id));
+    const visibleItems = groupedRows.map((group) => group.currentItem).filter(Boolean);
+    const allSelected = visibleItems.length > 0 && visibleItems.every((item) => selectedMap[item.variant_key]);
 
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
+    setSelectedMap((prev) => {
+      const next = { ...prev };
+
       if (allSelected) {
-        visibleIds.forEach((id) => next.delete(id));
+        visibleItems.forEach((item) => {
+          delete next[item.variant_key];
+        });
       } else {
-        visibleIds.forEach((id) => next.add(id));
+        visibleItems.forEach((item) => {
+          if (cleanText(item.color) && cleanText(item.size) && cleanText(item.variant_id)) {
+            next[item.variant_key] = item;
+          }
+        });
       }
+
       return next;
     });
   };
@@ -309,7 +662,7 @@ const DeleteProduct = () => {
         <div className="tools-vandana">
           <input
             className="search-input-vandana"
-            placeholder="Search by brand, product, color, size"
+            placeholder="Search by brand, product, color, size, barcode"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
@@ -326,14 +679,14 @@ const DeleteProduct = () => {
             {isLoading ? 'Loading...' : 'Refresh'}
           </button>
 
-          <button className="danger-btn-vandana" onClick={() => askDelete(Array.from(selectedIds))}>
+          <button className="danger-btn-vandana" onClick={() => askDelete(selectedItems)}>
             Delete Selected
           </button>
         </div>
       </div>
 
       <div className="delete-section2-vandana">
-        <h2>Product Table ({filteredSortedRows.length})</h2>
+        <h2>Product Table ({groupedRows.length})</h2>
         <div className="table-scroll-wrapper-vandana">
           <table className="table-vandana">
             <thead>
@@ -343,8 +696,8 @@ const DeleteProduct = () => {
                     type="checkbox"
                     onChange={toggleSelectAllVisible}
                     checked={
-                      filteredSortedRows.length > 0 &&
-                      filteredSortedRows.every((r) => selectedIds.has(r.id))
+                      groupedRows.length > 0 &&
+                      groupedRows.every((group) => group.currentItem && selectedMap[group.currentItem.variant_key])
                     }
                     aria-label="Select all visible"
                   />
@@ -363,39 +716,73 @@ const DeleteProduct = () => {
                 <th>Delete</th>
               </tr>
             </thead>
-            <tbody>
-              {filteredSortedRows.map((p, idx) => (
-                <tr key={p.id || idx}>
-                  <td>
-                    <input
-                      type="checkbox"
-                      checked={selectedIds.has(p.id)}
-                      onChange={() => toggleSelect(p.id)}
-                      aria-label={`Select ${p.product_name}`}
-                    />
-                  </td>
-                  <td>{idx + 1}</td>
-                  <td>{p.category}</td>
-                  <td>{p.brand}</td>
-                  <td>{p.product_name}</td>
-                  <td>{p.color}</td>
-                  <td>{p.size}</td>
-                  <td>{p.original_price_b2c}</td>
-                  <td>{p.discount_b2c}</td>
-                  <td>{computeFinal(p.original_price_b2c, p.discount_b2c).toFixed(2)}</td>
-                  <td>{p.total_count}</td>
-                  <td>
-                    <img src={p.image_url} alt="product" className="table-image-vandana" />
-                  </td>
-                  <td>
-                    <button className="delete-btn-vandana" onClick={() => askDelete([p.id])}>
-                      Delete
-                    </button>
-                  </td>
-                </tr>
-              ))}
 
-              {!filteredSortedRows.length && (
+            <tbody>
+              {groupedRows.map((group, idx) => {
+                const current = group.currentItem;
+                const isSelected = current && selectedMap[current.variant_key];
+
+                return (
+                  <tr key={group.group_key}>
+                    <td>
+                      <input
+                        type="checkbox"
+                        checked={Boolean(isSelected)}
+                        onChange={() => toggleSelect(current)}
+                        aria-label={`Select ${group.product_name}`}
+                      />
+                    </td>
+                    <td>{idx + 1}</td>
+                    <td>{group.category}</td>
+                    <td>{group.brand}</td>
+                    <td>{group.product_name}</td>
+                    <td>
+                      <select
+                        className="variant-select-vandana"
+                        value={group.selectedColor}
+                        onChange={(e) => handleColorChange(group, e.target.value)}
+                      >
+                        {group.colors.map((color) => (
+                          <option key={color} value={color}>
+                            {color}
+                          </option>
+                        ))}
+                      </select>
+                    </td>
+                    <td>
+                      <select
+                        className="variant-select-vandana"
+                        value={group.selectedSize}
+                        onChange={(e) => handleSizeChange(group, e.target.value)}
+                      >
+                        {group.sizes.map((size) => (
+                          <option key={size} value={size}>
+                            {size}
+                          </option>
+                        ))}
+                      </select>
+                    </td>
+                    <td>{current?.original_price_b2c ?? 0}</td>
+                    <td>{current?.discount_b2c ?? 0}</td>
+                    <td>{computeFinal(current?.original_price_b2c, current?.discount_b2c).toFixed(2)}</td>
+                    <td>{current?.total_count ?? 0}</td>
+                    <td>
+                      {current?.image_url ? (
+                        <img src={current.image_url} alt="product" className="table-image-vandana" />
+                      ) : (
+                        <div className="table-image-placeholder-vandana">No Image</div>
+                      )}
+                    </td>
+                    <td>
+                      <button className="delete-btn-vandana" onClick={() => askDelete([current])}>
+                        Delete
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
+
+              {!groupedRows.length && (
                 <tr>
                   <td colSpan="13" className="empty-cell-vandana">
                     No products found
@@ -412,10 +799,35 @@ const DeleteProduct = () => {
       {showConfirm && (
         <div className="popup-confirm-overlay-vandana">
           <div className="popup-confirm-box-vandana">
-            <p>{confirmIds.length > 1 ? `Delete ${confirmIds.length} products?` : 'Delete this product?'}</p>
+            <p className="confirm-title-vandana">
+              {confirmItems.length > 1 ? `Delete ${confirmItems.length} selected variants?` : 'Delete this variant?'}
+            </p>
+
+            <div className="confirm-products-vandana">
+              {confirmItems.map((item) => (
+                <div className="confirm-product-card-vandana" key={item.variant_key}>
+                  {item.image_url ? (
+                    <img src={item.image_url} alt="product" className="confirm-image-vandana" />
+                  ) : (
+                    <div className="confirm-image-placeholder-vandana">No Image</div>
+                  )}
+
+                  <div className="confirm-details-vandana">
+                    <strong>{item.product_name}</strong>
+                    <span>Brand: {item.brand || '-'}</span>
+                    <span>Category: {item.category || '-'}</span>
+                    <span>Color: {item.color || '-'}</span>
+                    <span>Size: {item.size || '-'}</span>
+                    <span>Barcode: {item.barcode || '-'}</span>
+                    <span>Stock: {item.total_count ?? 0}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+
             <div className="popup-actions-vandana">
-              <button onClick={() => confirmDelete(true)}>Yes</button>
-              <button onClick={() => confirmDelete(false)}>No</button>
+              <button onClick={() => confirmDelete(true)}>Yes, Delete</button>
+              <button onClick={() => confirmDelete(false)}>Cancel</button>
             </div>
           </div>
         </div>

@@ -32,6 +32,17 @@ const formatDateOnly = (value) => {
   const d = new Date(value)
   if (Number.isNaN(d.getTime())) return '-'
   return d.toLocaleDateString('en-IN', {
+    year: 'numeric',
+    month: 'short',
+    day: '2-digit'
+  })
+}
+
+const formatLongDate = (value) => {
+  if (!value) return '-'
+  const d = new Date(value)
+  if (Number.isNaN(d.getTime())) return '-'
+  return d.toLocaleDateString('en-IN', {
     weekday: 'long',
     year: 'numeric',
     month: 'long',
@@ -113,6 +124,285 @@ const getShipmentStatus = (shipment) => {
   return shipment?.status || shipment?.shipment_status || shipment?.current_status || '-'
 }
 
+const safeUpper = (value) => String(value || '').trim().toUpperCase()
+
+const asNum = (value) => {
+  const n = Number(value)
+  return Number.isFinite(n) ? n : 0
+}
+
+const pickValue = (...values) => {
+  for (const v of values) {
+    if (v !== undefined && v !== null && String(v).trim() !== '') return v
+  }
+  return ''
+}
+
+const latestObject = (arr) => {
+  if (!Array.isArray(arr) || !arr.length) return null
+
+  return [...arr].sort((a, b) => {
+    const ad = new Date(
+      a?.updated_at ||
+        a?.created_at ||
+        a?.remittance_date ||
+        a?.remittance_scheduled_to ||
+        a?.remittance_scheduled_from ||
+        0
+    ).getTime()
+
+    const bd = new Date(
+      b?.updated_at ||
+        b?.created_at ||
+        b?.remittance_date ||
+        b?.remittance_scheduled_to ||
+        b?.remittance_scheduled_from ||
+        0
+    ).getTime()
+
+    return bd - ad
+  })[0]
+}
+
+const normalizeOrderStatus = (value) => {
+  const s = safeUpper(value)
+
+  if (!s) return ''
+  if (s.includes('CANCEL')) return 'CANCELLED'
+  if (s.includes('RTO')) return 'RTO'
+  if (s.includes('DELIVER')) return 'DELIVERED'
+  if (s.includes('OUT FOR DELIVERY') || s.includes('OUT_FOR_DELIVERY')) return 'SHIPPED'
+  if (
+    s.includes('IN TRANSIT') ||
+    s.includes('TRANSIT') ||
+    s.includes('DISPATCH') ||
+    s.includes('SHIPPED') ||
+    s.includes('PICKED') ||
+    s.includes('PICKUP')
+  ) {
+    return 'SHIPPED'
+  }
+  if (s.includes('PACKED') || s.includes('MANIFEST') || s.includes('AWB') || s.includes('READY TO SHIP')) return 'PACKED'
+  if (s.includes('CONFIRM') || s.includes('PROCESSING') || s.includes('ACCEPTED') || s.includes('CREATED')) return 'CONFIRMED'
+  if (s.includes('PLACED') || s.includes('NEW')) return 'PLACED'
+
+  return s
+}
+
+const normalizeRemittanceStatus = (value) => {
+  const s = safeUpper(value)
+
+  if (!s) return ''
+  if (s.includes('NOT_RECEIVED')) return 'NOT_RECEIVED'
+  if (s.includes('SCHEDULED') || s.includes('PROCESSING') || s.includes('INITIATED')) return 'SCHEDULED'
+  if (s.includes('FAILED') || s.includes('REJECTED')) return 'FAILED'
+  if (s.includes('HOLD')) return 'ON_HOLD'
+  if (s.includes('PENDING')) return 'PENDING'
+  if (s.includes('RECEIVED') || s.includes('REMITTED') || s.includes('SETTLED') || s.includes('PAID') || s.includes('TRANSFERRED') || s.includes('CREDITED')) return 'RECEIVED'
+
+  return s
+}
+
+const getPayable = (sale) => {
+  const totals = parseMaybeJson(sale?.totals) || {}
+  return asNum(totals.payable ?? totals.total ?? totals.subtotal ?? totals.bagTotal ?? sale?.total ?? 0)
+}
+
+const getRemittance = (sale, detail, transactionDetail) => {
+  const fromArray =
+    latestObject(transactionDetail?.cod_remittances) ||
+    latestObject(detail?.cod_remittances) ||
+    latestObject(sale?.cod_remittances) ||
+    latestObject(transactionDetail?.remittances) ||
+    latestObject(sale?.remittances)
+
+  const obj =
+    fromArray ||
+    transactionDetail?.latest_cod_remittance ||
+    detail?.latest_cod_remittance ||
+    sale?.latest_cod_remittance ||
+    sale?.cod_remittance ||
+    sale?.remittance ||
+    {}
+
+  return {
+    status: pickValue(
+      obj.remittance_status,
+      obj.status,
+      transactionDetail?.remittance_status,
+      transactionDetail?.cod_remittance_status,
+      detail?.remittance_status,
+      sale?.remittance_status,
+      sale?.cod_remittance_status
+    ),
+    utr: pickValue(
+      obj.remittance_utr,
+      obj.utr,
+      obj.utr_number,
+      obj.transaction_reference,
+      transactionDetail?.remittance_utr,
+      sale?.remittance_utr
+    ),
+    date: pickValue(
+      obj.remittance_date,
+      obj.settlement_date,
+      obj.payment_date,
+      obj.received_at,
+      transactionDetail?.remittance_date,
+      sale?.remittance_date
+    ),
+    scheduledFrom: pickValue(
+      obj.remittance_scheduled_from,
+      obj.scheduled_from,
+      transactionDetail?.remittance_scheduled_from,
+      sale?.remittance_scheduled_from
+    ),
+    scheduledTo: pickValue(
+      obj.remittance_scheduled_to,
+      obj.scheduled_to,
+      transactionDetail?.remittance_scheduled_to,
+      sale?.remittance_scheduled_to
+    ),
+    amount: pickValue(
+      obj.cod_amount,
+      obj.amount,
+      obj.remittance_amount,
+      transactionDetail?.cod_amount,
+      sale?.cod_amount
+    ),
+    awb: pickValue(
+      obj.awb,
+      transactionDetail?.awb,
+      transactionDetail?.latest_shipment?.awb,
+      sale?.awb,
+      sale?.latest_shipment?.awb
+    ),
+    shiprocketOrderId: pickValue(
+      obj.shiprocket_order_id,
+      transactionDetail?.shiprocket_order_id,
+      transactionDetail?.latest_shipment?.shiprocket_order_id,
+      sale?.shiprocket_order_id
+    ),
+    shiprocketShipmentId: pickValue(
+      obj.shiprocket_shipment_id,
+      transactionDetail?.shiprocket_shipment_id,
+      transactionDetail?.latest_shipment?.shiprocket_shipment_id,
+      sale?.shiprocket_shipment_id
+    )
+  }
+}
+
+const getBankDateText = (remittance, bankSettlementState) => {
+  if (bankSettlementState === 'RECEIVED' && remittance.date) {
+    return formatDateOnly(remittance.date)
+  }
+
+  if (bankSettlementState === 'SCHEDULED') {
+    const from = formatDateOnly(remittance.scheduledFrom)
+    const to = formatDateOnly(remittance.scheduledTo)
+
+    if (from !== '-' && to !== '-') return `${from} to ${to}`
+    if (to !== '-') return `Expected by ${to}`
+    if (from !== '-') return `From ${from}`
+
+    return 'Scheduled'
+  }
+
+  if (bankSettlementState === 'NOT_RECEIVED') return 'Not received'
+  if (bankSettlementState === 'PENDING') return 'Pending'
+  if (bankSettlementState === 'FAILED') return 'Failed'
+  if (bankSettlementState === 'ON_HOLD') return 'On hold'
+  if (bankSettlementState === 'NA') return '-'
+
+  return '-'
+}
+
+const derivePaymentMeta = (sale, detail, transactionDetail, latestShipment) => {
+  const paymentStatus = safeUpper(sale?.payment_status)
+  const paymentMethod = safeUpper(sale?.payment_method)
+  const paymentRef = safeText(sale?.payment_ref, '')
+  const source = safeUpper(sale?.source) || 'WEB'
+  const orderStatus = normalizeOrderStatus(sale?.effective_status || sale?.status || latestShipment?.status)
+  const remittance = getRemittance(sale, detail, transactionDetail)
+  const remittanceStatus = normalizeRemittanceStatus(remittance.status)
+  const isCOD = paymentStatus === 'COD' || paymentMethod === 'COD'
+  const isPrepaidPaid =
+    paymentStatus === 'PAID' ||
+    paymentStatus === 'SUCCESS' ||
+    paymentStatus === 'PAYMENT_SUCCESS' ||
+    paymentStatus === 'RECEIVED'
+  const isFailed = paymentStatus === 'FAILED' || paymentStatus === 'CANCELLED'
+  const isPending = paymentStatus === 'PENDING' || paymentStatus === 'CREATED' || paymentStatus === 'INITIATED'
+  const paymentType = isCOD ? 'COD' : 'PREPAID'
+
+  let collectionPartner = paymentType === 'COD' ? 'Shiprocket Courier' : 'Razorpay'
+
+  if (paymentType === 'PREPAID' && paymentMethod && paymentMethod !== 'ONLINE') {
+    collectionPartner = paymentMethod
+  }
+
+  if (paymentRef && paymentType === 'PREPAID') {
+    collectionPartner = paymentMethod || 'Razorpay'
+  }
+
+  let customerPaymentState = 'PENDING'
+  let bankSettlementState = 'NA'
+
+  if (paymentType === 'COD') {
+    if (orderStatus === 'DELIVERED') customerPaymentState = 'COLLECTED'
+    else if (orderStatus === 'CANCELLED' || orderStatus === 'RTO') customerPaymentState = 'NOT_COLLECTED'
+    else customerPaymentState = 'COD_PENDING'
+
+    if (remittanceStatus === 'RECEIVED') bankSettlementState = 'RECEIVED'
+    else if (remittanceStatus === 'SCHEDULED') bankSettlementState = 'SCHEDULED'
+    else if (remittanceStatus === 'FAILED') bankSettlementState = 'FAILED'
+    else if (remittanceStatus === 'ON_HOLD') bankSettlementState = 'ON_HOLD'
+    else if (remittanceStatus === 'PENDING') bankSettlementState = 'PENDING'
+    else if (remittanceStatus === 'NOT_RECEIVED') bankSettlementState = 'NOT_RECEIVED'
+    else if (orderStatus === 'DELIVERED') bankSettlementState = 'NOT_RECEIVED'
+    else bankSettlementState = 'PENDING'
+  } else {
+    if (isFailed) customerPaymentState = 'FAILED'
+    else if (isPrepaidPaid) customerPaymentState = 'RECEIVED'
+    else if (isPending) customerPaymentState = 'PENDING'
+    else customerPaymentState = 'PENDING'
+
+    bankSettlementState = 'NA'
+  }
+
+  const remittanceAmount = asNum(remittance.amount) || getPayable(sale)
+
+  return {
+    paymentType,
+    collectionPartner,
+    customerPaymentState,
+    bankSettlementState,
+    channel: source,
+    orderStatus,
+    remittance,
+    remittanceAmount,
+    bankDateText: getBankDateText(remittance, bankSettlementState)
+  }
+}
+
+const settlementPillClass = (value) => {
+  const s = safeUpper(value)
+
+  if (s === 'RECEIVED' || s === 'COLLECTED' || s === 'DELIVERED') return 'ok'
+  if (s === 'SCHEDULED' || s === 'PENDING' || s === 'COD_PENDING' || s === 'ON_HOLD') return 'warn'
+  if (s === 'NOT_RECEIVED' || s === 'NOT_COLLECTED' || s === 'FAILED' || s === 'CANCELLED' || s === 'RTO') return 'danger'
+  if (s === 'NA') return 'muted'
+
+  return 'info'
+}
+
+const displayStatus = (value) => {
+  const s = safeUpper(value)
+  if (!s) return '-'
+  if (s === 'NA') return 'N/A'
+  return s
+}
+
 export default function OrderDetailPopup({
   open,
   loading,
@@ -176,9 +466,17 @@ export default function OrderDetailPopup({
   const [trackingError, setTrackingError] = useState('')
   const [trackingData, setTrackingData] = useState(null)
 
-  const sale = detail?.sale || null
+  const [transactionLoading, setTransactionLoading] = useState(false)
+  const [transactionError, setTransactionError] = useState('')
+  const [transactionDetail, setTransactionDetail] = useState(null)
+
+  const baseSale = detail?.sale || null
+  const mergedSale = transactionDetail && baseSale ? { ...baseSale, ...transactionDetail } : baseSale
+  const sale = mergedSale || baseSale
   const items = Array.isArray(detail?.items) ? detail.items : []
-  const shipments = Array.isArray(detail?.shipments) ? detail.shipments : []
+  const shipmentsFromDetail = Array.isArray(detail?.shipments) ? detail.shipments : []
+  const shipmentsFromTransaction = transactionDetail?.latest_shipment ? [transactionDetail.latest_shipment] : []
+  const shipments = shipmentsFromDetail.length ? shipmentsFromDetail : shipmentsFromTransaction
   const saleTotals = normalizeTotals(sale)
   const shippingAddress = parseMaybeJson(sale?.shipping_address)
 
@@ -191,8 +489,16 @@ export default function OrderDetailPopup({
       core: null
     }
 
-  const latestShipmentFromDetail = detail?.latestShipment || (shipments.length ? shipments[shipments.length - 1] : null)
+  const latestShipmentFromDetail =
+    transactionDetail?.latest_shipment ||
+    detail?.latestShipment ||
+    (shipments.length ? shipments[shipments.length - 1] : null)
+
   const latestShipment = localShipment || latestShipmentFromDetail
+
+  const paymentMeta = useMemo(() => {
+    return derivePaymentMeta(sale, detail, transactionDetail, latestShipment)
+  }, [sale, detail, transactionDetail, latestShipment])
 
   const localOrderStatus = sale ? getStatusText(sale.status || 'PLACED') : ''
   const isCancelled = localOrderStatus === 'CANCELLED'
@@ -209,7 +515,7 @@ export default function OrderDetailPopup({
   const expectedDelivery =
     sale && typeof buildExpectedDeliveryText === 'function'
       ? buildExpectedDeliveryText(trackingSnapshot, sale, latestShipment)
-      : formatDateOnly(sale?.created_at)
+      : formatLongDate(sale?.created_at)
 
   const lastUpdateTime = (() => {
     if (!detail) return '-'
@@ -221,6 +527,20 @@ export default function OrderDetailPopup({
   const hasAwb = !!latestShipment?.awb
   const shipmentId = latestShipment?.shipment_id || latestShipment?.shiprocket_shipment_id || null
   const shiprocketOrderId = latestShipment?.shiprocket_order_id || latestShipment?.order_id || null
+
+  const tryFetchJson = async (url, options) => {
+    const res = await fetch(url, options)
+    const txt = await res.text().catch(() => '')
+    let json = null
+
+    try {
+      json = txt ? JSON.parse(txt) : null
+    } catch {
+      json = null
+    }
+
+    return { res, json, text: txt }
+  }
 
   const srData = useMemo(() => {
     return courierData?.data?.data || courierData?.data || courierData || null
@@ -254,8 +574,46 @@ export default function OrderDetailPopup({
       setTrackingLoading(false)
       setTrackingError('')
       setTrackingData(null)
+      setTransactionLoading(false)
+      setTransactionError('')
+      setTransactionDetail(null)
     }
   }, [open])
+
+  useEffect(() => {
+    if (!open || !baseSale?.id || !apiBase) return
+
+    let cancelled = false
+
+    const run = async () => {
+      setTransactionLoading(true)
+      setTransactionError('')
+
+      try {
+        const { res, json } = await tryFetchJson(`${apiBase}/api/transactions/admin/${baseSale.id}`, {
+          headers: { ...authHeaders }
+        })
+
+        if (cancelled) return
+
+        if (res.ok && json) {
+          setTransactionDetail(json)
+        } else {
+          setTransactionError(json?.message || 'Unable to load COD settlement details.')
+        }
+      } catch (e) {
+        if (!cancelled) setTransactionError('Unable to load COD settlement details.')
+      } finally {
+        if (!cancelled) setTransactionLoading(false)
+      }
+    }
+
+    run()
+
+    return () => {
+      cancelled = true
+    }
+  }, [open, baseSale?.id, apiBase, authHeaders])
 
   useEffect(() => {
     if (!courierData) return
@@ -267,20 +625,6 @@ export default function OrderDetailPopup({
 
     if (initial) setSelectedCourierId(initial)
   }, [courierData, selectedCourierId, recommendedCourierCompanyId, availableCouriers])
-
-  const tryFetchJson = async (url, options) => {
-    const res = await fetch(url, options)
-    const txt = await res.text().catch(() => '')
-    let json = null
-
-    try {
-      json = txt ? JSON.parse(txt) : null
-    } catch {
-      json = null
-    }
-
-    return { res, json, text: txt }
-  }
 
   const loadServiceability = async () => {
     if (!sale?.id) return
@@ -548,7 +892,7 @@ export default function OrderDetailPopup({
       awb: track?.awb_code || latestShipment?.awb || '-',
       current: track?.current_status || td?.current_status || td?.track_status || latestShipment?.status || '-',
       pickupDate: track?.pickup_date || td?.pickup_date || '-',
-      deliveredDate: track?.delivered_date || td?.delivered_date || '-'
+      deliveredDate: track?.delivered_date || td?.delivered_date || latestShipment?.delivered_at || '-'
     }
   })()
 
@@ -557,6 +901,7 @@ export default function OrderDetailPopup({
   const customerEmail = sale?.customer_email || sale?.customer?.email || '-'
   const paymentStatus = safeText(sale?.payment_status || 'COD').toUpperCase()
   const paymentMethod = safeText(sale?.payment_method || paymentStatus).toUpperCase()
+  const isCodOrder = paymentMeta.paymentType === 'COD'
 
   return (
     <div className="odp-modal-backdrop" onClick={onClose}>
@@ -578,7 +923,7 @@ export default function OrderDetailPopup({
         ) : (
           <>
             <div className="odp-header">
-              <div>
+              <div className="odp-header-main">
                 <span className="odp-badge">Order Fulfilment</span>
                 <h3 className="odp-title">Order #{sale?.id}</h3>
                 <p className="odp-subtitle">Placed on {placedText}</p>
@@ -607,6 +952,22 @@ export default function OrderDetailPopup({
                   <div className="odp-chip-box">
                     <span className="odp-chip-label">Last update</span>
                     <span className="odp-chip-value">{lastUpdateTime}</span>
+                  </div>
+                  <div className="odp-chip-box">
+                    <span className="odp-chip-label">Customer payment</span>
+                    <span className={`odp-mini-pill odp-mini-${settlementPillClass(paymentMeta.customerPaymentState)}`}>
+                      {displayStatus(paymentMeta.customerPaymentState)}
+                    </span>
+                  </div>
+                  <div className="odp-chip-box">
+                    <span className="odp-chip-label">Bank settlement</span>
+                    <span className={`odp-mini-pill odp-mini-${settlementPillClass(paymentMeta.bankSettlementState)}`}>
+                      {displayStatus(paymentMeta.bankSettlementState)}
+                    </span>
+                  </div>
+                  <div className="odp-chip-box">
+                    <span className="odp-chip-label">Bank date</span>
+                    <span className="odp-chip-value">{paymentMeta.bankDateText}</span>
                   </div>
                   <div className="odp-chip-box">
                     <span className="odp-chip-label">COD</span>
@@ -699,6 +1060,59 @@ export default function OrderDetailPopup({
                 <div className="odp-progress-item">
                   <span className="odp-progress-label">Shiprocket Order</span>
                   <span className="odp-progress-value">{shiprocketOrderId || '-'}</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="odp-step-card">
+              <div className="odp-step-card-head">
+                <div>
+                  <div className="odp-step-card-title">COD and bank settlement</div>
+                  <div className="odp-step-card-sub">Customer payment is different from Shiprocket bank settlement</div>
+                </div>
+                {transactionLoading ? <div className="odp-progress-pill">Loading settlement</div> : null}
+              </div>
+
+              {transactionError ? <div className="odp-alert odp-alert-error">{transactionError}</div> : null}
+
+              <div className="odp-settlement-grid">
+                <div className="odp-settlement-card">
+                  <span className="odp-progress-label">Payment type</span>
+                  <span className={`odp-mini-pill odp-mini-${settlementPillClass(paymentMeta.paymentType)}`}>
+                    {displayStatus(paymentMeta.paymentType)}
+                  </span>
+                </div>
+                <div className="odp-settlement-card">
+                  <span className="odp-progress-label">Collection partner</span>
+                  <span className="odp-progress-value">{paymentMeta.collectionPartner}</span>
+                </div>
+                <div className="odp-settlement-card">
+                  <span className="odp-progress-label">Customer payment</span>
+                  <span className={`odp-mini-pill odp-mini-${settlementPillClass(paymentMeta.customerPaymentState)}`}>
+                    {displayStatus(paymentMeta.customerPaymentState)}
+                  </span>
+                </div>
+                <div className="odp-settlement-card">
+                  <span className="odp-progress-label">Shiprocket bank settlement</span>
+                  <span className={`odp-mini-pill odp-mini-${settlementPillClass(paymentMeta.bankSettlementState)}`}>
+                    {displayStatus(paymentMeta.bankSettlementState)}
+                  </span>
+                </div>
+                <div className="odp-settlement-card">
+                  <span className="odp-progress-label">Expected / received bank date</span>
+                  <span className="odp-progress-value">{paymentMeta.bankDateText}</span>
+                </div>
+                <div className="odp-settlement-card">
+                  <span className="odp-progress-label">COD amount</span>
+                  <span className="odp-progress-value">{isCodOrder ? money(paymentMeta.remittanceAmount) : '-'}</span>
+                </div>
+                <div className="odp-settlement-card">
+                  <span className="odp-progress-label">UTR</span>
+                  <span className="odp-progress-value">{paymentMeta.remittance.utr || '-'}</span>
+                </div>
+                <div className="odp-settlement-card">
+                  <span className="odp-progress-label">Remittance AWB</span>
+                  <span className="odp-progress-value">{paymentMeta.remittance.awb || latestShipment?.awb || '-'}</span>
                 </div>
               </div>
             </div>
@@ -996,7 +1410,7 @@ export default function OrderDetailPopup({
                       </div>
                       <div className="odp-track-item">
                         <div className="odp-track-k">Delivered</div>
-                        <div className="odp-track-v">{trackingHeader.deliveredDate}</div>
+                        <div className="odp-track-v">{formatDateTime(trackingHeader.deliveredDate)}</div>
                       </div>
                     </div>
 
@@ -1033,56 +1447,54 @@ export default function OrderDetailPopup({
               </div>
 
               {shipments.length ? (
-                <div className="odp-items-grid">
+                <div className="odp-shipment-grid">
                   {shipments.map((sh, index) => (
-                    <div className="odp-item-card" key={`${sh.id || sh.shiprocket_shipment_id || index}`}>
-                      <div className="odp-item-main">
-                        <div className="odp-item-top">
-                          <div className="odp-item-meta">
-                            <span className="odp-item-label">Shipment row</span>
-                            <span className="odp-item-value">{safeText(sh.id || index + 1)}</span>
-                          </div>
-                          <div className="odp-item-meta">
-                            <span className="odp-item-label">Branch</span>
-                            <span className="odp-item-value">{safeText(sh.branch_id)}</span>
-                          </div>
-                          <div className="odp-item-meta">
-                            <span className="odp-item-label">Shiprocket shipment</span>
-                            <span className="odp-item-value">{safeText(sh.shiprocket_shipment_id || sh.shipment_id)}</span>
-                          </div>
-                          <div className="odp-item-meta">
-                            <span className="odp-item-label">Shiprocket order</span>
-                            <span className="odp-item-value">{safeText(sh.shiprocket_order_id)}</span>
-                          </div>
-                          <div className="odp-item-meta">
-                            <span className="odp-item-label">AWB</span>
-                            <span className="odp-item-value">{safeText(sh.awb)}</span>
-                          </div>
-                          <div className="odp-item-meta">
-                            <span className="odp-item-label">Status</span>
-                            <span className="odp-item-value">{getShipmentStatus(sh)}</span>
-                          </div>
-                          <div className="odp-item-meta">
-                            <span className="odp-item-label">Created</span>
-                            <span className="odp-item-value">{formatDateTime(sh.created_at)}</span>
-                          </div>
-                          <div className="odp-item-meta">
-                            <span className="odp-item-label">Updated</span>
-                            <span className="odp-item-value">{formatDateTime(sh.updated_at)}</span>
-                          </div>
+                    <div className="odp-shipment-card" key={`${sh.id || sh.shiprocket_shipment_id || index}`}>
+                      <div className="odp-progress-grid">
+                        <div className="odp-progress-item">
+                          <span className="odp-progress-label">Shipment row</span>
+                          <span className="odp-progress-value">{safeText(sh.id || index + 1)}</span>
                         </div>
-                        <div className="odp-payment-actions">
-                          {sh.label_url ? (
-                            <a className="odp-btn odp-btn-ghost" href={sh.label_url} target="_blank" rel="noopener noreferrer">
-                              Label
-                            </a>
-                          ) : null}
-                          {sh.tracking_url ? (
-                            <a className="odp-btn odp-btn-ghost" href={sh.tracking_url} target="_blank" rel="noopener noreferrer">
-                              Tracking
-                            </a>
-                          ) : null}
+                        <div className="odp-progress-item">
+                          <span className="odp-progress-label">Branch</span>
+                          <span className="odp-progress-value">{safeText(sh.branch_id)}</span>
                         </div>
+                        <div className="odp-progress-item">
+                          <span className="odp-progress-label">Shiprocket shipment</span>
+                          <span className="odp-progress-value">{safeText(sh.shiprocket_shipment_id || sh.shipment_id)}</span>
+                        </div>
+                        <div className="odp-progress-item">
+                          <span className="odp-progress-label">Shiprocket order</span>
+                          <span className="odp-progress-value">{safeText(sh.shiprocket_order_id)}</span>
+                        </div>
+                        <div className="odp-progress-item">
+                          <span className="odp-progress-label">AWB</span>
+                          <span className="odp-progress-value">{safeText(sh.awb)}</span>
+                        </div>
+                        <div className="odp-progress-item">
+                          <span className="odp-progress-label">Status</span>
+                          <span className="odp-progress-value">{getShipmentStatus(sh)}</span>
+                        </div>
+                        <div className="odp-progress-item">
+                          <span className="odp-progress-label">Created</span>
+                          <span className="odp-progress-value">{formatDateTime(sh.created_at)}</span>
+                        </div>
+                        <div className="odp-progress-item">
+                          <span className="odp-progress-label">Updated</span>
+                          <span className="odp-progress-value">{formatDateTime(sh.updated_at)}</span>
+                        </div>
+                      </div>
+                      <div className="odp-payment-actions">
+                        {sh.label_url ? (
+                          <a className="odp-btn odp-btn-ghost" href={sh.label_url} target="_blank" rel="noopener noreferrer">
+                            Label
+                          </a>
+                        ) : null}
+                        {sh.tracking_url ? (
+                          <a className="odp-btn odp-btn-ghost" href={sh.tracking_url} target="_blank" rel="noopener noreferrer">
+                            Tracking
+                          </a>
+                        ) : null}
                       </div>
                     </div>
                   ))}
@@ -1184,6 +1596,14 @@ export default function OrderDetailPopup({
                 <div className="odp-progress-item">
                   <span className="odp-progress-label">Payment method</span>
                   <span className="odp-progress-value">{safeText(sale?.payment_method)}</span>
+                </div>
+                <div className="odp-progress-item">
+                  <span className="odp-progress-label">Bank settlement</span>
+                  <span className="odp-progress-value">{displayStatus(paymentMeta.bankSettlementState)}</span>
+                </div>
+                <div className="odp-progress-item">
+                  <span className="odp-progress-label">Bank date</span>
+                  <span className="odp-progress-value">{paymentMeta.bankDateText}</span>
                 </div>
                 <div className="odp-progress-item">
                   <span className="odp-progress-label">Created at</span>

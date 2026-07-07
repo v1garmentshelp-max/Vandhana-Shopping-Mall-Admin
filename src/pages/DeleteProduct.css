@@ -7,6 +7,7 @@
   padding: 24px;
   background: linear-gradient(180deg, #fffdf6 0%, #fff4d6 100%);
   min-height: 100vh;
+  width: 100%;
 }
 
 .delete-toolbar-vandana {
@@ -147,7 +148,7 @@
   width: 100%;
   border-collapse: collapse;
   color: #1f1f1f;
-  min-width: 1200px;
+  min-width: 1250px;
   background: #ffffff;
 }
 
@@ -173,6 +174,24 @@
   background: #fff8e8;
 }
 
+.variant-select-vandana {
+  width: 140px;
+  max-width: 100%;
+  padding: 9px 12px;
+  border-radius: 11px;
+  border: 1px solid #e0cf98;
+  background: #fffdf8;
+  color: #1a1a1a;
+  outline: none;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.variant-select-vandana:focus {
+  border-color: #d4a200;
+  box-shadow: 0 0 0 4px rgba(212, 162, 0, 0.08);
+}
+
 .table-image-vandana {
   width: 60px;
   height: 60px;
@@ -181,6 +200,20 @@
   margin: 4px auto;
   border: 1px solid #ead79f;
   background: #fff8e6;
+}
+
+.table-image-placeholder-vandana {
+  width: 60px;
+  height: 60px;
+  border-radius: 10px;
+  margin: 4px auto;
+  border: 1px solid #ead79f;
+  background: #fff8e6;
+  color: #b48500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
 }
 
 .delete-btn-vandana {
@@ -217,7 +250,7 @@
   z-index: 1000;
   text-align: center;
   max-width: 90%;
-  width: 320px;
+  width: 340px;
   font-size: 15px;
   border: 1px solid rgba(212, 162, 0, 0.15);
 }
@@ -235,7 +268,7 @@
 .popup-confirm-overlay-vandana {
   position: fixed;
   inset: 0;
-  background: rgba(17, 17, 17, 0.32);
+  background: rgba(17, 17, 17, 0.38);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -246,14 +279,80 @@
 .popup-confirm-box-vandana {
   background: #ffffff;
   color: #1a1a1a;
-  padding: 28px 24px;
+  padding: 26px 24px;
   border-radius: 20px;
   box-shadow: 0 20px 44px rgba(0, 0, 0, 0.14);
   text-align: center;
-  max-width: 90%;
-  width: 360px;
+  max-width: 94%;
+  width: 520px;
   font-size: 16px;
   border: 1px solid rgba(212, 162, 0, 0.18);
+}
+
+.confirm-title-vandana {
+  margin: 0 0 18px;
+  font-size: 18px;
+  font-weight: 700;
+  color: #1a1a1a;
+}
+
+.confirm-products-vandana {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: 360px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.confirm-product-card-vandana {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  text-align: left;
+  background: #fffdf8;
+  border: 1px solid #f0e2b4;
+  border-radius: 16px;
+  padding: 12px;
+}
+
+.confirm-image-vandana {
+  width: 74px;
+  height: 74px;
+  object-fit: cover;
+  border-radius: 12px;
+  border: 1px solid #ead79f;
+  background: #fff8e6;
+  flex: 0 0 auto;
+}
+
+.confirm-image-placeholder-vandana {
+  width: 74px;
+  height: 74px;
+  border-radius: 12px;
+  border: 1px solid #ead79f;
+  background: #fff8e6;
+  color: #b48500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  flex: 0 0 auto;
+}
+
+.confirm-details-vandana {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: #333333;
+  font-size: 14px;
+  line-height: 1.35;
+}
+
+.confirm-details-vandana strong {
+  color: #111111;
+  font-size: 15px;
+  font-weight: 700;
 }
 
 .popup-actions-vandana {
@@ -274,8 +373,12 @@
 }
 
 .popup-actions-vandana button:first-child {
-  background: linear-gradient(180deg, #f0c64f 0%, #d4a200 100%);
-  color: #111111;
+  background: #dc3545;
+  color: #ffffff;
+}
+
+.popup-actions-vandana button:first-child:hover {
+  background: #b91d2b;
 }
 
 .popup-actions-vandana button:last-child {
@@ -320,5 +423,21 @@
     right: 14px;
     left: 14px;
     width: auto;
+  }
+
+  .popup-confirm-box-vandana {
+    padding: 22px 16px;
+  }
+
+  .confirm-product-card-vandana {
+    align-items: flex-start;
+  }
+
+  .popup-actions-vandana {
+    flex-direction: column;
+  }
+
+  .popup-actions-vandana button {
+    width: 100%;
   }
 }
