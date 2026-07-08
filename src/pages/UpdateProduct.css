@@ -24,7 +24,7 @@
 }
 
 .update-product-page-vandana {
-  min-height: 100vh;
+  min-height: 100%;
   width: 100%;
   background:
     radial-gradient(circle at top left, rgba(216, 161, 23, 0.08), transparent 22%),
@@ -292,7 +292,7 @@
   width: 100%;
   overflow-x: auto;
   overflow-y: auto;
-  max-height: calc(100vh - 260px);
+  max-height: auto;
 }
 
 .table-vandana {

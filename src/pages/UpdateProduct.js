@@ -29,6 +29,18 @@ const normalizeAssetUrl = (maybeRelative) => {
   return `${base}/${clean}`
 }
 
+
+const getImageValue = (value) => {
+  if (!value) return ''
+  if (typeof value === 'string') return value
+  return value.image_url || value.secure_url || value.url || ''
+}
+
+const getImageFromList = (images, index) => {
+  if (!Array.isArray(images)) return ''
+  return getImageValue(images[index])
+}
+
 const coerceNumber = (v) => {
   if (v === '' || v === null || v === undefined) return 0
   const n = typeof v === 'number' ? v : parseFloat(String(v).trim())
@@ -146,6 +158,8 @@ const rowFromApi = (p) => {
     id,
     product_id: productId,
     variant_id: variantId,
+    barcode: p.barcode || p.ean_code || p.eanCode || '',
+    ean_code: p.ean_code || p.barcode || p.eanCode || '',
     branch_id: p.branch_id || p.branchId || null,
     category: toCategoryLabel(p.category || p.gender || p.department || ''),
     brand: p.brand || p.brand_name || p.brandName || '',
@@ -165,9 +179,12 @@ const rowFromApi = (p) => {
     saved_discount_b2c: discountB2C,
     saved_final_price_b2c: finalB2C || computeFinal(originalB2C, discountB2C),
     total_count: coerceNumber(p.total_count ?? p.available_qty ?? p.on_hand ?? p.stock ?? p.quantity ?? 0),
-    image_url: normalizeAssetUrl(p.image_url || p.image || p.imageUrl || p.path || p.thumbnail || ''),
+    image_url: normalizeAssetUrl(p.front_image_url || p.frontImageUrl || p.image_url || p.image || p.imageUrl || p.path || p.thumbnail || getImageFromList(p.images, 0) || ''),
+    back_image_url: normalizeAssetUrl(p.back_image_url || p.backImageUrl || getImageFromList(p.images, 1) || ''),
     newImageFile: null,
+    newBackImageFile: null,
     preview_url: '',
+    back_preview_url: '',
     dirty: false,
     saving: false,
     last_saved_at: p.updated_at || p.modified_at || null
@@ -335,6 +352,7 @@ const UpdateProduct = () => {
     return () => {
       rows.forEach((r) => {
         if (r.preview_url) URL.revokeObjectURL(r.preview_url)
+        if (r.back_preview_url) URL.revokeObjectURL(r.back_preview_url)
       })
     }
   }, [rows])
@@ -380,17 +398,23 @@ const UpdateProduct = () => {
     })
   }
 
-  const handleImageChange = (index, file) => {
+  const handleImageChange = (index, file, type = 'front') => {
     if (!file || index < 0 || index === undefined || index === null) return
 
     setRows((prev) => {
       const next = [...prev]
       const current = { ...next[index] }
 
-      if (current.preview_url) URL.revokeObjectURL(current.preview_url)
+      if (type === 'back') {
+        if (current.back_preview_url) URL.revokeObjectURL(current.back_preview_url)
+        current.newBackImageFile = file
+        current.back_preview_url = URL.createObjectURL(file)
+      } else {
+        if (current.preview_url) URL.revokeObjectURL(current.preview_url)
+        current.newImageFile = file
+        current.preview_url = URL.createObjectURL(file)
+      }
 
-      current.newImageFile = file
-      current.preview_url = URL.createObjectURL(file)
       current.dirty = true
       next[index] = current
       return next
@@ -491,11 +515,12 @@ const UpdateProduct = () => {
     setPopupConfirm(true)
   }
 
-  const uploadImageIfNeeded = async (r) => {
-    if (!r.newImageFile) return r.image_url
+  const uploadImageFile = async (file, role, r) => {
+    if (!file) return ''
 
     const formData = new FormData()
-    formData.append('image', r.newImageFile)
+    const barcode = String(r.ean_code || r.barcode || r.variant_id || r.id || 'product').replace(/[^a-zA-Z0-9_-]/g, '')
+    formData.append('image', file, `${barcode}__${role}__${Date.now()}_${file.name}`)
 
     const res = await fetch(`${API_BASE}/api/upload`, {
       method: 'POST',
@@ -512,7 +537,13 @@ const UpdateProduct = () => {
     return normalizeAssetUrl(data?.imageUrl || data?.url || data?.path || data?.image_url)
   }
 
-  const buildPayload = (r, image_url) => {
+  const uploadImagesIfNeeded = async (r) => {
+    const frontImage = r.newImageFile ? await uploadImageFile(r.newImageFile, 'front', r) : r.image_url
+    const backImage = r.newBackImageFile ? await uploadImageFile(r.newBackImageFile, 'back', r) : r.back_image_url
+    return { frontImage, backImage }
+  }
+
+  const buildPayload = (r, image_url, back_image_url) => {
     const originalB2B = coerceNumber(r.original_price_b2b)
     const discountB2B = clampDiscount(r.discount_b2b)
     const finalB2B = computeFinal(originalB2B, discountB2B)
@@ -525,6 +556,8 @@ const UpdateProduct = () => {
       id: r.id,
       product_id: r.product_id,
       variant_id: r.variant_id,
+      barcode: r.barcode || r.ean_code || '',
+      ean_code: r.ean_code || r.barcode || '',
       branch_id: r.branch_id,
       category: r.category,
       gender: r.category,
@@ -564,7 +597,12 @@ const UpdateProduct = () => {
       quantity: stock,
       image_url,
       image: image_url,
-      imageUrl: image_url
+      imageUrl: image_url,
+      front_image_url: image_url,
+      frontImageUrl: image_url,
+      back_image_url,
+      backImageUrl: back_image_url,
+      images: [image_url, back_image_url].filter(Boolean)
     }
   }
 
@@ -588,8 +626,8 @@ const UpdateProduct = () => {
   }
 
   const persistRow = async (r) => {
-    const image_url = await uploadImageIfNeeded(r)
-    const payload = buildPayload(r, image_url)
+    const { frontImage, backImage } = await uploadImagesIfNeeded(r)
+    const payload = buildPayload(r, frontImage, backImage)
     const branchSuffix = r.branch_id ? `?branch_id=${encodeURIComponent(r.branch_id)}` : ''
 
     const candidates = [
@@ -618,7 +656,8 @@ const UpdateProduct = () => {
           ...r,
           ...payload,
           ...updated,
-          image_url
+          image_url: frontImage,
+          back_image_url: backImage
         })
 
         return {
@@ -630,7 +669,9 @@ const UpdateProduct = () => {
           saved_discount_b2c: clampDiscount(payload.discount_b2c),
           saved_final_price_b2c: computeFinal(payload.original_price_b2c, payload.discount_b2c),
           newImageFile: null,
+          newBackImageFile: null,
           preview_url: '',
+          back_preview_url: '',
           dirty: false,
           saving: false,
           last_saved_at: new Date().toISOString()
@@ -784,7 +825,7 @@ const UpdateProduct = () => {
                 <th>Website Discount B2C</th>
                 <th>Website Final B2C</th>
                 <th>Stock</th>
-                <th>Image</th>
+                <th>Front / Back Images</th>
                 <th>Status</th>
               </tr>
             </thead>
@@ -937,19 +978,36 @@ const UpdateProduct = () => {
 
                       <td>
                         <div className="image-stack-vandana">
-                          <img
-                            src={product.preview_url || product.image_url || 'https://via.placeholder.com/76x76?text=No+Image'}
-                            alt="product"
-                            className="table-image-vandana"
-                          />
-                          <label className="upload-btn-vandana">
-                            Replace
-                            <input
-                              type="file"
-                              accept="image/*"
-                              onChange={(e) => handleImageChange(rowIndex, e.target.files && e.target.files[0])}
+                          <div className="image-stack-vandana">
+                            <img
+                              src={product.preview_url || product.image_url || 'https://via.placeholder.com/76x76?text=No+Image'}
+                              alt="front product"
+                              className="table-image-vandana"
                             />
-                          </label>
+                            <label className="upload-btn-vandana">
+                              Front
+                              <input
+                                type="file"
+                                accept="image/*"
+                                onChange={(e) => handleImageChange(rowIndex, e.target.files && e.target.files[0], 'front')}
+                              />
+                            </label>
+                          </div>
+                          <div className="image-stack-vandana">
+                            <img
+                              src={product.back_preview_url || product.back_image_url || 'https://via.placeholder.com/76x76?text=No+Back'}
+                              alt="back product"
+                              className="table-image-vandana"
+                            />
+                            <label className="upload-btn-vandana">
+                              Back
+                              <input
+                                type="file"
+                                accept="image/*"
+                                onChange={(e) => handleImageChange(rowIndex, e.target.files && e.target.files[0], 'back')}
+                              />
+                            </label>
+                          </div>
                         </div>
                       </td>
 
