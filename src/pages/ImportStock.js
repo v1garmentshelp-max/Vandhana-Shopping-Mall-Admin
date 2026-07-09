@@ -32,10 +32,14 @@ function normalizeImageType(v) {
     .toLowerCase()
     .trim()
     .replace(/[^a-z0-9_-]/g, '')
+
+  if (!s) return ''
+  if (s === 'f') return 'front'
+  if (s === 'b') return 'back'
   if (s.includes('front')) return 'front'
   if (s.includes('back')) return 'back'
-  if (s.includes('main')) return 'main'
-  return s || 'main'
+  if (s.includes('main')) return 'front'
+  return ''
 }
 
 function normalizeBranchId(v) {
@@ -45,30 +49,37 @@ function normalizeBranchId(v) {
 
 function pickValue(row, candidates) {
   const keys = Object.keys(row || {})
+
   for (const c of candidates) {
     const ck = normalizeKey(c)
     const found = keys.find(k => normalizeKey(k) === ck)
     if (found !== undefined) return row[found]
   }
+
   for (const c of candidates) {
     const ck = normalizeKey(c)
     const found = keys.find(k => normalizeKey(k).includes(ck))
     if (found !== undefined) return row[found]
   }
+
   return undefined
 }
 
 function toNumber(v) {
   if (v === null || v === undefined) return null
   if (typeof v === 'number') return isFinite(v) ? v : null
+
   const s = String(v)
     .replace(/₹/g, '')
     .replace(/,/g, '')
     .replace(/\s+/g, ' ')
     .trim()
+
   if (!s) return null
+
   const m = s.match(/-?\d+(\.\d+)?/)
   if (!m) return null
+
   const n = parseFloat(m[0])
   return isFinite(n) ? n : null
 }
@@ -78,12 +89,14 @@ function rowHasBannedPhrases(row) {
   const values = Object.values(row || {})
     .map(v => String(v ?? '').toLowerCase().trim())
     .filter(Boolean)
+
   return values.some(val => banned.some(b => val === b || val.includes(b)))
 }
 
 function isDefaultBrandOrProduct(s) {
   const t = String(s ?? '').toLowerCase().trim()
   if (!t) return true
+
   const defaults = ['brand', 'product', 'new in', 'inclusive of all taxes']
   return defaults.includes(t) || defaults.some(d => t.includes(d))
 }
@@ -97,16 +110,12 @@ function shouldDropRow(row) {
 
   const brand = pickValue(row, ['brand', 'brand name'])
   const product = pickValue(row, ['product', 'product name', 'name', 'title'])
-
   const priceVal = pickValue(row, ['price', 'selling price', 'sale price', 'our price', 'sp'])
   const mrpVal = pickValue(row, ['mrp', 'm.r.p', 'list price', 'regular price'])
-
   const price = toNumber(priceVal)
   const mrp = toNumber(mrpVal)
-
   const priceIsZero = price !== null && price === 0
   const mrpIsZero = mrp !== null && mrp === 0
-
   const defaultNames = isDefaultBrandOrProduct(brand) || isDefaultBrandOrProduct(product)
 
   if (rowHasBannedPhrases(row) && (priceIsZero || mrpIsZero)) return true
@@ -122,20 +131,24 @@ function parseCsvLine(line) {
 
   for (let j = 0; j < line.length; j++) {
     const ch = line[j]
+
     if (ch === '"' && line[j + 1] === '"') {
       cur += '"'
       j++
       continue
     }
+
     if (ch === '"') {
       inQuotes = !inQuotes
       continue
     }
+
     if (ch === ',' && !inQuotes) {
       cols.push(cur)
       cur = ''
       continue
     }
+
     cur += ch
   }
 
@@ -149,25 +162,75 @@ function baseNameNoExt(name) {
   return i > 0 ? n.slice(0, i) : n
 }
 
+function cleanBaseName(name) {
+  return baseNameNoExt(name)
+    .replace(/\s*\(\d+\)\s*$/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
 function isImagePath(p) {
   const n = String(p || '').toLowerCase()
   return n.endsWith('.jpg') || n.endsWith('.jpeg') || n.endsWith('.png') || n.endsWith('.webp')
 }
 
-function extractBarcodeFromPath(path) {
-  const base = baseNameNoExt(path)
-  if (base.includes('__')) return normalizeBarcode(base.split('__')[0])
-  const dotMatch = base.match(/^(.+)\.(front|back|main)$/i)
-  if (dotMatch) return normalizeBarcode(dotMatch[1])
-  return normalizeBarcode(base)
+function extractImageTypeFromPath(path) {
+  const fullPath = String(path || '')
+  const base = cleanBaseName(fullPath)
+  const folderPart = fullPath.split('/').slice(0, -1).join(' ')
+
+  if (base.includes('__')) {
+    const typeFromDoubleUnderscore = normalizeImageType(base.split('__').slice(1).join('__'))
+    if (typeFromDoubleUnderscore) return typeFromDoubleUnderscore
+  }
+
+  const suffixMatch = base.match(/(?:__|[_\-. ]+)(front|back|main|f|b)(?:[_\-. ]*\d+)?$/i)
+  if (suffixMatch) {
+    const type = normalizeImageType(suffixMatch[1])
+    if (type) return type
+  }
+
+  const prefixMatch = base.match(/^(front|back|main|f|b)(?:__|[_\-. ]+)/i)
+  if (prefixMatch) {
+    const type = normalizeImageType(prefixMatch[1])
+    if (type) return type
+  }
+
+  const typeFromName = normalizeImageType(base)
+  if (typeFromName) return typeFromName
+
+  const typeFromFolder = normalizeImageType(folderPart)
+  if (typeFromFolder) return typeFromFolder
+
+  return 'front'
 }
 
-function extractImageTypeFromPath(path) {
-  const base = baseNameNoExt(path)
-  if (base.includes('__')) return normalizeImageType(base.split('__').slice(1).join('__'))
-  const dotMatch = base.match(/^(.+)\.(front|back|main)$/i)
-  if (dotMatch) return normalizeImageType(dotMatch[2])
-  return 'main'
+function extractBarcodeFromPath(path) {
+  const base = cleanBaseName(path)
+
+  if (base.includes('__')) {
+    const barcodeFromDoubleUnderscore = normalizeBarcode(base.split('__')[0])
+    if (barcodeFromDoubleUnderscore) return barcodeFromDoubleUnderscore
+  }
+
+  const suffixMatch = base.match(/^(.+?)(?:__|[_\-. ]+)(front|back|main|f|b)(?:[_\-. ]*\d+)?$/i)
+  if (suffixMatch) {
+    const barcode = normalizeBarcode(suffixMatch[1])
+    if (barcode) return barcode
+  }
+
+  const prefixMatch = base.match(/^(front|back|main|f|b)(?:__|[_\-. ]+)(.+)$/i)
+  if (prefixMatch) {
+    const barcode = normalizeBarcode(prefixMatch[2])
+    if (barcode) return barcode
+  }
+
+  const numericMatches = base.match(/[A-Za-z0-9]*\d{5,}[A-Za-z0-9]*/g)
+  if (numericMatches && numericMatches.length) {
+    return normalizeBarcode(numericMatches[0])
+  }
+
+  return normalizeBarcode(base)
 }
 
 async function cleanExcelOrCsvFile(inputFile) {
@@ -181,14 +244,15 @@ async function cleanExcelOrCsvFile(inputFile) {
 
     const headerLine = lines[0]
     const headers = parseCsvLine(headerLine).map(h => h.trim().replace(/^"|"$/g, ''))
-
     const rows = []
+
     for (let i = 1; i < lines.length; i++) {
       const line = lines[i]
       if (!line || !line.trim()) continue
 
       const cols = parseCsvLine(line)
       const rowObj = {}
+
       headers.forEach((h, idx) => {
         rowObj[h] = cols[idx] ?? ''
       })
@@ -206,7 +270,10 @@ async function cleanExcelOrCsvFile(inputFile) {
 
     const outLines = []
     outLines.push(headers.map(esc).join(','))
-    for (const r of rows) outLines.push(headers.map(h => esc(r[h])).join(','))
+
+    for (const r of rows) {
+      outLines.push(headers.map(h => esc(r[h])).join(','))
+    }
 
     const blob = new Blob([outLines.join('\n')], { type: 'text/csv' })
     return new File([blob], inputFile.name, { type: inputFile.type || 'text/csv' })
@@ -218,20 +285,22 @@ async function cleanExcelOrCsvFile(inputFile) {
     const buf = await inputFile.arrayBuffer()
     const wb = XLSX.read(buf, { type: 'array' })
     const sheetName = wb.SheetNames?.[0]
+
     if (!sheetName) return inputFile
 
     const ws = wb.Sheets[sheetName]
     const json = XLSX.utils.sheet_to_json(ws, { defval: '' })
     const filtered = (Array.isArray(json) ? json : []).filter(r => !shouldDropRow(r))
-
     const newWb = XLSX.utils.book_new()
     const newWs = XLSX.utils.json_to_sheet(filtered.length ? filtered : [])
+
     XLSX.utils.book_append_sheet(newWb, newWs, sheetName)
 
     const out = XLSX.write(newWb, { type: 'array', bookType: 'xlsx' })
     const blob = new Blob([out], {
       type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     })
+
     return new File([blob], inputFile.name, { type: blob.type })
   }
 
@@ -260,7 +329,10 @@ export default function ImportStock() {
   const [discountMessage, setDiscountMessage] = useState('')
 
   const branchId = useMemo(() => {
-    const savedBranchId = typeof window !== 'undefined' ? localStorage.getItem('branch_id') || localStorage.getItem('branchId') : null
+    const savedBranchId =
+      typeof window !== 'undefined'
+        ? localStorage.getItem('branch_id') || localStorage.getItem('branchId')
+        : null
 
     return (
       normalizeBranchId(user?.branch_id) ||
@@ -293,8 +365,10 @@ export default function ImportStock() {
 
   const fetchJobs = useCallback(async () => {
     if (!branchId) return
+
     setRefreshing(true)
     show()
+
     try {
       const data = await apiGet(`/api/branch/${encodeURIComponent(branchId)}/import-jobs`)
       setJobs(Array.isArray(data) ? data : [])
@@ -308,12 +382,15 @@ export default function ImportStock() {
 
   const fetchDiscounts = useCallback(async () => {
     if (!branchId) return
+
     try {
       const data = await apiGet(`/api/branch/${encodeURIComponent(branchId)}/discounts`)
+
       if (data && typeof data === 'object') {
         if (data.b2c_discount_pct !== undefined && data.b2c_discount_pct !== null) {
           setB2cDiscount(String(data.b2c_discount_pct))
         }
+
         if (data.b2b_discount_pct !== undefined && data.b2b_discount_pct !== null) {
           setB2bDiscount(String(data.b2b_discount_pct))
         }
@@ -397,12 +474,15 @@ export default function ImportStock() {
       try {
         const cleaned = await cleanExcelOrCsvFile(file)
         const fd = new FormData()
+
         fd.append('file', cleaned)
         fd.append('gender', gender)
+
         localStorage.setItem('import_gender', gender)
         localStorage.setItem('branch_id', String(branchId))
 
         const job = await apiUpload(`/api/branch/${encodeURIComponent(branchId)}/import`, fd)
+
         setMessage('Uploaded. Starting processing…')
         setFile(null)
 
@@ -481,14 +561,33 @@ export default function ImportStock() {
           const imageKey = `${barcode}__${imageType}`
 
           if (!barcode) {
-            unmatched.push({ file: f.name, barcode: '(none)', reason: 'Barcode not found in filename' })
+            unmatched.push({
+              file: f.name,
+              barcode: '(none)',
+              reason: 'Barcode not found in filename'
+            })
+            done += 1
+            setImageProgress({ done, total })
+            continue
+          }
+
+          if (!imageType || !['front', 'back'].includes(imageType)) {
+            unmatched.push({
+              file: f.name,
+              barcode,
+              reason: 'Image type must be front or back'
+            })
             done += 1
             setImageProgress({ done, total })
             continue
           }
 
           if (seenImageKeys.has(imageKey)) {
-            unmatched.push({ file: f.name, barcode, reason: `Duplicate ${imageType} image` })
+            unmatched.push({
+              file: f.name,
+              barcode,
+              reason: `Duplicate ${imageType} image`
+            })
             done += 1
             setImageProgress({ done, total })
             continue
@@ -520,6 +619,7 @@ export default function ImportStock() {
           const confirm = await apiPost(`/api/branch/${encodeURIComponent(branchId)}/images/confirm`, {
             images: uploadedImages
           })
+
           saved = Number(confirm?.totalUpdated || 0)
           serverUnmatched = Array.isArray(confirm?.unmatched) ? confirm.unmatched : []
         }
@@ -576,6 +676,7 @@ export default function ImportStock() {
           b2c_discount_pct: b2c,
           b2b_discount_pct: b2b
         })
+
         setDiscountMessage('Discounts saved successfully')
       } catch (err) {
         setDiscountMessage(err?.payload?.message || err?.message || 'Failed to save discounts')
@@ -595,6 +696,7 @@ export default function ImportStock() {
         <div className="import-card-admin">
           <div className="import-title-admin">Import Stock (Excel)</div>
           <div className="import-subtitle-admin">Upload your branch Excel file for a selected category.</div>
+
           <form className="import-form-admin" onSubmit={e => e.preventDefault()}>
             <div className="excel-block">
               <div className="select-wrap">
@@ -653,8 +755,9 @@ export default function ImportStock() {
         <div className="import-card-admin">
           <div className="import-title-admin">Upload Product Images (ZIP by Barcode)</div>
           <div className="import-subtitle-admin">
-            Use barcode__front.jpg and barcode__back.jpg. Images will be verified by backend barcode records.
+            Use barcode__front.jpg and barcode__back.jpg. Also supported: barcode_front.jpg, barcode-back.jpg, barcode.front.jpg, barcode back.jpg, front_barcode.jpg, back_barcode.jpg.
           </div>
+
           <form className="import-form-admin" onSubmit={e => e.preventDefault()}>
             <div className="zip-block">
               <div className="import-filebox-admin">
@@ -708,6 +811,7 @@ export default function ImportStock() {
           <div className="import-subtitle-admin">
             Set discount percentages for all products in this branch. These are kept separate from Excel and image uploads.
           </div>
+
           <form className="import-form-admin" onSubmit={onSaveDiscounts}>
             <div className="discount-block">
               <div className="discount-row">
@@ -749,6 +853,7 @@ export default function ImportStock() {
 
         <div className="import-card-admin">
           <div className="import-title-admin">Recent Imports</div>
+
           <div className="import-actions-admin">
             <button className="import-ghost-btn-admin" onClick={fetchJobs} disabled={refreshing}>
               {refreshing ? 'Refreshing…' : 'Refresh'}
@@ -770,6 +875,7 @@ export default function ImportStock() {
                   <th>Completed</th>
                 </tr>
               </thead>
+
               <tbody>
                 {jobs.map(j => (
                   <tr key={j.id} className="import-row-card">
