@@ -695,7 +695,7 @@ export default function ImportStock() {
       <div className="import-wrap-admin">
         <div className="import-card-admin">
           <div className="import-title-admin">Import Stock (Excel)</div>
-          <div className="import-subtitle-admin">Upload your branch Excel file for a selected category.</div>
+          <div className="import-subtitle-admin">Upload your branch Excel file for a selected category. Every EAN barcode is treated as one unique SKU.</div>
 
           <form className="import-form-admin" onSubmit={e => e.preventDefault()}>
             <div className="excel-block">
@@ -753,7 +753,7 @@ export default function ImportStock() {
         </div>
 
         <div className="import-card-admin">
-          <div className="import-title-admin">Upload Product Images (ZIP by Barcode)</div>
+          <div className="import-title-admin">Upload Product Images (ZIP by EAN / Barcode)</div>
           <div className="import-subtitle-admin">
             Use barcode__front.jpg and barcode__back.jpg. Also supported: barcode_front.jpg, barcode-back.jpg, barcode.front.jpg, barcode back.jpg, front_barcode.jpg, back_barcode.jpg.
           </div>

@@ -3,6 +3,7 @@ import './UpdateProduct.css'
 
 const DEFAULT_API_BASE = 'https://vandhana-shopping-mall-backend.vercel.app'
 const DEFAULT_ASSETS_BASE = 'https://vandhana-shopping-mall-backend.vercel.app/uploads'
+const DEFAULT_BRANCH_ID = 3
 
 const PROCESS_ENV = typeof process !== 'undefined' && process.env ? process.env : {}
 
@@ -29,6 +30,19 @@ const normalizeAssetUrl = (maybeRelative) => {
   return `${base}/${clean}`
 }
 
+const normalizeBranchId = (v) => {
+  const n = Number(v)
+  return Number.isInteger(n) && n > 0 ? n : null
+}
+
+const getStoredBranchId = () => {
+  if (typeof window === 'undefined') return DEFAULT_BRANCH_ID
+  return (
+    normalizeBranchId(localStorage.getItem('branch_id')) ||
+    normalizeBranchId(localStorage.getItem('branchId')) ||
+    DEFAULT_BRANCH_ID
+  )
+}
 
 const getImageValue = (value) => {
   if (!value) return ''
@@ -94,35 +108,48 @@ const getFinalFromApi = (p, priceKey, discountKey, finalKeys) => {
 
 const makeRowKey = (p) => {
   return [
-    p.id || p.product_id || p._id || p.uuid || '',
-    p.variant_id || p.product_variant_id || '',
+    p.ean_code || p.barcode || '',
+    p.variant_id || p.variantId || p.product_variant_id || '',
+    p.product_id || p.productId || '',
+    p.id || '',
     p.size || '',
     p.colour || p.color || ''
   ].join('::')
 }
 
-const rowFromApi = (p) => {
-  const productId = p.product_id || p.productId || p.id || p._id || p.uuid
-  const variantId = p.variant_id || p.product_variant_id || p.variantId || p.variant?.id || null
-  const id = p.id || productId || variantId
+const rowFromApi = (p, fallbackBranchId = DEFAULT_BRANCH_ID) => {
+  const productId = p.product_id || p.productId || p.product?.id || null
+  const variantId = p.variant_id || p.product_variant_id || p.variantId || p.variant?.id || p.id || null
+  const eanCode = p.ean_code || p.eanCode || p.barcode || ''
+  const id = variantId || p.id || productId || eanCode
+
   const originalB2B = coerceNumber(
     p.original_price_b2b ??
+      p.originalPriceB2b ??
       p.b2b_original_price ??
       p.wholesale_price ??
+      p.cost_price ??
+      p.costPrice ??
       p.original_price ??
       p.mrp ??
       p.price_b2b ??
       0
   )
+
   const discountB2B = clampDiscount(
     p.discount_b2b ??
+      p.discountB2b ??
       p.b2b_discount ??
+      p.b2b_discount_pct ??
+      p.b2bDiscountPct ??
       p.discount_percentage_b2b ??
       p.wholesale_discount ??
       0
   )
+
   const originalB2C = coerceNumber(
     p.original_price_b2c ??
+      p.originalPriceB2c ??
       p.b2c_original_price ??
       p.original_price ??
       p.mrp ??
@@ -131,41 +158,73 @@ const rowFromApi = (p) => {
       p.selling_price ??
       0
   )
+
   const discountB2C = clampDiscount(
     p.discount_b2c ??
+      p.discountB2c ??
       p.b2c_discount ??
+      p.b2c_discount_pct ??
+      p.b2cDiscountPct ??
       p.discount_percentage ??
       p.discount_percent ??
       p.discount ??
       0
   )
+
   const finalB2B = getFinalFromApi(p, 'original_price_b2b', 'discount_b2b', [
     'final_price_b2b',
+    'finalPriceB2b',
     'b2b_final_price',
+    'b2bFinalPrice',
     'wholesale_final_price'
   ])
+
   const finalB2C = getFinalFromApi(p, 'original_price_b2c', 'discount_b2c', [
     'final_price_b2c',
+    'finalPriceB2c',
     'b2c_final_price',
+    'b2cFinalPrice',
     'selling_price',
+    'sellingPrice',
     'sale_price',
+    'salePrice',
     'final_price',
+    'finalPrice',
     'price_after_discount'
   ])
+
+  const imageUrl = normalizeAssetUrl(
+    p.front_image_url ||
+      p.frontImageUrl ||
+      p.image_url ||
+      p.image ||
+      p.imageUrl ||
+      p.path ||
+      p.thumbnail ||
+      getImageFromList(p.images, 0) ||
+      ''
+  )
+
+  const backImageUrl = normalizeAssetUrl(
+    p.back_image_url ||
+      p.backImageUrl ||
+      getImageFromList(p.images, 1) ||
+      ''
+  )
 
   const row = {
     row_key: '',
     id,
     product_id: productId,
     variant_id: variantId,
-    barcode: p.barcode || p.ean_code || p.eanCode || '',
-    ean_code: p.ean_code || p.barcode || p.eanCode || '',
-    branch_id: p.branch_id || p.branchId || null,
+    barcode: eanCode,
+    ean_code: eanCode,
+    branch_id: p.branch_id || p.branchId || fallbackBranchId || DEFAULT_BRANCH_ID,
     category: toCategoryLabel(p.category || p.gender || p.department || ''),
     brand: p.brand || p.brand_name || p.brandName || '',
     product_name: p.product_name || p.name || p.productName || p.title || '',
-    color: p.color || p.colour || p.selected_color || '',
-    size: p.size || p.selected_size || '',
+    color: p.color || p.colour || p.selected_color || p.selectedColor || '',
+    size: p.size || p.selected_size || p.selectedSize || '',
     original_price_b2b: originalB2B,
     discount_b2b: discountB2B,
     final_price_b2b: finalB2B || computeFinal(originalB2B, discountB2B),
@@ -178,9 +237,9 @@ const rowFromApi = (p) => {
     saved_original_price_b2c: originalB2C,
     saved_discount_b2c: discountB2C,
     saved_final_price_b2c: finalB2C || computeFinal(originalB2C, discountB2C),
-    total_count: coerceNumber(p.total_count ?? p.available_qty ?? p.on_hand ?? p.stock ?? p.quantity ?? 0),
-    image_url: normalizeAssetUrl(p.front_image_url || p.frontImageUrl || p.image_url || p.image || p.imageUrl || p.path || p.thumbnail || getImageFromList(p.images, 0) || ''),
-    back_image_url: normalizeAssetUrl(p.back_image_url || p.backImageUrl || getImageFromList(p.images, 1) || ''),
+    total_count: coerceNumber(p.total_count ?? p.totalCount ?? p.available_qty ?? p.availableQty ?? p.on_hand ?? p.onHand ?? p.stock ?? p.quantity ?? 0),
+    image_url: imageUrl,
+    back_image_url: backImageUrl,
     newImageFile: null,
     newBackImageFile: null,
     preview_url: '',
@@ -202,6 +261,54 @@ const getItemsFromResponse = (data) => {
   if (Array.isArray(data?.rows)) return data.rows
   if (Array.isArray(data?.result)) return data.result
   return []
+}
+
+const flattenApiItems = (items, fallbackBranchId) => {
+  const out = []
+  const seen = new Set()
+
+  for (const item of Array.isArray(items) ? items : []) {
+    const variants = Array.isArray(item?.variants) && item.variants.length ? item.variants : [item]
+
+    for (const variant of variants) {
+      const merged = {
+        ...item,
+        ...variant,
+        id: variant.variant_id || variant.variantId || variant.id || item.variant_id || item.variantId || item.id,
+        product_id: item.product_id || item.productId || variant.product_id || variant.productId,
+        productId: item.productId || item.product_id || variant.productId || variant.product_id,
+        variant_id: variant.variant_id || variant.variantId || variant.id || item.variant_id || item.variantId,
+        variantId: variant.variantId || variant.variant_id || variant.id || item.variantId || item.variant_id,
+        product_name: item.product_name || item.productName || item.name || item.title || variant.product_name || variant.name,
+        productName: item.productName || item.product_name || item.name || item.title || variant.productName,
+        name: item.name || item.product_name || item.productName || item.title || variant.name,
+        title: item.title || item.product_name || item.productName || item.name || variant.title,
+        brand_name: item.brand_name || item.brandName || item.brand || variant.brand_name,
+        brandName: item.brandName || item.brand_name || item.brand || variant.brandName,
+        brand: item.brand || item.brand_name || item.brandName || variant.brand,
+        gender: item.gender || item.category || variant.gender,
+        category: item.category || item.gender || variant.category,
+        branch_id: item.branch_id || item.branchId || variant.branch_id || variant.branchId || fallbackBranchId,
+        image_url: variant.image_url || variant.imageUrl || item.image_url || item.imageUrl,
+        imageUrl: variant.imageUrl || variant.image_url || item.imageUrl || item.image_url,
+        front_image_url: variant.front_image_url || variant.frontImageUrl || item.front_image_url || item.frontImageUrl,
+        frontImageUrl: variant.frontImageUrl || variant.front_image_url || item.frontImageUrl || item.front_image_url,
+        back_image_url: variant.back_image_url || variant.backImageUrl || item.back_image_url || item.backImageUrl,
+        backImageUrl: variant.backImageUrl || variant.back_image_url || item.backImageUrl || item.back_image_url,
+        images: Array.isArray(variant.images) && variant.images.length ? variant.images : item.images
+      }
+
+      const row = rowFromApi(merged, fallbackBranchId)
+      const key = row.row_key
+
+      if (!seen.has(key)) {
+        seen.add(key)
+        out.push(row)
+      }
+    }
+  }
+
+  return out
 }
 
 const getHasMoreFromResponse = (data, itemsLength, limit, page) => {
@@ -247,8 +354,54 @@ const fetchJson = async (url, options = {}) => {
   return data
 }
 
-const fetchAllProducts = async () => {
+const postJson = async (url, payload) => {
+  const res = await fetch(`${url}${url.includes('?') ? '&' : '?'}_ts=${Date.now()}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...getAuthHeaders()
+    },
+    body: JSON.stringify(payload),
+    cache: 'no-store'
+  })
+
+  const data = await res.json().catch(() => null)
+
+  if (!res.ok) {
+    throw new Error(data?.message || `Request failed ${res.status}`)
+  }
+
+  return data
+}
+
+const fetchAllProducts = async (branchId) => {
+  const branchUrls = [
+    `${API_BASE}/api/branch/${encodeURIComponent(branchId)}/stock`,
+    `${API_BASE}/api/branch/${encodeURIComponent(branchId)}/stock?gender=MEN`,
+    `${API_BASE}/api/branch/${encodeURIComponent(branchId)}/stock?gender=WOMEN`,
+    `${API_BASE}/api/branch/${encodeURIComponent(branchId)}/stock?gender=KIDS`
+  ]
+
+  const seenRows = new Map()
+
+  for (const url of branchUrls) {
+    try {
+      const data = await fetchJson(url)
+      const items = getItemsFromResponse(data)
+      const rows = flattenApiItems(items, branchId)
+
+      for (const row of rows) {
+        if (!seenRows.has(row.row_key)) seenRows.set(row.row_key, row)
+      }
+    } catch {}
+  }
+
+  if (seenRows.size > 0) {
+    return Array.from(seenRows.values())
+  }
+
   const directUrls = [
+    `${API_BASE}/api/products?branch_id=${encodeURIComponent(branchId)}&all=true`,
     `${API_BASE}/api/products?all=true`,
     `${API_BASE}/api/products?limit=50000`,
     `${API_BASE}/api/products`
@@ -258,9 +411,8 @@ const fetchAllProducts = async () => {
     try {
       const data = await fetchJson(url)
       const items = getItemsFromResponse(data)
-      if (Array.isArray(items) && items.length > 0) {
-        return items.map(rowFromApi)
-      }
+      const rows = flattenApiItems(items, branchId)
+      if (Array.isArray(rows) && rows.length > 0) return rows
     } catch {}
   }
 
@@ -272,6 +424,7 @@ const fetchAllProducts = async () => {
 
   while (hasMore) {
     const pageUrls = [
+      `${API_BASE}/api/products?branch_id=${encodeURIComponent(branchId)}&page=${page}&limit=${pageSize}`,
       `${API_BASE}/api/products?page=${page}&limit=${pageSize}`,
       `${API_BASE}/api/products?page=${page}&pageSize=${pageSize}`,
       `${API_BASE}/api/products?page=${page}&per_page=${pageSize}`,
@@ -295,14 +448,14 @@ const fetchAllProducts = async () => {
 
     if (!pageItems.length) break
 
+    const rows = flattenApiItems(pageItems, branchId)
     let addedThisRound = 0
 
-    for (const item of pageItems) {
-      const mapped = rowFromApi(item)
-      const key = mapped.row_key
+    for (const item of rows) {
+      const key = item.row_key
       if (!seen.has(key)) {
         seen.add(key)
-        all.push(mapped)
+        all.push(item)
         addedThisRound += 1
       }
     }
@@ -319,6 +472,7 @@ const fetchAllProducts = async () => {
 }
 
 const UpdateProduct = () => {
+  const [branchId] = useState(() => getStoredBranchId())
   const [rows, setRows] = useState([])
   const [popupMessage, setPopupMessage] = useState('')
   const [popupType, setPopupType] = useState('')
@@ -332,7 +486,8 @@ const UpdateProduct = () => {
   const fetchAll = async () => {
     setIsLoading(true)
     try {
-      const mapped = await fetchAllProducts()
+      if (typeof window !== 'undefined') localStorage.setItem('branch_id', String(branchId))
+      const mapped = await fetchAllProducts(branchId)
       setRows(mapped)
     } catch {
       setRows([])
@@ -434,6 +589,8 @@ const UpdateProduct = () => {
         String(r.id || '').toLowerCase().includes(q) ||
         String(r.product_id || '').toLowerCase().includes(q) ||
         String(r.variant_id || '').toLowerCase().includes(q) ||
+        String(r.barcode || '').toLowerCase().includes(q) ||
+        String(r.ean_code || '').toLowerCase().includes(q) ||
         String(r.brand || '').toLowerCase().includes(q) ||
         String(r.product_name || '').toLowerCase().includes(q) ||
         String(r.color || '').toLowerCase().includes(q) ||
@@ -444,7 +601,7 @@ const UpdateProduct = () => {
 
     const sorted = [...list]
 
-    if (sortBy === 'recent') sorted.sort((a, b) => coerceNumber(b.id) - coerceNumber(a.id))
+    if (sortBy === 'recent') sorted.sort((a, b) => coerceNumber(b.variant_id || b.id) - coerceNumber(a.variant_id || a.id))
     else if (sortBy === 'discount_b2c_desc') sorted.sort((a, b) => coerceNumber(b.discount_b2c) - coerceNumber(a.discount_b2c))
     else if (sortBy === 'discount_b2c_asc') sorted.sort((a, b) => coerceNumber(a.discount_b2c) - coerceNumber(b.discount_b2c))
     else if (sortBy === 'price_b2c_asc') sorted.sort((a, b) => computeFinal(a.original_price_b2c, a.discount_b2c) - computeFinal(b.original_price_b2c, b.discount_b2c))
@@ -464,6 +621,7 @@ const UpdateProduct = () => {
       const missing = []
 
       if (!p.id && !p.product_id && !p.variant_id) missing.push('id')
+      if (!String(p.ean_code || p.barcode || '').trim()) missing.push('ean code')
       if (!String(p.category || '').trim()) missing.push('category')
       if (!String(p.brand || '').trim()) missing.push('brand')
       if (!String(p.product_name || '').trim()) missing.push('product name')
@@ -482,7 +640,7 @@ const UpdateProduct = () => {
       if (missing.length) {
         errors.push({
           id: p.id,
-          name: p.product_name || `Row ${p.id}`,
+          name: `${p.product_name || `Row ${p.id}`} ${p.ean_code || p.barcode ? `(${p.ean_code || p.barcode})` : ''}`,
           fields: missing
         })
       }
@@ -519,7 +677,7 @@ const UpdateProduct = () => {
     if (!file) return ''
 
     const formData = new FormData()
-    const barcode = String(r.ean_code || r.barcode || r.variant_id || r.id || 'product').replace(/[^a-zA-Z0-9_-]/g, '')
+    const barcode = String(r.ean_code || r.barcode || r.variant_id || r.id || 'product').replace(/[^a-zA-Z0-9._-]/g, '')
     formData.append('image', file, `${barcode}__${role}__${Date.now()}_${file.name}`)
 
     const res = await fetch(`${API_BASE}/api/upload`, {
@@ -537,9 +695,45 @@ const UpdateProduct = () => {
     return normalizeAssetUrl(data?.imageUrl || data?.url || data?.path || data?.image_url)
   }
 
+  const confirmUploadedImages = async (r, frontImage, backImage) => {
+    const barcode = String(r.ean_code || r.barcode || '').trim()
+    if (!barcode) return
+
+    const images = []
+
+    if (r.newImageFile && frontImage) {
+      images.push({
+        barcode,
+        image_type: 'front',
+        image_url: frontImage,
+        secure_url: frontImage,
+        public_id: '',
+        original_filename: `${barcode}__front`
+      })
+    }
+
+    if (r.newBackImageFile && backImage) {
+      images.push({
+        barcode,
+        image_type: 'back',
+        image_url: backImage,
+        secure_url: backImage,
+        public_id: '',
+        original_filename: `${barcode}__back`
+      })
+    }
+
+    if (!images.length) return
+
+    await postJson(`${API_BASE}/api/branch/${encodeURIComponent(r.branch_id || branchId)}/images/confirm`, {
+      images
+    })
+  }
+
   const uploadImagesIfNeeded = async (r) => {
     const frontImage = r.newImageFile ? await uploadImageFile(r.newImageFile, 'front', r) : r.image_url
     const backImage = r.newBackImageFile ? await uploadImageFile(r.newBackImageFile, 'back', r) : r.back_image_url
+    await confirmUploadedImages(r, frontImage, backImage)
     return { frontImage, backImage }
   }
 
@@ -558,7 +752,7 @@ const UpdateProduct = () => {
       variant_id: r.variant_id,
       barcode: r.barcode || r.ean_code || '',
       ean_code: r.ean_code || r.barcode || '',
-      branch_id: r.branch_id,
+      branch_id: r.branch_id || branchId,
       category: r.category,
       gender: r.category,
       brand: r.brand,
@@ -628,22 +822,34 @@ const UpdateProduct = () => {
   const persistRow = async (r) => {
     const { frontImage, backImage } = await uploadImagesIfNeeded(r)
     const payload = buildPayload(r, frontImage, backImage)
-    const branchSuffix = r.branch_id ? `?branch_id=${encodeURIComponent(r.branch_id)}` : ''
+    const activeBranchId = r.branch_id || branchId
+    const branchSuffix = activeBranchId ? `?branch_id=${encodeURIComponent(activeBranchId)}` : ''
+    const eanSuffix = payload.ean_code ? `?ean_code=${encodeURIComponent(payload.ean_code)}${activeBranchId ? `&branch_id=${encodeURIComponent(activeBranchId)}` : ''}` : branchSuffix
 
     const candidates = [
-      { url: `${API_BASE}/api/products/${encodeURIComponent(r.id)}`, method: 'PUT' },
-      { url: `${API_BASE}/api/products/${encodeURIComponent(r.id)}`, method: 'PATCH' },
-      r.product_id && String(r.product_id) !== String(r.id)
-        ? { url: `${API_BASE}/api/products/${encodeURIComponent(r.product_id)}`, method: 'PUT' }
-        : null,
-      r.product_id && String(r.product_id) !== String(r.id)
-        ? { url: `${API_BASE}/api/products/${encodeURIComponent(r.product_id)}`, method: 'PATCH' }
-        : null,
       r.variant_id
         ? { url: `${API_BASE}/api/products/variant/${encodeURIComponent(r.variant_id)}${branchSuffix}`, method: 'PUT' }
         : null,
       r.variant_id
         ? { url: `${API_BASE}/api/products/variant/${encodeURIComponent(r.variant_id)}${branchSuffix}`, method: 'PATCH' }
+        : null,
+      payload.ean_code
+        ? { url: `${API_BASE}/api/products/barcode/${encodeURIComponent(payload.ean_code)}${branchSuffix}`, method: 'PUT' }
+        : null,
+      payload.ean_code
+        ? { url: `${API_BASE}/api/products/barcode/${encodeURIComponent(payload.ean_code)}${branchSuffix}`, method: 'PATCH' }
+        : null,
+      r.id
+        ? { url: `${API_BASE}/api/products/${encodeURIComponent(r.id)}${eanSuffix}`, method: 'PUT' }
+        : null,
+      r.id
+        ? { url: `${API_BASE}/api/products/${encodeURIComponent(r.id)}${eanSuffix}`, method: 'PATCH' }
+        : null,
+      r.product_id && String(r.product_id) !== String(r.id)
+        ? { url: `${API_BASE}/api/products/${encodeURIComponent(r.product_id)}${eanSuffix}`, method: 'PUT' }
+        : null,
+      r.product_id && String(r.product_id) !== String(r.id)
+        ? { url: `${API_BASE}/api/products/${encodeURIComponent(r.product_id)}${eanSuffix}`, method: 'PATCH' }
         : null
     ].filter(Boolean)
 
@@ -658,7 +864,7 @@ const UpdateProduct = () => {
           ...updated,
           image_url: frontImage,
           back_image_url: backImage
-        })
+        }, activeBranchId)
 
         return {
           ...merged,
@@ -731,7 +937,7 @@ const UpdateProduct = () => {
 
           <div className="summary-strip-vandana">
             <div className="summary-chip-vandana">
-              <span>Total</span>
+              <span>Total SKUs</span>
               <strong>{totalCount}</strong>
             </div>
             <div className="summary-chip-vandana">
@@ -764,7 +970,7 @@ const UpdateProduct = () => {
         <div className="toolbar-right-vandana">
           <input
             className="search-input-vandana"
-            placeholder="Search by id, brand, product, color, size or category"
+            placeholder="Search by EAN, variant id, brand, product, color, size or category"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
@@ -855,6 +1061,7 @@ const UpdateProduct = () => {
                         <div className="id-stack-vandana">
                           <span title={String(product.product_id || product.id || '-')}>P: {product.product_id || product.id || '-'}</span>
                           <span title={String(product.variant_id || '-')}>V: {product.variant_id || '-'}</span>
+                          <span title={String(product.ean_code || product.barcode || '-')}>EAN: {product.ean_code || product.barcode || '-'}</span>
                         </div>
                       </td>
 
