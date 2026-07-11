@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react'
+import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import './UpdateProduct.css'
 
 const DEFAULT_API_BASE = 'https://vandhana-shopping-mall-backend.vercel.app'
@@ -483,7 +483,7 @@ const UpdateProduct = () => {
   const [isLoading, setIsLoading] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
 
-  const fetchAll = async () => {
+  const fetchAll = useCallback(async () => {
     setIsLoading(true)
     try {
       if (typeof window !== 'undefined') localStorage.setItem('branch_id', String(branchId))
@@ -497,11 +497,11 @@ const UpdateProduct = () => {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [branchId])
 
   useEffect(() => {
     fetchAll()
-  }, [])
+  }, [fetchAll])
 
   useEffect(() => {
     return () => {
