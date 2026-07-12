@@ -95,10 +95,44 @@ const toCategoryLabel = (value) => {
   return cleanText(value)
 }
 
+const toBackendGender = (value) => {
+  const s = cleanText(value).toUpperCase()
+  if (s === 'MEN') return 'MEN'
+  if (s === 'WOMEN') return 'WOMEN'
+  if (s === 'KIDS' || s === 'KID') return 'KIDS'
+  return ''
+}
+
 const getImageValue = (value) => {
   if (!value) return ''
   if (typeof value === 'string') return normalizeAssetUrl(value)
   return normalizeAssetUrl(value.image_url || value.imageUrl || value.secure_url || value.url || '')
+}
+
+const flattenCategories = (tree) => {
+  const out = []
+
+  const walk = (items, parents = []) => {
+    for (const item of Array.isArray(items) ? items : []) {
+      const path = [...parents, item.name].filter(Boolean)
+      if (item.level > 0 && item.parent_id) {
+        out.push({
+          id: item.id,
+          gender: item.gender,
+          name: item.name,
+          slug: item.slug,
+          level: item.level,
+          parent_id: item.parent_id,
+          label: path.join(' > '),
+          category_path: item.category_path || path.join(' > ')
+        })
+      }
+      if (Array.isArray(item.children) && item.children.length) walk(item.children, path)
+    }
+  }
+
+  walk(tree)
+  return out
 }
 
 const getImagesFromApi = (item, variant) => {
@@ -299,6 +333,12 @@ const rowFromApi = (item, variant, fallbackBranchId = DEFAULT_BRANCH_ID) => {
     )
   )
 
+  const categoryId = pick(item?.category_id, item?.categoryId, variant?.category_id, variant?.categoryId)
+  const categoryName = cleanText(pick(item?.category_name, item?.categoryName, variant?.category_name, variant?.categoryName))
+  const categorySlug = cleanText(pick(item?.category_slug, item?.categorySlug, variant?.category_slug, variant?.categorySlug))
+  const parentCategoryName = cleanText(pick(item?.parent_category_name, item?.parentCategoryName, variant?.parent_category_name, variant?.parentCategoryName))
+  const categoryPath = cleanText(pick(item?.category_path, item?.categoryPath, variant?.category_path, variant?.categoryPath, [parentCategoryName, categoryName].filter(Boolean).join(' > ')))
+
   const row = {
     row_key: '',
     id: variantId || productId || barcode,
@@ -308,6 +348,11 @@ const rowFromApi = (item, variant, fallbackBranchId = DEFAULT_BRANCH_ID) => {
     ean_code: barcode,
     branch_id: normalizeBranchId(pick(item?.branch_id, item?.branchId, variant?.branch_id, variant?.branchId, fallbackBranchId)) || fallbackBranchId,
     category: toCategoryLabel(pick(item?.category, item?.gender, variant?.category, variant?.gender)),
+    category_id: categoryId,
+    category_name: categoryName,
+    category_slug: categorySlug,
+    parent_category_name: parentCategoryName,
+    category_path: categoryPath,
     brand: cleanText(pick(item?.brand, item?.brand_name, item?.brandName, variant?.brand, variant?.brand_name, variant?.brandName)),
     product_name: cleanText(pick(item?.product_name, item?.productName, item?.name, item?.title, variant?.product_name, variant?.productName, variant?.name, variant?.title)),
     color: cleanText(pick(variant?.color, variant?.colour, variant?.selected_color, variant?.selectedColor, item?.color, item?.colour, item?.selected_color, item?.selectedColor, item?.display_color, item?.displayColor)),
@@ -434,9 +479,15 @@ const fetchAllProducts = async (branchId) => {
   return Array.from(map.values())
 }
 
+const fetchCategoryOptions = async () => {
+  const tree = await fetchJson(`${API_BASE}/api/categories/tree`)
+  return flattenCategories(tree)
+}
+
 const UpdateProduct = () => {
   const [branchId] = useState(() => getStoredBranchId())
   const [rows, setRows] = useState([])
+  const [categoryOptions, setCategoryOptions] = useState([])
   const [popupMessage, setPopupMessage] = useState('')
   const [popupType, setPopupType] = useState('')
   const [popupConfirm, setPopupConfirm] = useState(false)
@@ -451,6 +502,15 @@ const UpdateProduct = () => {
     setPopupType(type)
     setTimeout(() => setPopupMessage(''), timeout)
   }
+
+  const fetchCategories = useCallback(async () => {
+    try {
+      const data = await fetchCategoryOptions()
+      setCategoryOptions(data)
+    } catch {
+      setCategoryOptions([])
+    }
+  }, [])
 
   const fetchAll = useCallback(async () => {
     setIsLoading(true)
@@ -473,8 +533,9 @@ const UpdateProduct = () => {
   }, [branchId])
 
   useEffect(() => {
+    fetchCategories()
     fetchAll()
-  }, [fetchAll])
+  }, [fetchCategories, fetchAll])
 
   useEffect(() => {
     return () => {
@@ -484,6 +545,18 @@ const UpdateProduct = () => {
       })
     }
   }, [rows])
+
+  const categoryOptionsByGender = useMemo(() => {
+    const map = { Men: [], Women: [], Kids: [] }
+
+    categoryOptions.forEach((c) => {
+      if (c.gender === 'MEN') map.Men.push(c)
+      if (c.gender === 'WOMEN') map.Women.push(c)
+      if (c.gender === 'KIDS') map.Kids.push(c)
+    })
+
+    return map
+  }, [categoryOptions])
 
   const rowIndexByKey = useMemo(() => {
     const map = new Map()
@@ -499,7 +572,19 @@ const UpdateProduct = () => {
       const current = { ...next[index] }
 
       if (field === 'category') {
-        current[field] = toCategoryLabel(value)
+        current.category = toCategoryLabel(value)
+        current.category_id = ''
+        current.category_name = ''
+        current.category_slug = ''
+        current.parent_category_name = ''
+        current.category_path = ''
+      } else if (field === 'category_id') {
+        const opt = categoryOptions.find(c => String(c.id) === String(value))
+        current.category_id = value
+        current.category_name = opt?.name || ''
+        current.category_slug = opt?.slug || ''
+        current.category_path = opt?.category_path || opt?.label || ''
+        current.parent_category_name = opt?.label ? opt.label.split(' > ').slice(-2, -1)[0] || '' : ''
       } else if (field === 'original_price_b2b' || field === 'discount_b2b' || field === 'original_price_b2c' || field === 'discount_b2c' || field === 'total_count') {
         current[field] = value === '' ? '' : field.includes('discount') ? clampDiscount(value) : coerceNumber(value)
       } else {
@@ -553,7 +638,7 @@ const UpdateProduct = () => {
 
     if (q) {
       list = list.filter((row) =>
-        [row.id, row.product_id, row.variant_id, row.barcode, row.ean_code, row.brand, row.product_name, row.color, row.size, row.category]
+        [row.id, row.product_id, row.variant_id, row.barcode, row.ean_code, row.brand, row.product_name, row.color, row.size, row.category, row.category_name, row.parent_category_name, row.category_path]
           .map((value) => String(value || '').toLowerCase())
           .some((value) => value.includes(q))
       )
@@ -581,7 +666,8 @@ const UpdateProduct = () => {
       const missing = []
       if (!row.id && !row.product_id && !row.variant_id) missing.push('id')
       if (!cleanText(row.ean_code || row.barcode)) missing.push('ean code')
-      if (!cleanText(row.category)) missing.push('category')
+      if (!cleanText(row.category)) missing.push('gender')
+      if (!cleanText(row.category_id)) missing.push('sub-category')
       if (!cleanText(row.brand)) missing.push('brand')
       if (!cleanText(row.product_name)) missing.push('product name')
       if (!cleanText(row.color)) missing.push('color')
@@ -685,6 +771,7 @@ const UpdateProduct = () => {
     const finalB2C = computeFinal(originalB2C, discountB2C)
     const stock = Math.max(0, Math.floor(coerceNumber(row.total_count)))
     const barcode = normalizeBarcode(row.ean_code || row.barcode)
+    const gender = toBackendGender(row.category)
 
     return {
       id: row.id,
@@ -693,8 +780,10 @@ const UpdateProduct = () => {
       barcode,
       ean_code: barcode,
       branch_id: row.branch_id || branchId,
-      category: row.category,
-      gender: row.category,
+      category: gender,
+      gender,
+      category_id: row.category_id,
+      categoryId: row.category_id,
       brand: row.brand,
       brand_name: row.brand,
       product_name: row.product_name,
@@ -779,6 +868,7 @@ const UpdateProduct = () => {
       barcode: payload.barcode,
       ean_code: payload.ean_code,
       category: toCategoryLabel(payload.category),
+      category_id: payload.category_id,
       brand: payload.brand,
       product_name: payload.product_name,
       color: payload.color,
@@ -892,7 +982,7 @@ const UpdateProduct = () => {
           <div className="title-wrap-vandana">
             <p className="page-kicker-vandana">Product Control</p>
             <h1>Update Products</h1>
-            <p className="page-subtitle-vandana">Edit website discounts, prices, stock, images and product details in one full screen workspace.</p>
+            <p className="page-subtitle-vandana">Edit website discounts, prices, stock, images and category details.</p>
           </div>
 
           <div className="summary-strip-vandana">
@@ -930,7 +1020,7 @@ const UpdateProduct = () => {
         <div className="toolbar-right-vandana">
           <input
             className="search-input-vandana"
-            placeholder="Search by EAN, variant id, brand, product, color, size or category"
+            placeholder="Search by EAN, brand, product, color, size, gender or sub-category"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
@@ -960,6 +1050,7 @@ const UpdateProduct = () => {
               <col className="col-sl-vandana" />
               <col className="col-id-vandana" />
               <col className="col-category-vandana" />
+              <col className="col-category-vandana" />
               <col className="col-brand-vandana" />
               <col className="col-name-vandana" />
               <col className="col-color-vandana" />
@@ -979,7 +1070,8 @@ const UpdateProduct = () => {
               <tr>
                 <th>Sl. No</th>
                 <th>IDs</th>
-                <th>Category</th>
+                <th>Gender</th>
+                <th>Sub-category</th>
                 <th>Brand</th>
                 <th>Product Name</th>
                 <th>Color</th>
@@ -999,7 +1091,7 @@ const UpdateProduct = () => {
             <tbody>
               {isLoading ? (
                 <tr>
-                  <td colSpan="16" className="empty-state-cell-vandana">Loading products...</td>
+                  <td colSpan="17" className="empty-state-cell-vandana">Loading products...</td>
                 </tr>
               ) : filteredSortedRows.length ? (
                 filteredSortedRows.map((product, idx) => {
@@ -1012,6 +1104,7 @@ const UpdateProduct = () => {
                   const finalB2C = computeFinal(product.original_price_b2c, product.discount_b2c)
                   const b2bChanged = currentB2B !== newB2B || coerceNumber(product.saved_final_price_b2b) !== finalB2B
                   const b2cChanged = currentB2C !== newB2C || coerceNumber(product.saved_final_price_b2c) !== finalB2C
+                  const availableSubcategories = categoryOptionsByGender[product.category] || []
 
                   return (
                     <tr key={product.row_key || idx} className={product.dirty ? 'dirty-row-vandana' : ''}>
@@ -1031,6 +1124,15 @@ const UpdateProduct = () => {
                           <option value="Men">Men</option>
                           <option value="Women">Women</option>
                           <option value="Kids">Kids</option>
+                        </select>
+                      </td>
+
+                      <td>
+                        <select className="table-select-vandana" value={product.category_id || ''} onChange={(e) => updateField(rowIndex, 'category_id', e.target.value)}>
+                          <option value="">Select</option>
+                          {availableSubcategories.map(c => (
+                            <option key={c.id} value={c.id}>{c.label}</option>
+                          ))}
                         </select>
                       </td>
 
@@ -1123,7 +1225,7 @@ const UpdateProduct = () => {
                 })
               ) : (
                 <tr>
-                  <td colSpan="16" className="empty-state-cell-vandana">No products found</td>
+                  <td colSpan="17" className="empty-state-cell-vandana">No products found</td>
                 </tr>
               )}
             </tbody>
@@ -1153,7 +1255,7 @@ const UpdateProduct = () => {
         <div className="popup-overlay-vandana">
           <div className="confirm-modal-vandana">
             <h3>Save changes</h3>
-            <p>Do you want to save all edited rows now? The B2C discount and final price will be sent to the website fields.</p>
+            <p>Do you want to save all edited rows now?</p>
             <div className="modal-actions-vandana">
               <button className="primary-btn-vandana" onClick={() => confirmUpdate(true)}>Yes, Save</button>
               <button className="ghost-btn-vandana" onClick={() => confirmUpdate(false)}>Cancel</button>
