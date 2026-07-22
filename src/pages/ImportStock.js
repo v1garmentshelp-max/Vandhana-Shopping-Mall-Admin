@@ -11,6 +11,13 @@ const UPLOAD_PRESET = 'unsigned_ean'
 const PROCESS_LIMIT = 250
 const DEFAULT_BRANCH_ID = 3
 
+const CATEGORY_TYPES = [
+  { value: 'MEN', label: "Men's Wear" },
+  { value: 'WOMEN', label: "Women's Wear" },
+  { value: 'KIDS_BOYS', label: 'Kids Boys' },
+  { value: 'KIDS_GIRLS', label: 'Kids Girls' }
+]
+
 function normalizeKey(value) {
   return String(value || '').toLowerCase().replace(/\s+/g, ' ').trim()
 }
@@ -42,6 +49,38 @@ function normalizeImageType(value) {
 function normalizeBranchId(value) {
   const branchId = Number(value)
   return Number.isInteger(branchId) && branchId > 0 ? branchId : null
+}
+
+function getGenderFromCategoryType(value) {
+  if (value === 'MEN') return 'MEN'
+  if (value === 'WOMEN') return 'WOMEN'
+  if (value === 'KIDS_BOYS' || value === 'KIDS_GIRLS') return 'KIDS'
+  return ''
+}
+
+function getCategoryTypeLabel(value) {
+  return CATEGORY_TYPES.find(item => item.value === value)?.label || ''
+}
+
+function getCategoryPath(category) {
+  return String(category?.category_path || category?.label || category?.name || '').replace(/\s+/g, ' ').trim()
+}
+
+function matchesCategoryType(category, categoryType) {
+  if (!categoryType) return false
+
+  const gender = getGenderFromCategoryType(categoryType)
+  const categoryGender = String(category?.gender || '').toUpperCase()
+  const path = getCategoryPath(category).toLowerCase()
+
+  if (categoryGender !== gender) return false
+
+  if (categoryType === 'MEN') return path.startsWith('men') || categoryGender === 'MEN'
+  if (categoryType === 'WOMEN') return path.startsWith('women') || categoryGender === 'WOMEN'
+  if (categoryType === 'KIDS_BOYS') return path.includes('kids > boys') || path.startsWith('boys >') || path === 'boys'
+  if (categoryType === 'KIDS_GIRLS') return path.includes('kids > girls') || path.startsWith('girls >') || path === 'girls'
+
+  return false
 }
 
 function pickValue(row, candidates) {
@@ -83,6 +122,7 @@ function toNumber(value) {
 
 function rowHasBannedPhrases(row) {
   const banned = ['inclusive of all taxes', 'brand', 'new in', 'product', '₹0.00']
+
   const values = Object.values(row || {})
     .map(value => String(value ?? '').toLowerCase().trim())
     .filter(Boolean)
@@ -92,9 +132,11 @@ function rowHasBannedPhrases(row) {
 
 function isDefaultBrandOrProduct(value) {
   const normalized = String(value ?? '').toLowerCase().trim()
+
   if (!normalized) return true
 
   const defaults = ['brand', 'product', 'new in', 'inclusive of all taxes']
+
   return defaults.includes(normalized) || defaults.some(item => normalized.includes(item))
 }
 
@@ -102,12 +144,15 @@ function shouldDropRow(row) {
   if (!row || typeof row !== 'object') return true
 
   const values = Object.values(row).map(value => String(value ?? '').trim())
+
   if (values.every(value => value === '')) return true
 
   const brand = pickValue(row, ['brand', 'brand name'])
   const product = pickValue(row, ['product', 'product name', 'name', 'title'])
+
   const priceValue = pickValue(row, ['price', 'selling price', 'sale price', 'our price', 'sp'])
   const mrpValue = pickValue(row, ['mrp', 'm.r.p', 'list price', 'regular price'])
+
   const price = toNumber(priceValue)
   const mrp = toNumber(mrpValue)
   const priceIsZero = price !== null && price === 0
@@ -149,6 +194,7 @@ function parseCsvLine(line) {
   }
 
   columns.push(current)
+
   return columns
 }
 
@@ -167,13 +213,7 @@ function cleanBaseName(name) {
 
 function isImagePath(path) {
   const normalized = String(path || '').toLowerCase()
-
-  return (
-    normalized.endsWith('.jpg') ||
-    normalized.endsWith('.jpeg') ||
-    normalized.endsWith('.png') ||
-    normalized.endsWith('.webp')
-  )
+  return normalized.endsWith('.jpg') || normalized.endsWith('.jpeg') || normalized.endsWith('.png') || normalized.endsWith('.webp')
 }
 
 function extractImageTypeFromPath(path) {
@@ -217,9 +257,7 @@ function extractBarcodeFromPath(path) {
     if (barcode) return barcode
   }
 
-  const suffixMatch = base.match(
-    /^(.+?)(?:__|[_\-. ]+)(front|back|main|f|b)(?:[_\-. ]*\d+)?$/i
-  )
+  const suffixMatch = base.match(/^(.+?)(?:__|[_\-. ]+)(front|back|main|f|b)(?:[_\-. ]*\d+)?$/i)
 
   if (suffixMatch) {
     const barcode = normalizeBarcode(suffixMatch[1])
@@ -235,42 +273,109 @@ function extractBarcodeFromPath(path) {
 
   const numericMatches = base.match(/[A-Za-z0-9]*\d{5,}[A-Za-z0-9]*/g)
 
-  if (numericMatches?.length) {
-    return normalizeBarcode(numericMatches[0])
-  }
+  if (numericMatches?.length) return normalizeBarcode(numericMatches[0])
 
   return normalizeBarcode(base)
 }
 
-function flattenCategories(tree) {
-  const categories = []
+function flattenCategories(data) {
+  const source = Array.isArray(data)
+    ? data
+    : Array.isArray(data?.tree)
+      ? data.tree
+      : Array.isArray(data?.categories)
+        ? data.categories
+        : Array.isArray(data?.rows)
+          ? data.rows
+          : []
 
-  const walk = (items, parentNames = []) => {
-    for (const item of Array.isArray(items) ? items : []) {
-      const children = Array.isArray(item.children) ? item.children : []
-      const names = [...parentNames, item.name].filter(Boolean)
-      const path = item.category_path || names.join(' > ')
+  if (!source.length) return []
 
-      categories.push({
-        id: String(item.id),
-        parent_id: item.parent_id == null ? null : String(item.parent_id),
-        gender: item.gender,
-        name: item.name,
-        slug: item.slug,
-        level: Number(item.level) || 0,
-        sort_order: Number(item.sort_order) || 0,
-        is_active: item.is_active !== false,
-        category_path: path,
-        label: path,
-        selectable: item.is_active !== false && children.length === 0 && item.parent_id != null
-      })
+  const hasNestedChildren = source.some(item => Array.isArray(item?.children) && item.children.length)
 
-      if (children.length) walk(children, names)
+  if (hasNestedChildren) {
+    const categories = []
+
+    const walk = (items, parentNames = []) => {
+      for (const item of Array.isArray(items) ? items : []) {
+        if (!item || item.is_active === false) continue
+
+        const children = (Array.isArray(item.children) ? item.children : []).filter(child => child && child.is_active !== false)
+        const names = [...parentNames, item.name].filter(Boolean)
+        const path = item.category_path || names.join(' > ')
+
+        categories.push({
+          id: String(item.id),
+          parent_id: item.parent_id == null ? null : String(item.parent_id),
+          gender: String(item.gender || '').toUpperCase(),
+          name: item.name,
+          slug: item.slug,
+          level: Number(item.level) || 0,
+          sort_order: Number(item.sort_order) || 0,
+          is_active: true,
+          category_path: path,
+          label: path,
+          selectable: children.length === 0 && item.parent_id != null
+        })
+
+        if (children.length) walk(children, names)
+      }
+    }
+
+    walk(source)
+    return categories
+  }
+
+  const activeRows = source.filter(item => item && item.is_active !== false)
+  const byId = new Map()
+
+  activeRows.forEach(item => {
+    byId.set(String(item.id), {
+      ...item,
+      id: String(item.id),
+      parent_id: item.parent_id == null ? null : String(item.parent_id),
+      children: []
+    })
+  })
+
+  for (const item of byId.values()) {
+    if (item.parent_id && byId.has(String(item.parent_id))) {
+      byId.get(String(item.parent_id)).children.push(item)
     }
   }
 
-  walk(tree)
-  return categories
+  const buildPath = item => {
+    const names = []
+    let current = item
+    let guard = 0
+
+    while (current && guard < 20) {
+      if (current.name) names.unshift(current.name)
+      current = current.parent_id ? byId.get(String(current.parent_id)) : null
+      guard += 1
+    }
+
+    return item.category_path || names.join(' > ')
+  }
+
+  return Array.from(byId.values()).map(item => {
+    const children = item.children.filter(child => child && child.is_active !== false)
+    const path = buildPath(item)
+
+    return {
+      id: String(item.id),
+      parent_id: item.parent_id == null ? null : String(item.parent_id),
+      gender: String(item.gender || '').toUpperCase(),
+      name: item.name,
+      slug: item.slug,
+      level: Number(item.level) || 0,
+      sort_order: Number(item.sort_order) || 0,
+      is_active: true,
+      category_path: path,
+      label: path,
+      selectable: children.length === 0 && item.parent_id != null
+    }
+  })
 }
 
 async function cleanExcelOrCsvFile(inputFile) {
@@ -279,14 +384,12 @@ async function cleanExcelOrCsvFile(inputFile) {
 
   if (lowerName.endsWith('.csv')) {
     const text = await inputFile.text()
+
     const lines = text.split(/\r?\n/).filter(line => line.trim() !== '')
 
     if (!lines.length) return inputFile
 
-    const headers = parseCsvLine(lines[0]).map(header =>
-      header.trim().replace(/^"|"$/g, '')
-    )
-
+    const headers = parseCsvLine(lines[0]).map(header => header.trim().replace(/^"|"$/g, ''))
     const rows = []
 
     for (let index = 1; index < lines.length; index += 1) {
@@ -306,12 +409,7 @@ async function cleanExcelOrCsvFile(inputFile) {
     const escapeValue = value => {
       const normalized = String(value ?? '')
 
-      if (
-        normalized.includes('"') ||
-        normalized.includes(',') ||
-        normalized.includes('\n') ||
-        normalized.includes('\r')
-      ) {
+      if (normalized.includes('"') || normalized.includes(',') || normalized.includes('\n') || normalized.includes('\r')) {
         return `"${normalized.replace(/"/g, '""')}"`
       }
 
@@ -326,9 +424,7 @@ async function cleanExcelOrCsvFile(inputFile) {
 
     const blob = new Blob([outputLines.join('\n')], { type: 'text/csv' })
 
-    return new File([blob], inputFile.name, {
-      type: inputFile.type || 'text/csv'
-    })
+    return new File([blob], inputFile.name, { type: inputFile.type || 'text/csv' })
   }
 
   if (lowerName.endsWith('.xlsx') || lowerName.endsWith('.xls')) {
@@ -348,14 +444,8 @@ async function cleanExcelOrCsvFile(inputFile) {
 
     XLSX.utils.book_append_sheet(outputWorkbook, outputWorksheet, sheetName)
 
-    const output = XLSX.write(outputWorkbook, {
-      type: 'array',
-      bookType: 'xlsx'
-    })
-
-    const blob = new Blob([output], {
-      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-    })
+    const output = XLSX.write(outputWorkbook, { type: 'array', bookType: 'xlsx' })
+    const blob = new Blob([output], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
 
     return new File([blob], inputFile.name, { type: blob.type })
   }
@@ -366,8 +456,10 @@ async function cleanExcelOrCsvFile(inputFile) {
 export default function ImportStock() {
   const { user } = useAuth()
   const { show, hide } = useLoading()
+
   const [file, setFile] = useState(null)
   const [imageZip, setImageZip] = useState(null)
+  const [categoryType, setCategoryType] = useState('')
   const [gender, setGender] = useState('')
   const [categoryId, setCategoryId] = useState('')
   const [allCategories, setAllCategories] = useState([])
@@ -380,8 +472,18 @@ export default function ImportStock() {
   const [jobs, setJobs] = useState([])
   const [refreshing, setRefreshing] = useState(false)
   const [progress, setProgress] = useState(null)
-  const [imageProgress, setImageProgress] = useState({ done: 0, total: 0 })
-  const [matchStats, setMatchStats] = useState({ matched: 0, total: 0, skipped: 0 })
+
+  const [imageProgress, setImageProgress] = useState({
+    done: 0,
+    total: 0
+  })
+
+  const [matchStats, setMatchStats] = useState({
+    matched: 0,
+    total: 0,
+    skipped: 0
+  })
+
   const [unmatchedList, setUnmatchedList] = useState([])
   const [b2cDiscount, setB2cDiscount] = useState('')
   const [b2bDiscount, setB2bDiscount] = useState('')
@@ -406,18 +508,15 @@ export default function ImportStock() {
   const categories = useMemo(
     () =>
       allCategories
-        .filter(category => category.gender === gender && category.selectable)
+        .filter(category => matchesCategoryType(category, categoryType) && category.selectable && category.is_active)
         .sort((a, b) => {
-          const pathCompare = String(a.category_path).localeCompare(
-            String(b.category_path),
-            undefined,
-            { numeric: true }
-          )
+          const pathCompare = String(a.category_path).localeCompare(String(b.category_path), undefined, { numeric: true })
 
           if (pathCompare !== 0) return pathCompare
+
           return a.sort_order - b.sort_order
         }),
-    [allCategories, gender]
+    [allCategories, categoryType]
   )
 
   const categoryMap = useMemo(
@@ -435,21 +534,16 @@ export default function ImportStock() {
       Boolean(
         file &&
           branchId &&
+          categoryType &&
           gender &&
           categoryId &&
           selectedCategory &&
+          selectedCategory.selectable &&
+          selectedCategory.is_active &&
           !uploading &&
           !loadingCategories
       ),
-    [
-      file,
-      branchId,
-      gender,
-      categoryId,
-      selectedCategory,
-      uploading,
-      loadingCategories
-    ]
+    [file, branchId, categoryType, gender, categoryId, selectedCategory, uploading, loadingCategories]
   )
 
   const canUploadImages = useMemo(
@@ -474,9 +568,32 @@ export default function ImportStock() {
     setLoadingCategories(true)
     setCategoryError('')
 
+    const endpoints = ['/api/categories/tree', '/api/product-categories/tree', '/api/categories']
+
     try {
-      const tree = await apiGet('/api/categories/tree')
-      setAllCategories(flattenCategories(tree))
+      let loaded = []
+      let lastError = null
+
+      for (const endpoint of endpoints) {
+        try {
+          const response = await apiGet(endpoint)
+          const flattened = flattenCategories(response)
+
+          if (flattened.length) {
+            loaded = flattened
+            break
+          }
+        } catch (error) {
+          lastError = error
+        }
+      }
+
+      setAllCategories(loaded)
+
+      if (!loaded.length) {
+        setCategoryId('')
+        setCategoryError(lastError?.payload?.message || lastError?.message || 'No active categories available')
+      }
     } catch (error) {
       setAllCategories([])
       setCategoryId('')
@@ -493,10 +610,7 @@ export default function ImportStock() {
     show()
 
     try {
-      const data = await apiGet(
-        `/api/branch/${encodeURIComponent(branchId)}/import-jobs`
-      )
-
+      const data = await apiGet(`/api/branch/${encodeURIComponent(branchId)}/import-jobs`)
       setJobs(Array.isArray(data) ? data : [])
     } catch {
       setJobs([])
@@ -510,9 +624,7 @@ export default function ImportStock() {
     if (!branchId) return
 
     try {
-      const data = await apiGet(
-        `/api/branch/${encodeURIComponent(branchId)}/discounts`
-      )
+      const data = await apiGet(`/api/branch/${encodeURIComponent(branchId)}/discounts`)
 
       if (data && typeof data === 'object') {
         if (data.b2c_discount_pct !== undefined && data.b2c_discount_pct !== null) {
@@ -530,8 +642,12 @@ export default function ImportStock() {
   }, [branchId])
 
   useEffect(() => {
+    const savedType = localStorage.getItem('import_category_type') || ''
     const savedGender = localStorage.getItem('import_gender') || ''
-    setGender(savedGender)
+    const initialType = savedType || (savedGender === 'MEN' || savedGender === 'WOMEN' ? savedGender : '')
+
+    setCategoryType(initialType)
+    setGender(getGenderFromCategoryType(initialType))
     localStorage.setItem('branch_id', String(branchId))
   }, [branchId])
 
@@ -548,26 +664,24 @@ export default function ImportStock() {
   }, [fetchDiscounts])
 
   useEffect(() => {
-    if (!gender || loadingCategories) {
-      if (!gender) setCategoryId('')
+    if (!categoryType || loadingCategories) {
+      if (!categoryType) setCategoryId('')
       return
     }
 
-    const currentCategory = categories.find(
-      category => String(category.id) === String(categoryId)
-    )
+    const currentCategory = categories.find(category => String(category.id) === String(categoryId))
 
     if (currentCategory) return
 
     const savedCategoryId =
-      localStorage.getItem(`import_category_id_${gender}`) || ''
+      localStorage.getItem(`import_category_id_${categoryType}`) ||
+      localStorage.getItem(`import_category_id_${gender}`) ||
+      ''
 
-    const savedCategory = categories.find(
-      category => String(category.id) === String(savedCategoryId)
-    )
+    const savedCategory = categories.find(category => String(category.id) === String(savedCategoryId))
 
     setCategoryId(savedCategory ? String(savedCategory.id) : '')
-  }, [gender, categoryId, categories, loadingCategories])
+  }, [categoryType, gender, categoryId, categories, loadingCategories])
 
   const processJob = useCallback(
     async (jobId, setProg) => {
@@ -583,13 +697,10 @@ export default function ImportStock() {
 
       while (!finished) {
         const response = await apiPost(
-          `/api/branch/${encodeURIComponent(
-            branchId
-          )}/import/process/${jobId}?start=${start}&limit=${PROCESS_LIMIT}`
+          `/api/branch/${encodeURIComponent(branchId)}/import/process/${jobId}?start=${start}&limit=${PROCESS_LIMIT}`
         )
 
         const processed = Number(response?.processed || 0)
-
         const next =
           response?.nextStart !== undefined && response?.nextStart !== null
             ? Number(response.nextStart)
@@ -622,34 +733,40 @@ export default function ImportStock() {
 
   const getJobCategoryLabel = useCallback(
     job => {
+      if (job?.category_path) return job.category_path
+
       const category = categoryMap.get(String(job?.category_id || ''))
 
-      if (category?.category_path) {
-        return category.category_path
-      }
+      if (category?.category_path) return category.category_path
 
-      return (
-        [job?.parent_category_name, job?.category_name]
-          .filter(Boolean)
-          .join(' > ') || '-'
-      )
+      return [job?.parent_category_name, job?.category_name].filter(Boolean).join(' > ') || '-'
     },
     [categoryMap]
   )
 
-  const onGenderChange = value => {
-    setGender(value)
+  const onCategoryTypeChange = value => {
+    const nextGender = getGenderFromCategoryType(value)
+
+    setCategoryType(value)
+    setGender(nextGender)
     setCategoryId('')
     setMessage('')
-    localStorage.setItem('import_gender', value || '')
+
+    localStorage.setItem('import_category_type', value || '')
+    localStorage.setItem('import_gender', nextGender || '')
   }
 
   const onCategoryChange = value => {
     const category = categories.find(item => String(item.id) === String(value))
-    const nextValue = category?.selectable ? String(category.id) : ''
+
+    const nextValue = category?.selectable && category?.is_active ? String(category.id) : ''
 
     setCategoryId(nextValue)
     setMessage('')
+
+    if (categoryType) {
+      localStorage.setItem(`import_category_id_${categoryType}`, nextValue)
+    }
 
     if (gender) {
       localStorage.setItem(`import_category_id_${gender}`, nextValue)
@@ -665,8 +782,8 @@ export default function ImportStock() {
         return
       }
 
-      if (!file || !gender || !categoryId || !selectedCategory) {
-        setMessage('Please select gender, selectable sub-category and choose a file.')
+      if (!file || !categoryType || !gender || !categoryId || !selectedCategory || !selectedCategory.selectable || !selectedCategory.is_active) {
+        setMessage('Please select category type, selectable product category and choose a file.')
         return
       }
 
@@ -683,17 +800,13 @@ export default function ImportStock() {
         formData.append('gender', gender)
         formData.append('category_id', String(selectedCategory.id))
 
+        localStorage.setItem('import_category_type', categoryType)
         localStorage.setItem('import_gender', gender)
-        localStorage.setItem(
-          `import_category_id_${gender}`,
-          String(selectedCategory.id)
-        )
+        localStorage.setItem(`import_category_id_${categoryType}`, String(selectedCategory.id))
+        localStorage.setItem(`import_category_id_${gender}`, String(selectedCategory.id))
         localStorage.setItem('branch_id', String(branchId))
 
-        const job = await apiUpload(
-          `/api/branch/${encodeURIComponent(branchId)}/import`,
-          formData
-        )
+        const job = await apiUpload(`/api/branch/${encodeURIComponent(branchId)}/import`, formData)
 
         setMessage('Uploaded. Starting processing…')
         setFile(null)
@@ -701,56 +814,34 @@ export default function ImportStock() {
         await processJob(job.id, setProgress)
         await fetchJobs()
       } catch (error) {
-        setMessage(
-          error?.payload?.message ||
-            error?.message ||
-            'Upload failed'
-        )
+        setMessage(error?.payload?.message || error?.message || 'Upload failed')
       } finally {
         setUploading(false)
         hide()
         setTimeout(() => setMessage(''), 3000)
       }
     },
-    [
-      file,
-      branchId,
-      gender,
-      categoryId,
-      selectedCategory,
-      show,
-      hide,
-      processJob,
-      fetchJobs
-    ]
+    [file, branchId, categoryType, gender, categoryId, selectedCategory, show, hide, processJob, fetchJobs]
   )
 
   async function uploadToCloudinary(blob, publicIdBase) {
     const formData = new FormData()
-    const uniquePublicId = `${publicIdBase}__${Date.now()}_${Math.random()
-      .toString(36)
-      .slice(2, 8)}`
+    const uniquePublicId = `${publicIdBase}__${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
 
     formData.append('file', blob)
     formData.append('upload_preset', UPLOAD_PRESET)
     formData.append('folder', 'products')
     formData.append('public_id', uniquePublicId)
 
-    const response = await fetch(
-      `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`,
-      {
-        method: 'POST',
-        body: formData
-      }
-    )
+    const response = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`, {
+      method: 'POST',
+      body: formData
+    })
 
     const data = await response.json()
 
     if (!response.ok) {
-      throw new Error(
-        data?.error?.message ||
-          `Cloudinary upload failed (${response.status})`
-      )
+      throw new Error(data?.error?.message || `Cloudinary upload failed (${response.status})`)
     }
 
     return data
@@ -781,11 +872,9 @@ export default function ImportStock() {
         localStorage.setItem('branch_id', String(branchId))
 
         const zip = await JSZip.loadAsync(imageZip)
-        const entries = Object.values(zip.files).filter(
-          entry => !entry.dir && isImagePath(entry.name)
-        )
-
+        const entries = Object.values(zip.files).filter(entry => !entry.dir && isImagePath(entry.name))
         const total = entries.length
+
         let done = 0
         let uploadedCount = 0
         const unmatched = []
@@ -836,10 +925,7 @@ export default function ImportStock() {
           seenImageKeys.add(imageKey)
 
           const blob = await entry.async('blob')
-          const uploaded = await uploadToCloudinary(
-            blob,
-            `${barcode}__${imageType}`
-          )
+          const uploaded = await uploadToCloudinary(blob, `${barcode}__${imageType}`)
 
           uploadedImages.push({
             barcode,
@@ -858,15 +944,12 @@ export default function ImportStock() {
         let serverUnmatched = []
 
         if (uploadedImages.length) {
-          const confirmation = await apiPost(
-            `/api/branch/${encodeURIComponent(branchId)}/images/confirm`,
-            { images: uploadedImages }
-          )
+          const confirmation = await apiPost(`/api/branch/${encodeURIComponent(branchId)}/images/confirm`, {
+            images: uploadedImages
+          })
 
           saved = Number(confirmation?.totalUpdated || 0)
-          serverUnmatched = Array.isArray(confirmation?.unmatched)
-            ? confirmation.unmatched
-            : []
+          serverUnmatched = Array.isArray(confirmation?.unmatched) ? confirmation.unmatched : []
         }
 
         const finalUnmatched = [
@@ -885,18 +968,10 @@ export default function ImportStock() {
         })
 
         setUnmatchedList(finalUnmatched)
-
-        setImageMessage(
-          `Finished. Uploaded ${uploadedCount}/${total}. Saved ${saved}. Unmatched ${finalUnmatched.length}.`
-        )
-
+        setImageMessage(`Finished. Uploaded ${uploadedCount}/${total}. Saved ${saved}. Unmatched ${finalUnmatched.length}.`)
         setImageZip(null)
       } catch (error) {
-        setImageMessage(
-          error?.payload?.message ||
-            error?.message ||
-            'Image upload failed'
-        )
+        setImageMessage(error?.payload?.message || error?.message || 'Image upload failed')
       } finally {
         setUploadingImages(false)
         hide()
@@ -918,14 +993,7 @@ export default function ImportStock() {
       const b2c = parseFloat(b2cDiscount)
       const b2b = parseFloat(b2bDiscount)
 
-      if (
-        !Number.isFinite(b2c) ||
-        !Number.isFinite(b2b) ||
-        b2c < 0 ||
-        b2b < 0 ||
-        b2c > 100 ||
-        b2b > 100
-      ) {
+      if (!Number.isFinite(b2c) || !Number.isFinite(b2b) || b2c < 0 || b2b < 0 || b2c > 100 || b2b > 100) {
         setDiscountMessage('Enter valid discount percentages between 0 and 100')
         return
       }
@@ -937,21 +1005,14 @@ export default function ImportStock() {
       try {
         localStorage.setItem('branch_id', String(branchId))
 
-        await apiPost(
-          `/api/branch/${encodeURIComponent(branchId)}/discounts`,
-          {
-            b2c_discount_pct: b2c,
-            b2b_discount_pct: b2b
-          }
-        )
+        await apiPost(`/api/branch/${encodeURIComponent(branchId)}/discounts`, {
+          b2c_discount_pct: b2c,
+          b2b_discount_pct: b2b
+        })
 
         setDiscountMessage('Discounts saved successfully')
       } catch (error) {
-        setDiscountMessage(
-          error?.payload?.message ||
-            error?.message ||
-            'Failed to save discounts'
-        )
+        setDiscountMessage(error?.payload?.message || error?.message || 'Failed to save discounts')
       } finally {
         setSavingDiscounts(false)
         hide()
@@ -970,42 +1031,39 @@ export default function ImportStock() {
           <div className="import-title-admin">Import Stock (Excel)</div>
 
           <div className="import-subtitle-admin">
-            Upload your branch Excel file after selecting gender and a final
-            selectable category. Every barcode is treated as one unique SKU.
+            Select category type, product category and upload the Excel file. Every barcode is treated as one unique SKU.
           </div>
 
-          <form
-            className="import-form-admin"
-            onSubmit={event => event.preventDefault()}
-          >
+          <form className="import-form-admin" onSubmit={event => event.preventDefault()}>
             <div className="excel-block">
               <div className="category-flow-grid">
                 <div className="select-wrap">
-                  <label className="label">Gender</label>
+                  <label className="label">Category Type</label>
 
                   <select
-                    className={`audience-select ${gender ? '' : 'invalid'}`}
-                    value={gender}
-                    onChange={event => onGenderChange(event.target.value)}
+                    className={`audience-select ${categoryType ? '' : 'invalid'}`}
+                    value={categoryType}
+                    onChange={event => onCategoryTypeChange(event.target.value)}
                     required
                   >
-                    <option value="">Select Gender</option>
-                    <option value="MEN">Men</option>
-                    <option value="WOMEN">Women</option>
-                    <option value="KIDS">Kids</option>
+                    <option value="">Select Category Type</option>
+
+                    {CATEGORY_TYPES.map(item => (
+                      <option key={item.value} value={item.value}>
+                        {item.label}
+                      </option>
+                    ))}
                   </select>
                 </div>
 
                 <div className="select-wrap">
-                  <label className="label">Sub-category</label>
+                  <label className="label">Product Category</label>
 
                   <select
-                    className={`audience-select ${
-                      selectedCategory ? '' : 'invalid'
-                    }`}
+                    className={`audience-select ${selectedCategory ? '' : 'invalid'}`}
                     value={categoryId}
                     onChange={event => onCategoryChange(event.target.value)}
-                    disabled={!gender || loadingCategories || Boolean(categoryError)}
+                    disabled={!categoryType || loadingCategories || Boolean(categoryError)}
                     required
                   >
                     <option value="">
@@ -1013,7 +1071,9 @@ export default function ImportStock() {
                         ? 'Loading categories...'
                         : categoryError
                           ? 'Categories unavailable'
-                          : 'Select Sub-category'}
+                          : categoryType
+                            ? 'Select Product Category'
+                            : 'Select Category Type First'}
                     </option>
 
                     {categories.map(category => (
@@ -1023,9 +1083,7 @@ export default function ImportStock() {
                     ))}
                   </select>
 
-                  {categoryError ? (
-                    <div className="import-filehint-admin">{categoryError}</div>
-                  ) : null}
+                  {categoryError ? <div className="import-filehint-admin">{categoryError}</div> : null}
                 </div>
               </div>
 
@@ -1035,9 +1093,7 @@ export default function ImportStock() {
                 <input
                   type="file"
                   accept=".xlsx,.xls,.csv"
-                  onChange={event =>
-                    setFile(event.target.files?.[0] || null)
-                  }
+                  onChange={event => setFile(event.target.files?.[0] || null)}
                 />
 
                 {file ? (
@@ -1045,48 +1101,30 @@ export default function ImportStock() {
                     {file.name} • {(file.size / 1024 / 1024).toFixed(2)} MB
                   </div>
                 ) : (
-                  <div className="import-filehint-admin">
-                    No file selected
-                  </div>
+                  <div className="import-filehint-admin">No file selected</div>
                 )}
 
-                <button
-                  type="button"
-                  className="import-btn-admin"
-                  onClick={onUpload}
-                  disabled={!canUpload}
-                >
+                <button type="button" className="import-btn-admin" onClick={onUpload} disabled={!canUpload}>
                   {uploading ? 'Uploading…' : 'Upload Excel'}
                 </button>
 
-                {message ? (
-                  <div className="import-msg-admin">{message}</div>
-                ) : null}
+                {message ? <div className="import-msg-admin">{message}</div> : null}
 
                 {progress ? (
                   <div className="import-msg-admin">
                     {progress.state}{' '}
-                    {progress.total !== null
-                      ? `${progress.done}/${progress.total}`
-                      : `${progress.done}+`}{' '}
-                    rows
+                    {progress.total !== null ? `${progress.done}/${progress.total}` : `${progress.done}+`} rows
                   </div>
                 ) : null}
               </div>
 
               <div className="inline-info">
-                <span className={`pill-mini ${gender ? 'ok' : 'warn'}`}>
-                  {gender ? `Gender: ${gender}` : 'Select gender'}
+                <span className={`pill-mini ${categoryType ? 'ok' : 'warn'}`}>
+                  {categoryType ? `Category Type: ${getCategoryTypeLabel(categoryType)}` : 'Select category type'}
                 </span>
 
-                <span
-                  className={`pill-mini ${
-                    selectedCategory ? 'ok' : 'warn'
-                  }`}
-                >
-                  {selectedCategory
-                    ? `Sub-category: ${selectedCategory.category_path}`
-                    : 'Select sub-category'}
+                <span className={`pill-mini ${selectedCategory ? 'ok' : 'warn'}`}>
+                  {selectedCategory ? `Product Category: ${selectedCategory.category_path}` : 'Select product category'}
                 </span>
               </div>
             </div>
@@ -1094,20 +1132,13 @@ export default function ImportStock() {
         </div>
 
         <div className="import-card-admin">
-          <div className="import-title-admin">
-            Upload Product Images (ZIP by Barcode)
-          </div>
+          <div className="import-title-admin">Upload Product Images (ZIP by Barcode)</div>
 
           <div className="import-subtitle-admin">
-            Use barcode__front.jpg and barcode__back.jpg. Also supported:
-            barcode_front.jpg, barcode-back.jpg, barcode.front.jpg,
-            barcode back.jpg, front_barcode.jpg and back_barcode.jpg.
+            Use barcode__front.jpg and barcode__back.jpg. Also supported: barcode_front.jpg, barcode-back.jpg, barcode.front.jpg, barcode back.jpg, front_barcode.jpg and back_barcode.jpg.
           </div>
 
-          <form
-            className="import-form-admin"
-            onSubmit={event => event.preventDefault()}
-          >
+          <form className="import-form-admin" onSubmit={event => event.preventDefault()}>
             <div className="zip-block">
               <div className="import-filebox-admin">
                 <label className="label">Images ZIP Folder</label>
@@ -1115,36 +1146,22 @@ export default function ImportStock() {
                 <input
                   type="file"
                   accept=".zip"
-                  onChange={event =>
-                    setImageZip(event.target.files?.[0] || null)
-                  }
+                  onChange={event => setImageZip(event.target.files?.[0] || null)}
                 />
 
                 {imageZip ? (
                   <div className="import-filehint-admin">
-                    {imageZip.name} •{' '}
-                    {(imageZip.size / 1024 / 1024).toFixed(2)} MB
+                    {imageZip.name} • {(imageZip.size / 1024 / 1024).toFixed(2)} MB
                   </div>
                 ) : (
-                  <div className="import-filehint-admin">
-                    No ZIP selected
-                  </div>
+                  <div className="import-filehint-admin">No ZIP selected</div>
                 )}
 
-                <button
-                  type="button"
-                  className="import-btn-admin"
-                  onClick={onUploadImages}
-                  disabled={!canUploadImages}
-                >
-                  {uploadingImages
-                    ? `Uploading ${imageProgress.done}/${imageProgress.total}…`
-                    : 'Upload Images ZIP'}
+                <button type="button" className="import-btn-admin" onClick={onUploadImages} disabled={!canUploadImages}>
+                  {uploadingImages ? `Uploading ${imageProgress.done}/${imageProgress.total}…` : 'Upload Images ZIP'}
                 </button>
 
-                {imageMessage ? (
-                  <div className="import-msg-admin">{imageMessage}</div>
-                ) : null}
+                {imageMessage ? <div className="import-msg-admin">{imageMessage}</div> : null}
 
                 <div className="image-stats">
                   <span>Saved: {matchStats.matched}</span>
@@ -1154,17 +1171,12 @@ export default function ImportStock() {
 
                 {unmatchedList.length > 0 ? (
                   <div className="unmatched-wrap">
-                    <div className="unmatched-title">
-                      Unmatched / Skipped Images
-                    </div>
+                    <div className="unmatched-title">Unmatched / Skipped Images</div>
 
                     <ul className="unmatched-list">
                       {unmatchedList.map((item, index) => (
                         <li key={`${item.file}-${index}`}>
-                          <span className="unmatched-ean">
-                            {item.barcode}
-                          </span>
-
+                          <span className="unmatched-ean">{item.barcode}</span>
                           <span className="unmatched-file">
                             {item.file}
                             {item.reason ? ` - ${item.reason}` : ''}
@@ -1183,14 +1195,10 @@ export default function ImportStock() {
           <div className="import-title-admin">B2C / B2B Discounts</div>
 
           <div className="import-subtitle-admin">
-            Set discount percentages for all products in this branch. These are
-            kept separate from Excel and image uploads.
+            Set discount percentages for all products in this branch. These are kept separate from Excel and image uploads.
           </div>
 
-          <form
-            className="import-form-admin"
-            onSubmit={onSaveDiscounts}
-          >
+          <form className="import-form-admin" onSubmit={onSaveDiscounts}>
             <div className="discount-block">
               <div className="discount-row">
                 <div className="discount-field">
@@ -1222,19 +1230,11 @@ export default function ImportStock() {
                 </div>
               </div>
 
-              <button
-                type="submit"
-                className="import-btn-admin"
-                disabled={!canSaveDiscounts}
-              >
+              <button type="submit" className="import-btn-admin" disabled={!canSaveDiscounts}>
                 {savingDiscounts ? 'Saving…' : 'Save Discounts'}
               </button>
 
-              {discountMessage ? (
-                <div className="import-msg-admin">
-                  {discountMessage}
-                </div>
-              ) : null}
+              {discountMessage ? <div className="import-msg-admin">{discountMessage}</div> : null}
             </div>
           </form>
         </div>
@@ -1243,12 +1243,7 @@ export default function ImportStock() {
           <div className="import-title-admin">Recent Imports</div>
 
           <div className="import-actions-admin">
-            <button
-              type="button"
-              className="import-ghost-btn-admin"
-              onClick={fetchJobs}
-              disabled={refreshing}
-            >
+            <button type="button" className="import-ghost-btn-admin" onClick={fetchJobs} disabled={refreshing}>
               {refreshing ? 'Refreshing…' : 'Refresh'}
             </button>
           </div>
@@ -1260,7 +1255,7 @@ export default function ImportStock() {
                   <th>ID</th>
                   <th>File</th>
                   <th>Gender</th>
-                  <th>Sub-category</th>
+                  <th>Product Category</th>
                   <th>Status</th>
                   <th>Total</th>
                   <th>Success</th>
@@ -1276,44 +1271,23 @@ export default function ImportStock() {
                     <td data-label="ID">{job.id}</td>
                     <td data-label="File">{job.file_name || '-'}</td>
                     <td data-label="Gender">{job.gender || '-'}</td>
-                    <td data-label="Sub-category">
-                      {getJobCategoryLabel(job)}
-                    </td>
-
+                    <td data-label="Product Category">{getJobCategoryLabel(job)}</td>
                     <td data-label="Status">
-                      <span
-                        className={`pill-admin ${String(
-                          job.status_enum || ''
-                        ).toLowerCase()}`}
-                      >
+                      <span className={`pill-admin ${String(job.status_enum || '').toLowerCase()}`}>
                         {job.status_enum || '-'}
                       </span>
                     </td>
-
                     <td data-label="Total">{job.rows_total ?? 0}</td>
                     <td data-label="Success">{job.rows_success ?? 0}</td>
                     <td data-label="Error">{job.rows_error ?? 0}</td>
-
-                    <td data-label="Uploaded">
-                      {job.uploaded_at
-                        ? new Date(job.uploaded_at).toLocaleString()
-                        : '-'}
-                    </td>
-
-                    <td data-label="Completed">
-                      {job.completed_at
-                        ? new Date(job.completed_at).toLocaleString()
-                        : '-'}
-                    </td>
+                    <td data-label="Uploaded">{job.uploaded_at ? new Date(job.uploaded_at).toLocaleString() : '-'}</td>
+                    <td data-label="Completed">{job.completed_at ? new Date(job.completed_at).toLocaleString() : '-'}</td>
                   </tr>
                 ))}
 
                 {!jobs.length ? (
                   <tr>
-                    <td
-                      colSpan="10"
-                      className="import-empty-admin"
-                    >
+                    <td colSpan="10" className="import-empty-admin">
                       No imports yet
                     </td>
                   </tr>
@@ -1322,9 +1296,7 @@ export default function ImportStock() {
             </table>
           </div>
 
-          <div className="import-note-admin">
-            Each upload affects only your branch inventory.
-          </div>
+          <div className="import-note-admin">Each upload affects only your branch inventory.</div>
         </div>
       </div>
     </div>
