@@ -13,6 +13,33 @@ function buildUrl(path) {
   return `${API_BASE.replace(/\/+$/, '')}${apiPath}`
 }
 
+function getStoredToken() {
+  if (typeof window === 'undefined') return ''
+
+  return (
+    window.localStorage.getItem('auth_token') ||
+    window.localStorage.getItem('admin_token') ||
+    window.localStorage.getItem('token') ||
+    window.localStorage.getItem('adminToken') ||
+    window.localStorage.getItem('accessToken') ||
+    ''
+  )
+}
+
+function buildHeaders(customHeaders = {}, includeJsonContentType = false) {
+  const token = getStoredToken()
+  const hasAuthorization = Boolean(
+    customHeaders.Authorization ||
+    customHeaders.authorization
+  )
+
+  return {
+    ...(includeJsonContentType ? { 'Content-Type': 'application/json' } : {}),
+    ...(token && !hasAuthorization ? { Authorization: `Bearer ${token}` } : {}),
+    ...customHeaders
+  }
+}
+
 async function parseResponse(res) {
   const isJson = res.headers
     .get('content-type')
@@ -41,11 +68,7 @@ async function parseResponse(res) {
 
 async function request(method, path, body, opts = {}) {
   const url = buildUrl(path)
-
-  const headers = {
-    'Content-Type': 'application/json',
-    ...(opts.headers || {})
-  }
+  const headers = buildHeaders(opts.headers || {}, true)
 
   const hasBody =
     body !== undefined &&
@@ -106,7 +129,7 @@ export async function apiUpload(path, formData, opts = {}) {
 
   const res = await fetch(url, {
     method: 'POST',
-    headers: opts.headers || {},
+    headers: buildHeaders(opts.headers || {}),
     body: formData,
     credentials: 'omit',
     mode: 'cors',

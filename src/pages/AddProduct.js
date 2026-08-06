@@ -1,23 +1,168 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import './AddProduct.css'
 import { useAuth } from './AdminAuth'
 import { useLoading } from './LoadingContext'
 import { apiGet, apiUpload, apiPost } from './api'
 
+const DEFAULT_BRANCH_ID = 3
+
+const PATTERN_TYPE_OPTIONS = [
+  'AOP',
+  'CHECKED',
+  'FEATHER PRINT',
+  'FLORAL',
+  'GRAPHIC PRINT',
+  'OMBRE',
+  'PLAIN',
+  'PRINTED',
+  'PUFF PRINT',
+  'SOLID',
+  'TEXTURED'
+]
+
+const cleanText = value => String(value ?? '').replace(/\s+/g, ' ').trim()
+
+const normalizeDesignCode = value =>
+  cleanText(value)
+    .toUpperCase()
+    .replace(/\s+/g, '-')
+    .replace(/[^A-Z0-9._-]/g, '')
+    .slice(0, 100)
+
+const normalizePatternType = value => cleanText(value).toUpperCase().slice(0, 100)
+
+const getProductItems = data => {
+  if (Array.isArray(data)) return data
+  if (Array.isArray(data?.products)) return data.products
+  if (Array.isArray(data?.items)) return data.items
+  if (Array.isArray(data?.rows)) return data.rows
+  if (Array.isArray(data?.data)) return data.data
+  return []
+}
+
+const flattenCategories = data => {
+  const source = Array.isArray(data)
+    ? data
+    : Array.isArray(data?.tree)
+      ? data.tree
+      : Array.isArray(data?.categories)
+        ? data.categories
+        : Array.isArray(data?.rows)
+          ? data.rows
+          : []
+
+  if (!source.length) return []
+
+  const nested = source.some(item => Array.isArray(item?.children) && item.children.length)
+
+  if (nested) {
+    const result = []
+
+    const walk = (items, parents = []) => {
+      for (const item of Array.isArray(items) ? items : []) {
+        if (!item || item.is_active === false) continue
+
+        const children = (Array.isArray(item.children) ? item.children : []).filter(
+          child => child && child.is_active !== false
+        )
+        const names = [...parents, item.name].filter(Boolean)
+        const path = item.category_path || names.join(' > ')
+
+        result.push({
+          id: String(item.id),
+          parent_id: item.parent_id == null ? null : String(item.parent_id),
+          gender: cleanText(item.gender).toUpperCase(),
+          name: item.name,
+          slug: item.slug,
+          category_path: path,
+          label: path,
+          selectable: children.length === 0 && item.parent_id != null
+        })
+
+        if (children.length) walk(children, names)
+      }
+    }
+
+    walk(source)
+    return result
+  }
+
+  const rows = source.filter(item => item && item.is_active !== false)
+  const byId = new Map(
+    rows.map(item => [
+      String(item.id),
+      {
+        ...item,
+        id: String(item.id),
+        parent_id: item.parent_id == null ? null : String(item.parent_id),
+        children: []
+      }
+    ])
+  )
+
+  for (const item of byId.values()) {
+    if (item.parent_id && byId.has(item.parent_id)) {
+      byId.get(item.parent_id).children.push(item)
+    }
+  }
+
+  const buildPath = item => {
+    const names = []
+    let current = item
+    let guard = 0
+
+    while (current && guard < 20) {
+      if (current.name) names.unshift(current.name)
+      current = current.parent_id ? byId.get(String(current.parent_id)) : null
+      guard += 1
+    }
+
+    return item.category_path || names.join(' > ')
+  }
+
+  return Array.from(byId.values()).map(item => {
+    const children = item.children.filter(child => child && child.is_active !== false)
+    const path = buildPath(item)
+
+    return {
+      id: String(item.id),
+      parent_id: item.parent_id,
+      gender: cleanText(item.gender).toUpperCase(),
+      name: item.name,
+      slug: item.slug,
+      category_path: path,
+      label: path,
+      selectable: children.length === 0 && item.parent_id != null
+    }
+  })
+}
+
+const mapCategoryToGender = category => {
+  if (category === 'Men') return 'MEN'
+  if (category === 'Women') return 'WOMEN'
+  if (category === 'Kids - Boys' || category === 'Kids - Girls') return 'KIDS'
+  return ''
+}
+
 const AddProduct = () => {
   const { user } = useAuth()
   const { show, hide } = useLoading()
-  const branchId = user?.branch_id
+  const branchId =
+    user?.branch_id ||
+    (typeof window !== 'undefined' ? localStorage.getItem('branch_id') : null) ||
+    DEFAULT_BRANCH_ID
 
   const [brandList, setBrandList] = useState([])
   const [productList, setProductList] = useState([])
   const [colorList, setColorList] = useState([])
   const [kidsSizes, setKidsSizes] = useState([])
   const [adultSizes, setAdultSizes] = useState([])
+  const [categoryOptions, setCategoryOptions] = useState([])
 
   const [loadingOptions, setLoadingOptions] = useState(false)
 
   const [selectedCategory, setSelectedCategory] = useState('')
+  const [selectedCategoryId, setSelectedCategoryId] = useState('')
   const [brandInput, setBrandInput] = useState('')
   const [filteredBrands, setFilteredBrands] = useState([])
   const [showDropdownBrand, setShowDropdownBrand] = useState(false)
@@ -45,6 +190,9 @@ const AddProduct = () => {
   const [uploadedImage, setUploadedImage] = useState('')
 
   const [eanCode, setEanCode] = useState('')
+  const [designCode, setDesignCode] = useState('')
+  const [patternType, setPatternType] = useState('')
+  const [patternCode, setPatternCode] = useState('')
 
   const [popupMessage, setPopupMessage] = useState('')
   const [popupType, setPopupType] = useState('')
@@ -53,56 +201,87 @@ const AddProduct = () => {
   useEffect(() => {
     async function loadOptions() {
       setLoadingOptions(true)
+      const fallbackKids = [
+        'Below 1 year', '1-2', '2-3', '3-4', '4-5', '5-6', '6-7', '7-8', '8-9',
+        '9-10', '10-11', '11-12', '12-13', '13-14', '14-15'
+      ]
+      const fallbackAdults = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL']
+
       try {
-        const data = await apiGet('/api/products?limit=10000')
-        const list = Array.isArray(data) ? data : []
+        const [productData, categoryData] = await Promise.all([
+          apiGet('/api/products?limit=10000&all=true'),
+          apiGet('/api/categories/tree')
+        ])
+        const list = getProductItems(productData)
         const brandSet = new Set()
         const productSet = new Set()
         const colorSet = new Set()
         const sizeSet = new Set()
+
         list.forEach(item => {
-          if (item.brand) brandSet.add(item.brand)
-          if (item.product_name) productSet.add(item.product_name)
-          if (item.color) colorSet.add(item.color)
-          if (item.size) sizeSet.add(item.size)
+          const brand = cleanText(item.brand || item.brand_name)
+          const productName = cleanText(item.product_name || item.name)
+          if (brand) brandSet.add(brand)
+          if (productName) productSet.add(productName)
+
+          const variants = Array.isArray(item.variants)
+            ? item.variants
+            : Array.isArray(item.color_variants)
+              ? item.color_variants
+              : [item]
+
+          variants.forEach(variant => {
+            const color = cleanText(variant.color || variant.colour)
+            const size = cleanText(variant.size)
+            if (color) colorSet.add(color)
+            if (size) sizeSet.add(size)
+          })
         })
-        const brands = Array.from(brandSet).sort()
-        const products = Array.from(productSet).sort()
-        const colors = Array.from(colorSet).sort()
+
         const allSizes = Array.from(sizeSet)
         const kids = []
         const adults = []
+
         allSizes.forEach(size => {
-          if (/^\d/.test(size)) kids.push(size)
+          if (/^\d/.test(size) || /year/i.test(size)) kids.push(size)
           else adults.push(size)
         })
-        const fallbackKids = [
-          'Below 1 year', '1-2', '2-3', '3-4', '4-5', '5-6', '6-7', '7-8', '8-9',
-          '9-10', '10-11', '11-12', '12-13', '13-14', '14-15'
-        ]
-        const fallbackAdults = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL']
-        setBrandList(brands)
-        setProductList(products)
-        setColorList(colors.length ? colors : ['Red', 'Blue', 'Green', 'Black', 'White', 'Gold'])
-        setKidsSizes(kids.length ? kids : fallbackKids)
-        setAdultSizes(adults.length ? adults : fallbackAdults)
-      } catch (e) {
-        const fallbackKids = [
-          'Below 1 year', '1-2', '2-3', '3-4', '4-5', '5-6', '6-7', '7-8', '8-9',
-          '9-10', '10-11', '11-12', '12-13', '13-14', '14-15'
-        ]
-        const fallbackAdults = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL']
+
+        setBrandList(Array.from(brandSet).sort())
+        setProductList(Array.from(productSet).sort())
+        setColorList(Array.from(colorSet).sort().length ? Array.from(colorSet).sort() : ['Red', 'Blue', 'Green', 'Black', 'White', 'Gold'])
+        setKidsSizes(kids.length ? kids.sort() : fallbackKids)
+        setAdultSizes(adults.length ? adults.sort() : fallbackAdults)
+        setCategoryOptions(flattenCategories(categoryData))
+      } catch (error) {
         setBrandList([])
         setProductList([])
         setColorList(['Red', 'Blue', 'Green', 'Black', 'White', 'Gold'])
         setKidsSizes(fallbackKids)
         setAdultSizes(fallbackAdults)
+        setCategoryOptions([])
       } finally {
         setLoadingOptions(false)
       }
     }
+
     loadOptions()
   }, [])
+
+  const availableCategories = useMemo(() => {
+    const gender = mapCategoryToGender(selectedCategory)
+    if (!gender) return []
+
+    return categoryOptions
+      .filter(category => {
+        if (!category.selectable || category.gender !== gender) return false
+        const path = cleanText(category.category_path || category.label).toLowerCase()
+        if (selectedCategory === 'Kids - Boys') return path.includes('boy') && !path.includes('girl')
+        if (selectedCategory === 'Kids - Girls') return path.includes('girl')
+        return true
+      })
+      .sort((a, b) => String(a.label || '').localeCompare(String(b.label || '')))
+  }, [categoryOptions, selectedCategory])
 
   const handlePriceChangeB2B = value => {
     setOriginalPriceB2B(value)
@@ -170,15 +349,9 @@ const AddProduct = () => {
     }
   }
 
-  const mapCategoryToGender = category => {
-    if (category === 'Men') return 'MEN'
-    if (category === 'Women') return 'WOMEN'
-    if (category === 'Kids - Boys' || category === 'Kids - Girls') return 'KIDS'
-    return ''
-  }
-
   const resetForm = () => {
     setSelectedCategory('')
+    setSelectedCategoryId('')
     setBrandInput('')
     setProductInput('')
     setSelectedColor('')
@@ -192,6 +365,9 @@ const AddProduct = () => {
     setTotalCount('')
     setUploadedImage('')
     setEanCode('')
+    setDesignCode('')
+    setPatternType('')
+    setPatternCode('')
   }
 
   const processJob = async (branchIdValue, jobId) => {
@@ -221,6 +397,7 @@ const AddProduct = () => {
 
     if (
       !selectedCategory ||
+      !selectedCategoryId ||
       !brandInput.trim() ||
       !productInput.trim() ||
       !selectedColor ||
@@ -253,6 +430,8 @@ const AddProduct = () => {
       return
     }
 
+    const normalizedDesignCode = normalizeDesignCode(designCode)
+    const normalizedPatternType = normalizePatternType(patternType)
     const gender = mapCategoryToGender(selectedCategory)
     if (!gender) {
       setPopupMessage('Please select a valid category.')
@@ -267,6 +446,9 @@ const AddProduct = () => {
     const csvHeaders = [
       'productname',
       'brandname',
+      'designcode',
+      'patterntype',
+      'pattern',
       'size',
       'colour',
       'eancode',
@@ -283,6 +465,9 @@ const AddProduct = () => {
     const csvRow = [
       safe(productInput),
       safe(brandInput),
+      safe(normalizedDesignCode),
+      safe(normalizedPatternType),
+      safe(patternCode),
       safe(selectedSize),
       safe(selectedColor),
       ean,
@@ -303,6 +488,7 @@ const AddProduct = () => {
     const formData = new FormData()
     formData.append('file', blob, 'manual-product.csv')
     formData.append('gender', gender)
+    formData.append('category_id', selectedCategoryId)
 
     try {
       setSubmitting(true)
@@ -312,6 +498,18 @@ const AddProduct = () => {
         throw new Error('Import job not created')
       }
       await processJob(branchId, job.id)
+      await apiPost(`/api/branch/${encodeURIComponent(branchId)}/images/confirm`, {
+        images: [
+          {
+            barcode: ean,
+            image_type: 'front',
+            image_url: uploadedImage,
+            secure_url: uploadedImage,
+            public_id: '',
+            original_filename: `${ean}__front`
+          }
+        ]
+      })
       setPopupMessage('Product added successfully.')
       setPopupType('success')
       resetForm()
@@ -334,6 +532,7 @@ const AddProduct = () => {
 
   const handleCategorySelect = category => {
     setSelectedCategory(category)
+    setSelectedCategoryId('')
   }
 
   const handleBrandSearch = e => {
@@ -393,7 +592,7 @@ const AddProduct = () => {
       setProductList(updated)
       setProductInput(value)
     }
-    setNewBrand('')
+    setNewProduct('')
     setShowPopupProduct(false)
     setShowDropdownProduct(false)
   }
@@ -489,6 +688,61 @@ const AddProduct = () => {
           >
             Add New Product
           </button>
+        </div>
+      </div>
+
+      <div className="row-two">
+        <div className="admin-section2">
+          <h2>Sub-category</h2>
+          <select
+            className="text-input"
+            value={selectedCategoryId}
+            onChange={event => setSelectedCategoryId(event.target.value)}
+            disabled={!selectedCategory || loadingOptions}
+          >
+            <option value="">Select product sub-category</option>
+            {availableCategories.map(category => (
+              <option key={category.id} value={category.id}>
+                {category.label}
+              </option>
+            ))}
+          </select>
+          <span className="hint">Active leaf category is required</span>
+        </div>
+
+        <div className="admin-section3">
+          <h2>Design Details</h2>
+          <input
+            type="text"
+            className="text-input"
+            placeholder="Design code, optional"
+            value={designCode}
+            onChange={event => setDesignCode(normalizeDesignCode(event.target.value))}
+            maxLength={100}
+          />
+          <input
+            type="text"
+            className="text-input"
+            placeholder="Pattern type, optional"
+            list="pattern-type-options"
+            value={patternType}
+            onChange={event => setPatternType(normalizePatternType(event.target.value))}
+            maxLength={100}
+          />
+          <datalist id="pattern-type-options">
+            {PATTERN_TYPE_OPTIONS.map(option => (
+              <option key={option} value={option} />
+            ))}
+          </datalist>
+          <input
+            type="text"
+            className="text-input"
+            placeholder="Legacy pattern code, optional"
+            value={patternCode}
+            onChange={event => setPatternCode(event.target.value.slice(0, 100))}
+            maxLength={100}
+          />
+          <span className="hint">Design code is generated by the backend when left blank</span>
         </div>
       </div>
 

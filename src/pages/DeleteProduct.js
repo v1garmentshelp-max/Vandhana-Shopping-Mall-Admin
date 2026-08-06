@@ -38,6 +38,18 @@ const getBranchId = () => {
   )
 }
 
+const getAuthHeaders = () => {
+  if (typeof window === 'undefined') return {}
+  const token =
+    localStorage.getItem('auth_token') ||
+    localStorage.getItem('admin_token') ||
+    localStorage.getItem('token') ||
+    localStorage.getItem('adminToken') ||
+    localStorage.getItem('accessToken') ||
+    ''
+  return token ? { Authorization: `Bearer ${token}` } : {}
+}
+
 const withBranch = (url) => {
   const branchId = getBranchId()
   if (!branchId) return url
@@ -129,6 +141,9 @@ const mapVariantRow = (product, variant) => {
     category_path: cleanText(product.category_path || variant.category_path),
     brand: cleanText(product.brand || product.brand_name),
     product_name: cleanText(product.product_name || product.name),
+    design_code: cleanText(product.design_code || product.designCode || variant.design_code || variant.designCode),
+    pattern_type: cleanText(product.pattern_type || product.patternType || variant.pattern_type || variant.patternType),
+    pattern_code: cleanText(product.pattern_code || product.patternCode || variant.pattern_code || variant.patternCode),
     color,
     colour: color,
     size,
@@ -171,6 +186,9 @@ const mapSingleRow = (p) => {
     category_path: cleanText(p.category_path),
     brand: cleanText(p.brand || p.brand_name),
     product_name: cleanText(p.product_name || p.name),
+    design_code: cleanText(p.design_code || p.designCode),
+    pattern_type: cleanText(p.pattern_type || p.patternType),
+    pattern_code: cleanText(p.pattern_code || p.patternCode),
     color,
     colour: color,
     size,
@@ -230,7 +248,11 @@ const getItemsFromResponse = (data) => {
 }
 
 const fetchJson = async (url) => {
-  const res = await fetch(url)
+  const res = await fetch(url, {
+    headers: getAuthHeaders(),
+    credentials: 'omit',
+    mode: 'cors'
+  })
   if (!res.ok) throw new Error('Request failed')
   return await res.json()
 }
@@ -312,7 +334,10 @@ const deleteVariantRequest = async (item) => {
   const suffix = query.toString() ? `?${query.toString()}` : ''
 
   const res = await fetch(`${API_BASE}/api/products/variant/${encodeURIComponent(variantId)}${suffix}`, {
-    method: 'DELETE'
+    method: 'DELETE',
+    headers: getAuthHeaders(),
+    credentials: 'omit',
+    mode: 'cors'
   })
 
   if (!res.ok) {
@@ -412,6 +437,9 @@ const DeleteProduct = () => {
         (r) =>
           (r.brand || '').toLowerCase().includes(q) ||
           (r.product_name || '').toLowerCase().includes(q) ||
+          (r.design_code || '').toLowerCase().includes(q) ||
+          (r.pattern_type || '').toLowerCase().includes(q) ||
+          (r.pattern_code || '').toLowerCase().includes(q) ||
           (r.color || '').toLowerCase().includes(q) ||
           (r.size || '').toLowerCase().includes(q) ||
           (r.barcode || '').toLowerCase().includes(q) ||
@@ -465,6 +493,9 @@ const DeleteProduct = () => {
           category_path: row.category_path,
           brand: row.brand,
           product_name: row.product_name,
+          design_code: row.design_code,
+          pattern_type: row.pattern_type,
+          pattern_code: row.pattern_code,
           image_url: row.image_url,
           variants: []
         })
@@ -650,7 +681,7 @@ const DeleteProduct = () => {
         <div className="tools-vandana">
           <input
             className="search-input-vandana"
-            placeholder="Search by brand, product, category, color, size, barcode"
+            placeholder="Search by product, design code, pattern type, category, colour, size or barcode"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
@@ -704,6 +735,9 @@ const DeleteProduct = () => {
                 <th>Sub-category</th>
                 <th>Brand</th>
                 <th>Product Name</th>
+                <th>Design Code</th>
+                <th>Pattern Type</th>
+                <th>Pattern Code</th>
                 <th>Color</th>
                 <th>Size</th>
                 <th>Original Price (B2C)</th>
@@ -735,6 +769,9 @@ const DeleteProduct = () => {
                     <td>{group.category_path || [group.parent_category_name, group.category_name].filter(Boolean).join(' > ') || '-'}</td>
                     <td>{group.brand}</td>
                     <td>{group.product_name}</td>
+                    <td>{group.design_code || '-'}</td>
+                    <td>{group.pattern_type || '-'}</td>
+                    <td>{group.pattern_code || '-'}</td>
                     <td>
                       <select
                         className="variant-select-vandana"
@@ -783,7 +820,7 @@ const DeleteProduct = () => {
 
               {!groupedRows.length && (
                 <tr>
-                  <td colSpan="14" className="empty-cell-vandana">
+                  <td colSpan="17" className="empty-cell-vandana">
                     No products found
                   </td>
                 </tr>
@@ -816,6 +853,9 @@ const DeleteProduct = () => {
                     <span>Brand: {item.brand || '-'}</span>
                     <span>Gender: {item.category || '-'}</span>
                     <span>Sub-category: {item.category_path || item.category_name || '-'}</span>
+                    <span>Design Code: {item.design_code || '-'}</span>
+                    <span>Pattern Type: {item.pattern_type || '-'}</span>
+                    <span>Pattern Code: {item.pattern_code || '-'}</span>
                     <span>Color: {item.color || '-'}</span>
                     <span>Size: {item.size || '-'}</span>
                     <span>Barcode: {item.barcode || '-'}</span>

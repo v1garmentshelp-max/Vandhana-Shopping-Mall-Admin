@@ -30,6 +30,8 @@ const pick = (...values) => {
 
 const cleanText = (value) => String(value ?? '').replace(/\s+/g, ' ').trim()
 
+const normalizePatternType = value => cleanText(value).toUpperCase().slice(0, 100)
+
 const normalizeAssetUrl = (value) => {
   const raw = cleanText(value)
   if (!raw) return ''
@@ -353,6 +355,10 @@ const rowFromApi = (item, variant, fallbackBranchId = DEFAULT_BRANCH_ID) => {
     category_slug: categorySlug,
     parent_category_name: parentCategoryName,
     category_path: categoryPath,
+    design_code: cleanText(pick(item?.design_code, item?.designCode, variant?.design_code, variant?.designCode)),
+    pattern_type: normalizePatternType(pick(item?.pattern_type, item?.patternType, variant?.pattern_type, variant?.patternType)),
+    saved_pattern_type: normalizePatternType(pick(item?.pattern_type, item?.patternType, variant?.pattern_type, variant?.patternType)),
+    pattern_code: cleanText(pick(item?.pattern_code, item?.patternCode, variant?.pattern_code, variant?.patternCode)),
     brand: cleanText(pick(item?.brand, item?.brand_name, item?.brandName, variant?.brand, variant?.brand_name, variant?.brandName)),
     product_name: cleanText(pick(item?.product_name, item?.productName, item?.name, item?.title, variant?.product_name, variant?.productName, variant?.name, variant?.title)),
     color: cleanText(pick(variant?.color, variant?.colour, variant?.selected_color, variant?.selectedColor, item?.color, item?.colour, item?.selected_color, item?.selectedColor, item?.display_color, item?.displayColor)),
@@ -571,6 +577,20 @@ const UpdateProduct = () => {
       const next = [...prev]
       const current = { ...next[index] }
 
+      if (field === 'pattern_type') {
+        const normalized = normalizePatternType(value)
+        const productId = String(current.product_id || '')
+
+        return next.map((row, rowIndex) => {
+          if (String(row.product_id || '') !== productId) return row
+          return {
+            ...row,
+            pattern_type: normalized,
+            dirty: rowIndex === index ? true : row.dirty
+          }
+        })
+      }
+
       if (field === 'category') {
         current.category = toCategoryLabel(value)
         current.category_id = ''
@@ -638,7 +658,7 @@ const UpdateProduct = () => {
 
     if (q) {
       list = list.filter((row) =>
-        [row.id, row.product_id, row.variant_id, row.barcode, row.ean_code, row.brand, row.product_name, row.color, row.size, row.category, row.category_name, row.parent_category_name, row.category_path]
+        [row.id, row.product_id, row.variant_id, row.barcode, row.ean_code, row.design_code, row.pattern_type, row.pattern_code, row.brand, row.product_name, row.color, row.size, row.category, row.category_name, row.parent_category_name, row.category_path]
           .map((value) => String(value || '').toLowerCase())
           .some((value) => value.includes(q))
       )
@@ -668,6 +688,8 @@ const UpdateProduct = () => {
       if (!cleanText(row.ean_code || row.barcode)) missing.push('ean code')
       if (!cleanText(row.category)) missing.push('gender')
       if (!cleanText(row.category_id)) missing.push('sub-category')
+      if (!cleanText(row.design_code)) missing.push('design code')
+      if (cleanText(row.pattern_type).length > 100) missing.push('valid pattern type')
       if (!cleanText(row.brand)) missing.push('brand')
       if (!cleanText(row.product_name)) missing.push('product name')
       if (!cleanText(row.color)) missing.push('color')
@@ -784,6 +806,12 @@ const UpdateProduct = () => {
       gender,
       category_id: row.category_id,
       categoryId: row.category_id,
+      design_code: row.design_code,
+      designCode: row.design_code,
+      pattern_type: normalizePatternType(row.pattern_type) || null,
+      patternType: normalizePatternType(row.pattern_type) || null,
+      pattern_code: row.pattern_code,
+      patternCode: row.pattern_code,
       brand: row.brand,
       brand_name: row.brand,
       product_name: row.product_name,
@@ -869,6 +897,10 @@ const UpdateProduct = () => {
       ean_code: payload.ean_code,
       category: toCategoryLabel(payload.category),
       category_id: payload.category_id,
+      design_code: payload.design_code,
+      pattern_type: payload.pattern_type || '',
+      saved_pattern_type: payload.pattern_type || '',
+      pattern_code: payload.pattern_code,
       brand: payload.brand,
       product_name: payload.product_name,
       color: payload.color,
@@ -982,7 +1014,7 @@ const UpdateProduct = () => {
           <div className="title-wrap-vandana">
             <p className="page-kicker-vandana">Product Control</p>
             <h1>Update Products</h1>
-            <p className="page-subtitle-vandana">Edit website discounts, prices, stock, images and category details.</p>
+            <p className="page-subtitle-vandana">Edit pattern type, website discounts, prices, stock, images and category details.</p>
           </div>
 
           <div className="summary-strip-vandana">
@@ -1020,7 +1052,7 @@ const UpdateProduct = () => {
         <div className="toolbar-right-vandana">
           <input
             className="search-input-vandana"
-            placeholder="Search by EAN, brand, product, color, size, gender or sub-category"
+            placeholder="Search by EAN, design, pattern, brand, product, color, size or category"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
@@ -1049,6 +1081,9 @@ const UpdateProduct = () => {
             <colgroup>
               <col className="col-sl-vandana" />
               <col className="col-id-vandana" />
+              <col className="col-id-vandana" />
+              <col className="col-category-vandana" />
+              <col className="col-id-vandana" />
               <col className="col-category-vandana" />
               <col className="col-category-vandana" />
               <col className="col-brand-vandana" />
@@ -1070,6 +1105,9 @@ const UpdateProduct = () => {
               <tr>
                 <th>Sl. No</th>
                 <th>IDs</th>
+                <th>Design Code</th>
+                <th>Pattern Type</th>
+                <th>Legacy Pattern</th>
                 <th>Gender</th>
                 <th>Sub-category</th>
                 <th>Brand</th>
@@ -1091,7 +1129,7 @@ const UpdateProduct = () => {
             <tbody>
               {isLoading ? (
                 <tr>
-                  <td colSpan="17" className="empty-state-cell-vandana">Loading products...</td>
+                  <td colSpan="20" className="empty-state-cell-vandana">Loading products...</td>
                 </tr>
               ) : filteredSortedRows.length ? (
                 filteredSortedRows.map((product, idx) => {
@@ -1116,6 +1154,25 @@ const UpdateProduct = () => {
                           <span title={String(product.variant_id || '-')}>V: {product.variant_id || '-'}</span>
                           <span title={String(product.ean_code || product.barcode || '-')}>EAN: {product.ean_code || product.barcode || '-'}</span>
                         </div>
+                      </td>
+
+                      <td>
+                        <input type="text" value={product.design_code || ''} readOnly title="Design code can only be changed from Design Review" />
+                      </td>
+
+                      <td>
+                        <input
+                          type="text"
+                          value={product.pattern_type || ''}
+                          onChange={(e) => updateField(rowIndex, 'pattern_type', e.target.value)}
+                          maxLength={100}
+                          placeholder="Pattern type"
+                        />
+                        <div className="current-mini-vandana">Current {product.saved_pattern_type || '-'}</div>
+                      </td>
+
+                      <td>
+                        <input type="text" value={product.pattern_code || ''} readOnly title="Legacy pattern code" />
                       </td>
 
                       <td>
@@ -1225,7 +1282,7 @@ const UpdateProduct = () => {
                 })
               ) : (
                 <tr>
-                  <td colSpan="17" className="empty-state-cell-vandana">No products found</td>
+                  <td colSpan="20" className="empty-state-cell-vandana">No products found</td>
                 </tr>
               )}
             </tbody>

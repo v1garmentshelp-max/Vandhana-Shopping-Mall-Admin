@@ -806,6 +806,262 @@ async function prepareImportFile(
   )
 }
 
+
+const IMPORT_FIELD_ALIASES = {
+  product: ['product', 'product name', 'productname', 'name', 'title'],
+  brand: ['brand', 'brand name', 'brandname'],
+  size: ['size'],
+  colour: ['colour', 'color'],
+  barcode: ['ean', 'ean code', 'eancode', 'barcode', 'bar code'],
+  designCode: ['design code', 'design_code', 'designcode'],
+  patternType: ['pattern type', 'pattern_type', 'patterntype'],
+  patternCode: ['pattern code', 'pattern_code', 'patterncode', 'pattern']
+}
+
+const KNOWN_PATTERN_TYPES = new Set([
+  'AOP',
+  'CHECKED',
+  'FEATHER PRINT',
+  'FLORAL',
+  'GRAPHIC PRINT',
+  'OMBRE',
+  'PLAIN',
+  'PRINTED',
+  'PUFF PRINT',
+  'SOLID',
+  'TEXTURED'
+])
+
+function normalizeImportField(value) {
+  return String(value ?? '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+function findImportHeader(headers, aliases) {
+  const normalizedAliases = aliases.map(normalizeImportField)
+  return headers.find(header => normalizedAliases.includes(normalizeImportField(header))) || ''
+}
+
+function getImportValue(row, header) {
+  return header ? String(row?.[header] ?? '').replace(/\s+/g, ' ').trim() : ''
+}
+
+function csvRowsFromText(text) {
+  const lines = String(text || '')
+    .split(/\r?\n/)
+    .filter(line => line.trim())
+
+  if (!lines.length) return []
+
+  const headers = parseCsvLine(lines[0]).map(header => header.trim().replace(/^"|"$/g, ''))
+
+  return lines.slice(1).map(line => {
+    const values = parseCsvLine(line)
+    const row = {}
+    headers.forEach((header, index) => {
+      row[header] = values[index] ?? ''
+    })
+    return row
+  }).filter(row => !shouldDropRow(row))
+}
+
+function excelColumnIndex(reference) {
+  const letters = String(reference || '').match(/^[A-Z]+/i)?.[0]?.toUpperCase() || ''
+  let result = 0
+  for (const letter of letters) result = result * 26 + letter.charCodeAt(0) - 64
+  return Math.max(0, result - 1)
+}
+
+function xmlText(node) {
+  if (!node) return ''
+  return Array.from(node.getElementsByTagName('t')).map(item => item.textContent || '').join('')
+}
+
+function normalizeZipPath(path) {
+  const parts = []
+  String(path || '').replace(/^\/+/, '').split('/').forEach(part => {
+    if (!part || part === '.') return
+    if (part === '..') parts.pop()
+    else parts.push(part)
+  })
+  return parts.join('/')
+}
+
+async function xlsxRowsFromFile(file) {
+  const zip = await JSZip.loadAsync(file)
+  const workbookFile = zip.file('xl/workbook.xml')
+  const relationshipsFile = zip.file('xl/_rels/workbook.xml.rels')
+
+  if (!workbookFile || !relationshipsFile) throw new Error('Excel workbook structure is invalid')
+
+  const parser = new DOMParser()
+  const workbook = parser.parseFromString(await workbookFile.async('text'), 'application/xml')
+  const relationships = parser.parseFromString(await relationshipsFile.async('text'), 'application/xml')
+  const firstSheet = workbook.getElementsByTagName('sheet')[0]
+  const relationshipId = firstSheet?.getAttribute('r:id') || firstSheet?.getAttributeNS('http://schemas.openxmlformats.org/officeDocument/2006/relationships', 'id')
+  const relationship = Array.from(relationships.getElementsByTagName('Relationship')).find(item => item.getAttribute('Id') === relationshipId)
+  const target = relationship?.getAttribute('Target')
+
+  if (!target) throw new Error('Excel worksheet could not be resolved')
+
+  const worksheetPath = normalizeZipPath(target.startsWith('/') ? target : `xl/${target}`)
+  const worksheetFile = zip.file(worksheetPath)
+
+  if (!worksheetFile) throw new Error('Excel worksheet is missing')
+
+  const sharedStringsFile = zip.file('xl/sharedStrings.xml')
+  const sharedStrings = sharedStringsFile
+    ? Array.from(parser.parseFromString(await sharedStringsFile.async('text'), 'application/xml').getElementsByTagName('si')).map(xmlText)
+    : []
+
+  const worksheet = parser.parseFromString(await worksheetFile.async('text'), 'application/xml')
+  const matrix = Array.from(worksheet.getElementsByTagName('row')).map(rowNode => {
+    const row = []
+    Array.from(rowNode.getElementsByTagName('c')).forEach(cell => {
+      const index = excelColumnIndex(cell.getAttribute('r'))
+      const type = cell.getAttribute('t')
+      const valueNode = cell.getElementsByTagName('v')[0]
+      let value = valueNode?.textContent || ''
+
+      if (type === 's') value = sharedStrings[Number(value)] ?? ''
+      else if (type === 'inlineStr') value = xmlText(cell)
+      else if (type === 'b') value = value === '1' ? 'TRUE' : 'FALSE'
+
+      row[index] = value
+    })
+    return row
+  })
+
+  const known = Object.values(IMPORT_FIELD_ALIASES).flat().map(normalizeImportField)
+  let headerIndex = matrix.findIndex(row => row.filter(value => known.includes(normalizeImportField(value))).length >= 3)
+  if (headerIndex < 0) headerIndex = matrix.findIndex(row => row.some(value => String(value ?? '').trim()))
+  if (headerIndex < 0) return []
+
+  const headers = matrix[headerIndex].map(value => String(value ?? '').trim())
+
+  return matrix.slice(headerIndex + 1).map(values => {
+    const row = {}
+    headers.forEach((header, index) => {
+      if (header) row[header] = values[index] ?? ''
+    })
+    return row
+  }).filter(row => !shouldDropRow(row))
+}
+
+async function readImportRows(file) {
+  if (isCsvFile(file)) return { rows: csvRowsFromText(await file.text()), skipped: false }
+  if (/\.xlsx$/i.test(file?.name || '')) return { rows: await xlsxRowsFromFile(file), skipped: false }
+  return { rows: [], skipped: true }
+}
+
+function analyzeImportRows(rows, skipped = false) {
+  if (skipped) {
+    return {
+      rowCount: 0,
+      columns: [],
+      errors: [],
+      warnings: [],
+      infos: ['Local preview is not available for old .xls files. The backend will validate the file during upload.'],
+      skipped: true
+    }
+  }
+
+  const columns = Object.keys(rows[0] || {})
+  const headers = {}
+  Object.entries(IMPORT_FIELD_ALIASES).forEach(([key, aliases]) => {
+    headers[key] = findImportHeader(columns, aliases)
+  })
+
+  const errors = []
+  const warnings = []
+  const infos = []
+  const required = ['product', 'brand', 'size', 'colour', 'barcode']
+  const missingRequired = required.filter(key => !headers[key])
+
+  if (missingRequired.length) errors.push(`Missing required columns: ${missingRequired.join(', ')}`)
+
+  const barcodeRows = new Map()
+  const designIdentities = new Map()
+  const designPatterns = new Map()
+  const variantCombinations = new Map()
+  let missingDesignCodes = 0
+  let missingPatternTypes = 0
+  const unknownPatterns = new Set()
+
+  rows.forEach((row, index) => {
+    const line = index + 2
+    const product = getImportValue(row, headers.product)
+    const brand = getImportValue(row, headers.brand)
+    const size = getImportValue(row, headers.size)
+    const colour = getImportValue(row, headers.colour)
+    const barcode = normalizeBarcode(getImportValue(row, headers.barcode))
+    const designCode = getImportValue(row, headers.designCode).toUpperCase()
+    const patternType = getImportValue(row, headers.patternType).toUpperCase()
+    const patternCode = getImportValue(row, headers.patternCode)
+
+    if (barcode) {
+      if (!barcodeRows.has(barcode)) barcodeRows.set(barcode, [])
+      barcodeRows.get(barcode).push(line)
+    }
+
+    if (!designCode) missingDesignCodes += 1
+    else if (!/^[A-Z0-9][A-Z0-9._-]{0,99}$/.test(designCode)) errors.push(`Invalid design code at row ${line}: ${designCode}`)
+
+    if (!patternType) missingPatternTypes += 1
+    else if (patternType.length > 100) errors.push(`Pattern type is too long at row ${line}`)
+    else if (!KNOWN_PATTERN_TYPES.has(patternType)) unknownPatterns.add(patternType)
+
+    if (designCode) {
+      const identity = `${normalizeImportField(product)}|${normalizeImportField(brand)}`
+      if (!designIdentities.has(designCode)) designIdentities.set(designCode, new Set())
+      designIdentities.get(designCode).add(identity)
+
+      if (!designPatterns.has(designCode)) designPatterns.set(designCode, new Set())
+      if (patternType) designPatterns.get(designCode).add(patternType)
+    }
+
+    const groupingKey = designCode || `${normalizeImportField(product)}|${normalizeImportField(brand)}|${normalizeImportField(patternCode)}`
+    const variantKey = `${groupingKey}|${normalizeImportField(colour)}|${normalizeImportField(size)}`
+    if (colour && size) {
+      if (!variantCombinations.has(variantKey)) variantCombinations.set(variantKey, [])
+      variantCombinations.get(variantKey).push(line)
+    }
+  })
+
+  barcodeRows.forEach((lineNumbers, barcode) => {
+    if (lineNumbers.length > 1) errors.push(`Duplicate barcode ${barcode} in rows ${lineNumbers.join(', ')}`)
+  })
+
+  designIdentities.forEach((identities, designCode) => {
+    if (identities.size > 1) errors.push(`Design code ${designCode} is assigned to multiple product or brand combinations`)
+  })
+
+  designPatterns.forEach((patterns, designCode) => {
+    if (patterns.size > 1) warnings.push(`Design code ${designCode} has multiple pattern types: ${Array.from(patterns).join(', ')}`)
+  })
+
+  variantCombinations.forEach((lineNumbers) => {
+    if (lineNumbers.length > 1) warnings.push(`Duplicate colour and size combination in rows ${lineNumbers.join(', ')}. Separate barcodes will be preserved.`)
+  })
+
+  if (unknownPatterns.size) warnings.push(`Review pattern types: ${Array.from(unknownPatterns).sort().join(', ')}`)
+  if (missingDesignCodes) infos.push(`${missingDesignCodes} row${missingDesignCodes === 1 ? '' : 's'} without design code will use backend-generated design codes.`)
+  if (missingPatternTypes) infos.push(`${missingPatternTypes} row${missingPatternTypes === 1 ? '' : 's'} without pattern type will remain blank.`)
+  if (!rows.length) warnings.push('No importable product rows were detected in the file.')
+
+  return {
+    rowCount: rows.length,
+    columns,
+    errors: Array.from(new Set(errors)),
+    warnings: Array.from(new Set(warnings)).slice(0, 25),
+    infos: Array.from(new Set(infos)),
+    skipped: false
+  }
+}
+
 function getUploadErrorMessage(error) {
   const payload =
     error?.payload || {}
@@ -863,6 +1119,12 @@ export default function ImportStock() {
 
   const [file, setFile] =
     useState(null)
+
+  const [fileReview, setFileReview] =
+    useState(null)
+
+  const [reviewingFile, setReviewingFile] =
+    useState(false)
 
   const [imageZip, setImageZip] =
     useState(null)
@@ -1063,6 +1325,8 @@ export default function ImportStock() {
       gender &&
       selectedCategory &&
       !uploading &&
+      !reviewingFile &&
+      (!fileReview || fileReview.errors.length === 0) &&
       !loadingCategories
   )
 
@@ -1481,13 +1745,14 @@ export default function ImportStock() {
       }
     }
 
-  const onFileChange = event => {
+  const onFileChange = async event => {
     const selectedFile =
       event.target.files?.[0] ||
       null
 
     setMessage('')
     setProgress(null)
+    setFileReview(null)
 
     if (!selectedFile) {
       setFile(null)
@@ -1510,6 +1775,23 @@ export default function ImportStock() {
     }
 
     setFile(selectedFile)
+    setReviewingFile(true)
+
+    try {
+      const parsed = await readImportRows(selectedFile)
+      setFileReview(analyzeImportRows(parsed.rows, parsed.skipped))
+    } catch (error) {
+      setFileReview({
+        rowCount: 0,
+        columns: [],
+        errors: [error?.message || 'Unable to preview this file'],
+        warnings: [],
+        infos: [],
+        skipped: false
+      })
+    } finally {
+      setReviewingFile(false)
+    }
   }
 
   const onUpload = async event => {
@@ -1603,6 +1885,7 @@ export default function ImportStock() {
       )
 
       setFile(null)
+      setFileReview(null)
 
       if (fileInputRef.current) {
         fileInputRef.current.value = ''
@@ -2116,6 +2399,31 @@ export default function ImportStock() {
                   </div>
                 )}
 
+                <div className="import-filehint-admin">
+                  Expected columns: Product Name, Brand Name, Size, Colour, EAN Code, Design Code, Pattern Type and Pattern Code. Design Code and Pattern Type are optional.
+                </div>
+
+                {reviewingFile ? (
+                  <div className="import-msg-admin">Checking file rows…</div>
+                ) : null}
+
+                {fileReview ? (
+                  <div className="import-msg-admin">
+                    <div>Detected rows: {fileReview.rowCount}</div>
+                    <div>Errors: {fileReview.errors.length}</div>
+                    <div>Warnings: {fileReview.warnings.length}</div>
+                    {fileReview.errors.map((item, index) => (
+                      <div key={`import-error-${index}`}>Error: {item}</div>
+                    ))}
+                    {fileReview.warnings.map((item, index) => (
+                      <div key={`import-warning-${index}`}>Warning: {item}</div>
+                    ))}
+                    {fileReview.infos.map((item, index) => (
+                      <div key={`import-info-${index}`}>{item}</div>
+                    ))}
+                  </div>
+                ) : null}
+
                 <button
                   type="button"
                   className="import-btn-admin"
@@ -2124,7 +2432,7 @@ export default function ImportStock() {
                 >
                   {uploading
                     ? 'Uploading…'
-                    : 'Upload Excel'}
+                    : 'Upload Excel / CSV'}
                 </button>
 
                 {message ? (

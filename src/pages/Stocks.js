@@ -175,6 +175,9 @@ export default function Stocks() {
           const id = Number(v.variant_id ?? v.variantId ?? v.id ?? `${idx + 1}${variantIndex + 1}`)
           const brand = safe(s.brand_name ?? s.brand ?? s.brandName ?? v.brand_name ?? v.brand)
           const product = safe(s.product_name ?? s.name ?? s.product ?? s.title ?? v.product_name ?? v.name)
+          const designCode = safe(s.design_code ?? s.designCode ?? v.design_code ?? v.designCode)
+          const patternType = safe(s.pattern_type ?? s.patternType ?? v.pattern_type ?? v.patternType)
+          const patternCode = safe(s.pattern_code ?? s.patternCode ?? v.pattern_code ?? v.patternCode)
           const color = safe(v.colour ?? v.color ?? s.selected_color)
           const size = safe(v.size ?? s.selected_size)
           const ean = safe(v.ean_code ?? v.ean ?? v.barcode ?? s.ean_code ?? s.barcode)
@@ -193,6 +196,9 @@ export default function Stocks() {
             rowKey: `${id}-${ean}-${variantIndex}`,
             brand,
             product,
+            designCode,
+            patternType,
+            patternCode,
             color,
             size,
             ean,
@@ -210,6 +216,9 @@ export default function Stocks() {
       const id = Number(s.variant_id ?? s.variantId ?? s.id ?? idx + 1)
       const brand = safe(s.brand_name ?? s.brand ?? s.brandName)
       const product = safe(s.product_name ?? s.name ?? s.product ?? s.title)
+      const designCode = safe(s.design_code ?? s.designCode)
+      const patternType = safe(s.pattern_type ?? s.patternType)
+      const patternCode = safe(s.pattern_code ?? s.patternCode)
       const color = safe(s.colour ?? s.color ?? s.selected_color)
       const size = safe(s.size ?? s.selected_size)
       const ean = safe(s.ean_code ?? s.ean ?? s.barcode ?? s.barcode_value)
@@ -228,6 +237,9 @@ export default function Stocks() {
         rowKey: `${id}-${ean}-${idx}`,
         brand,
         product,
+        designCode,
+        patternType,
+        patternCode,
         color,
         size,
         ean,
@@ -270,7 +282,7 @@ export default function Stocks() {
     if (search.trim()) {
       const q = search.trim().toLowerCase()
       list = list.filter((r) =>
-        [r.brand, r.product, r.color, r.size, r.ean, r.gender].some((x) =>
+        [r.brand, r.product, r.designCode, r.patternType, r.patternCode, r.color, r.size, r.ean, r.gender].some((x) =>
           String(x || '').toLowerCase().includes(q)
         )
       )
@@ -299,7 +311,7 @@ export default function Stocks() {
       return
     }
 
-    const header = ['Sl. No,Status,Gender,Brand,Product,Size,Colour,EAN,MRP,Sale Price,Qty']
+    const header = ['Sl. No,Status,Gender,Brand,Product,Design Code,Pattern Type,Pattern Code,Size,Colour,EAN,MRP,Sale Price,Qty']
 
     const lines = filtered.map((s, i) =>
       [
@@ -308,6 +320,9 @@ export default function Stocks() {
         `"${(s.gender || '').replace(/"/g, '""')}"`,
         `"${(s.brand || '').replace(/"/g, '""')}"`,
         `"${(s.product || '').replace(/"/g, '""')}"`,
+        `"${(s.designCode || '').replace(/"/g, '""')}"`,
+        `"${(s.patternType || '').replace(/"/g, '""')}"`,
+        `"${(s.patternCode || '').replace(/"/g, '""')}"`,
         `"${(s.size || '').replace(/"/g, '""')}"`,
         `"${(s.color || '').replace(/"/g, '""')}"`,
         `"${(s.ean || '').replace(/"/g, '""')}"`,
@@ -458,7 +473,7 @@ export default function Stocks() {
               <input
                 ref={searchRef}
                 className="stocks-search-vandana-stocks"
-                placeholder="Search brand, product, color, size, EAN"
+                placeholder="Search brand, product, design code, pattern type, color, size or EAN"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
@@ -538,6 +553,9 @@ export default function Stocks() {
                   <col className="stocks-col-gender-vandana-stocks" />
                   <col className="stocks-col-brand-vandana-stocks" />
                   <col className="stocks-col-product-vandana-stocks" />
+                  <col className="stocks-col-product-vandana-stocks" />
+                  <col className="stocks-col-product-vandana-stocks" />
+                  <col className="stocks-col-product-vandana-stocks" />
                   <col className="stocks-col-size-vandana-stocks" />
                   <col className="stocks-col-color-vandana-stocks" />
                   <col className="stocks-col-ean-vandana-stocks" />
@@ -552,6 +570,9 @@ export default function Stocks() {
                     <th>Gender</th>
                     <th className="stocks-al-vandana-stocks">Brand</th>
                     <th className="stocks-al-vandana-stocks">Product</th>
+                    <th className="stocks-al-vandana-stocks">Design Code</th>
+                    <th className="stocks-al-vandana-stocks">Pattern Type</th>
+                    <th className="stocks-al-vandana-stocks">Pattern Code</th>
                     <th>Size</th>
                     <th className="stocks-al-vandana-stocks">Colour</th>
                     <th className="stocks-al-vandana-stocks">EAN</th>
@@ -572,6 +593,15 @@ export default function Stocks() {
                       <td className="stocks-mono-vandana-stocks">{s.gender || '-'}</td>
                       <td className="stocks-al-vandana-stocks stocks-wrap-cell-vandana-stocks" title={s.brand}>{s.brand || '-'}</td>
                       <td className="stocks-al-vandana-stocks stocks-wrap-cell-vandana-stocks" title={s.product}>{s.product || '-'}</td>
+                      <td className="stocks-al-vandana-stocks stocks-wrap-cell-vandana-stocks" title={s.designCode}>
+                        <DisplayValue value={s.designCode} mono />
+                      </td>
+                      <td className="stocks-al-vandana-stocks stocks-wrap-cell-vandana-stocks" title={s.patternType}>
+                        <DisplayValue value={s.patternType} />
+                      </td>
+                      <td className="stocks-al-vandana-stocks stocks-wrap-cell-vandana-stocks" title={s.patternCode}>
+                        <DisplayValue value={s.patternCode} mono />
+                      </td>
                       <td className="stocks-wrap-cell-vandana-stocks">
                         <DisplayValue value={s.size} mono />
                       </td>
@@ -589,7 +619,7 @@ export default function Stocks() {
 
                   {!filtered.length ? (
                     <tr>
-                      <td colSpan={11} className="stocks-empty-vandana-stocks">
+                      <td colSpan={14} className="stocks-empty-vandana-stocks">
                         {rows.length ? 'No matching records. Clear filters or search.' : `No stock records found for branch ${branchId}.`}
                       </td>
                     </tr>
