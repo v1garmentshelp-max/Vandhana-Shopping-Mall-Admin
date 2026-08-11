@@ -1,645 +1,1695 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import Navbar from './NavbarAdmin'
 import { useAuth } from './AdminAuth'
+import { apiGet, apiPost } from './api'
 import './POS.css'
 
-const DEFAULT_API_BASE = 'https://vandhana-shopping-mall-backend.vercel.app'
-const API_BASE_RAW =
-  (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE) ||
-  (typeof process !== 'undefined' && process.env?.REACT_APP_API_BASE) ||
-  process.env.REACT_APP_API_BASE_URL ||
-  DEFAULT_API_BASE
-
-const API_BASE = API_BASE_RAW.replace(/\/+$/, '').replace(/\/api$/, '')
 const DEFAULT_BRANCH_ID = 3
 
-const uuid = () =>
-  typeof crypto !== 'undefined' && crypto.randomUUID
-    ? crypto.randomUUID()
-    : `${Date.now()}_${Math.random().toString(36).slice(2)}`
-
-const num = (v) => {
-  const n = Number(v)
-  return Number.isFinite(n) ? n : 0
+const num = value => {
+  const parsed = Number(value)
+  return Number.isFinite(parsed) ? parsed : 0
 }
 
-const str = (v) => String(v == null ? '' : v).trim()
+const str = value => String(value ?? '').trim()
 
-const money = (v) =>
-  num(v).toLocaleString('en-IN', {
+const money = value =>
+  num(value).toLocaleString('en-IN', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2
   })
 
-const toArray = (x) => {
-  if (Array.isArray(x)) return x
-  if (Array.isArray(x?.data)) return x.data
-  if (Array.isArray(x?.rows)) return x.rows
-  if (Array.isArray(x?.items)) return x.items
-  if (Array.isArray(x?.stock)) return x.stock
-  if (Array.isArray(x?.stocks)) return x.stocks
-  if (Array.isArray(x?.products)) return x.products
-  return []
-}
+const normalizeProduct = data => {
+  if (!data) return null
 
-const normalizeProduct = (v, code) => {
-  if (!v) return null
+  const variantId = num(data.variant_id ?? data.variantId)
+  const productId = num(data.product_id ?? data.productId)
+  const eanCode = str(
+    data.ean_code ??
+      data.eanCode ??
+      data.barcode ??
+      data.barcode_value
+  )
 
-  const variantId = num(v.variant_id ?? v.variantId ?? v.id ?? v.product_id)
-  const eanCode = str(v.ean_code ?? v.ean ?? v.barcode ?? v.barcode_value ?? code)
-  const price = num(v.sale_price ?? v.final_price_b2c ?? v.retail_price ?? v.final_price ?? v.price ?? v.mrp)
-  const mrp = num(v.mrp ?? v.original_price_b2c ?? v.originalPrice ?? v.price ?? price)
-  const stockValue = v.on_hand ?? v.stock ?? v.qty ?? v.quantity
-  const stock = stockValue == null || stockValue === '' ? null : num(stockValue)
+  const availableQty = num(
+    data.available_qty ??
+      data.availableQty ??
+      data.available ??
+      data.stock
+  )
 
-  if (!variantId || !eanCode) return null
+  const mrp = num(data.mrp)
+
+  const price = num(
+    data.sale_price ??
+      data.salePrice ??
+      data.price ??
+      data.mrp
+  )
+
+  if (!variantId || !productId || !eanCode) {
+    return null
+  }
 
   return {
+    product_id: productId,
     variant_id: variantId,
     ean_code: eanCode,
-    name: str(v.product_name ?? v.name ?? v.title ?? 'Product'),
-    brand: str(v.brand_name ?? v.brand ?? ''),
-    size: str(v.size ?? v.selected_size ?? ''),
-    colour: str(v.colour ?? v.color ?? v.selected_color ?? ''),
-    price: price || mrp,
+    name: str(
+      data.product_name ??
+        data.productName ??
+        data.name ??
+        'Product'
+    ),
+    brand: str(
+      data.brand_name ??
+        data.brandName ??
+        data.brand
+    ),
+    design_code: str(
+      data.design_code ??
+        data.designCode
+    ),
+    pattern_code: str(
+      data.pattern_code ??
+        data.patternCode
+    ),
+    pattern_type: str(
+      data.pattern_type ??
+        data.patternType
+    ),
+    size: str(data.size),
+    colour: str(
+      data.colour ??
+        data.color
+    ),
     mrp: mrp || price,
-    image_url: str(v.image_url ?? v.image ?? v.thumbnail ?? ''),
-    stock,
+    price: price || mrp,
+    image_url: str(
+      data.image_url ??
+        data.imageUrl ??
+        data.image
+    ),
+    on_hand: num(
+      data.on_hand ??
+        data.onHand
+    ),
+    reserved: num(data.reserved),
+    available_qty: availableQty,
     qty: 1
   }
 }
 
 export default function POS() {
-  const { token } = useAuth()
-  const branchId = DEFAULT_BRANCH_ID
-  const eanInputRef = useRef(null)
+  const { user } = useAuth()
 
-  const [saleId, setSaleId] = useState(uuid())
+  const inputRef = useRef(null)
+  const messageTimerRef = useRef(null)
+
+  const branchId = useMemo(() => {
+    const userBranch = num(
+      user?.branch_id ??
+        user?.branchId
+    )
+
+    if (userBranch > 0) {
+      return userBranch
+    }
+
+    const storedBranch =
+      typeof window !== 'undefined'
+        ? num(
+            window.localStorage.getItem(
+              'pos_branch_id'
+            )
+          )
+        : 0
+
+    return storedBranch > 0
+      ? storedBranch
+      : DEFAULT_BRANCH_ID
+  }, [user])
+
   const [ean, setEan] = useState('')
   const [items, setItems] = useState([])
-  const [toast, setToast] = useState('')
-  const [searching, setSearching] = useState(false)
-  const [paying, setPaying] = useState(false)
-  const [successOpen, setSuccessOpen] = useState(false)
-  const [paymentMethod, setPaymentMethod] = useState('CASH')
-  const [paymentRef, setPaymentRef] = useState('')
-  const [error, setError] = useState('')
-  const [confirming, setConfirming] = useState(false)
+  const [lastScanned, setLastScanned] = useState(null)
+  const [scanning, setScanning] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+  const [message, setMessage] = useState(null)
+  const [checkoutOpen, setCheckoutOpen] = useState(false)
+  const [receipt, setReceipt] = useState(null)
 
-  const authToken =
-    token ||
-    localStorage.getItem('auth_token') ||
-    localStorage.getItem('admin_token') ||
-    localStorage.getItem('token') ||
-    localStorage.getItem('adminToken') ||
-    localStorage.getItem('accessToken') ||
-    ''
+  const [paymentMethod, setPaymentMethod] =
+    useState('POS_CASH')
+
+  const [paymentRef, setPaymentRef] =
+    useState('')
+
+  const [customerName, setCustomerName] =
+    useState('')
+
+  const [customerMobile, setCustomerMobile] =
+    useState('')
 
   useEffect(() => {
-    localStorage.setItem('pos_branch_id', String(DEFAULT_BRANCH_ID))
-    eanInputRef.current?.focus()
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem(
+        'pos_branch_id',
+        String(branchId)
+      )
+    }
+
+    inputRef.current?.focus()
+  }, [branchId])
+
+  useEffect(() => {
+    return () => {
+      if (messageTimerRef.current) {
+        clearTimeout(messageTimerRef.current)
+      }
+    }
   }, [])
 
-  const headers = useMemo(
-    () => ({
-      'Content-Type': 'application/json',
-      ...(authToken ? { Authorization: `Bearer ${authToken}` } : {})
-    }),
-    [authToken]
-  )
+  const showMessage = (type, text) => {
+    if (messageTimerRef.current) {
+      clearTimeout(messageTimerRef.current)
+    }
 
-  const showToast = (msg) => {
-    setToast(msg)
-    setTimeout(() => setToast(''), 2000)
+    setMessage({
+      type,
+      text
+    })
+
+    messageTimerRef.current = setTimeout(() => {
+      setMessage(null)
+    }, 3000)
   }
 
   const totals = useMemo(() => {
-    let qty = 0
-    let subtotal = 0
+    let quantity = 0
     let mrpTotal = 0
+    let payable = 0
 
-    for (const it of items) {
-      const itemQty = num(it.qty)
-      qty += itemQty
-      subtotal += itemQty * num(it.price)
-      mrpTotal += itemQty * num(it.mrp || it.price)
-    }
+    items.forEach(item => {
+      const qty = num(item.qty)
 
-    const discount = Math.max(0, mrpTotal - subtotal)
+      quantity += qty
+      mrpTotal += num(item.mrp) * qty
+      payable += num(item.price) * qty
+    })
 
     return {
-      qty,
-      subtotal,
+      quantity,
       mrpTotal,
-      discount,
-      total: subtotal
+      discount: Math.max(
+        mrpTotal - payable,
+        0
+      ),
+      payable
     }
   }, [items])
 
-  const apiGet = async (path) => {
-    const res = await fetch(`${API_BASE}${path}`, {
-      method: 'GET',
-      headers,
-      credentials: 'omit',
-      mode: 'cors'
+  const addProductToCart = product => {
+    if (!product) return
+
+    if (product.available_qty <= 0) {
+      showMessage(
+        'error',
+        `${product.ean_code} is out of stock`
+      )
+
+      return
+    }
+
+    setItems(current => {
+      const index = current.findIndex(
+        item =>
+          item.variant_id ===
+            product.variant_id &&
+          item.ean_code ===
+            product.ean_code
+      )
+
+      if (index < 0) {
+        return [
+          ...current,
+          {
+            ...product,
+            qty: 1
+          }
+        ]
+      }
+
+      const existing = current[index]
+      const nextQty =
+        num(existing.qty) + 1
+
+      if (
+        nextQty >
+        product.available_qty
+      ) {
+        showMessage(
+          'error',
+          `Only ${product.available_qty} unit${
+            product.available_qty === 1
+              ? ''
+              : 's'
+          } available for ${product.ean_code}`
+        )
+
+        return current
+      }
+
+      const updated = [...current]
+
+      updated[index] = {
+        ...existing,
+        ...product,
+        qty: nextQty
+      }
+
+      return updated
     })
-
-    const data = await res.json().catch(() => null)
-
-    if (!res.ok) {
-      throw new Error(data?.message || data?.error || `Request failed with status ${res.status}`)
-    }
-
-    return data
   }
 
-  const apiPost = async (path, body) => {
-    const res = await fetch(`${API_BASE}${path}`, {
-      method: 'POST',
-      headers,
-      credentials: 'omit',
-      mode: 'cors',
-      body: JSON.stringify(body)
-    })
+  const scanBarcode = async rawCode => {
+    const code = str(rawCode).replace(
+      /\s+/g,
+      ''
+    )
 
-    const data = await res.json().catch(() => null)
-
-    if (!res.ok) {
-      throw new Error(data?.message || data?.error || `Request failed with status ${res.status}`)
+    if (!code || scanning) {
+      return
     }
 
-    return data
-  }
-
-  const findProductByStock = async (code) => {
-    const data = await apiGet(`/api/branch/${branchId}/stock`)
-    const list = toArray(data)
-    const found = list.find((x) => str(x.ean_code ?? x.ean ?? x.barcode ?? x.barcode_value) === code)
-    return normalizeProduct(found, code)
-  }
-
-  const findProductByBarcode = async (code) => {
-    const paths = [
-      `/api/barcodes/${encodeURIComponent(code)}`,
-      `/api/products/barcode/${encodeURIComponent(code)}`,
-      `/api/products/by-barcode/${encodeURIComponent(code)}`,
-      `/api/inventory/scan?branch_id=${branchId}&ean_code=${encodeURIComponent(code)}`
-    ]
-
-    for (const path of paths) {
-      try {
-        const data = await apiGet(path)
-        const product = normalizeProduct(Array.isArray(data) ? data[0] : data?.data || data?.product || data?.variant || data?.item || data, code)
-        if (product) return product
-      } catch {}
-    }
+    setScanning(true)
+    setMessage(null)
 
     try {
-      const product = await findProductByStock(code)
-      if (product) return product
-    } catch {}
+      const data = await apiGet(
+        '/inventory/scan',
+        {
+          branch_id: branchId,
+          ean_code: code
+        }
+      )
 
-    return null
-  }
-
-  const scanFlow = async (code) => {
-    const trimmed = str(code)
-    if (!trimmed) return
-
-    setSearching(true)
-    setError('')
-
-    try {
-      const product = await findProductByBarcode(trimmed)
+      const product =
+        normalizeProduct(data)
 
       if (!product) {
-        showToast('Product not found')
+        throw new Error(
+          'Invalid barcode response'
+        )
+      }
+
+      if (
+        product.ean_code !== code
+      ) {
+        throw new Error(
+          'Barcode response mismatch'
+        )
+      }
+
+      if (
+        product.available_qty <= 0
+      ) {
+        setLastScanned(product)
+
+        showMessage(
+          'error',
+          `${product.ean_code} is out of stock`
+        )
+
         return
       }
 
-      if (product.stock != null && product.stock <= 0) {
-        showToast('Product is out of stock')
-        return
+      setLastScanned(product)
+      addProductToCart(product)
+
+      showMessage(
+        'success',
+        `${product.ean_code} added`
+      )
+    } catch (error) {
+      const payload =
+        error?.payload || {}
+
+      if (
+        error?.status === 401
+      ) {
+        showMessage(
+          'error',
+          'Session expired. Please login again.'
+        )
+      } else if (
+        error?.status === 404
+      ) {
+        setLastScanned(null)
+
+        showMessage(
+          'error',
+          `Barcode ${code} not found`
+        )
+      } else if (
+        error?.status === 409
+      ) {
+        setLastScanned(
+          payload?.product
+            ? normalizeProduct(
+                payload.product
+              )
+            : null
+        )
+
+        showMessage(
+          'error',
+          payload?.message ||
+            `Barcode ${code} is out of stock`
+        )
+      } else {
+        showMessage(
+          'error',
+          error?.message ||
+            'Unable to scan barcode'
+        )
       }
+    } finally {
+      setScanning(false)
+      setEan('')
 
-      setItems((prev) => {
-        const ix = prev.findIndex((p) => p.variant_id === product.variant_id)
+      setTimeout(() => {
+        inputRef.current?.focus()
+      }, 50)
+    }
+  }
 
-        if (ix >= 0) {
-          const existing = prev[ix]
-          const nextQty = existing.qty + 1
+  const handleSubmit = event => {
+    event.preventDefault()
 
-          if (existing.stock != null && nextQty > existing.stock) {
-            showToast(`Only ${existing.stock} units available`)
-            return prev
+    scanBarcode(ean)
+  }
+
+  const changeQty = (
+    variantId,
+    eanCode,
+    delta
+  ) => {
+    setItems(current =>
+      current
+        .map(item => {
+          if (
+            item.variant_id !==
+              variantId ||
+            item.ean_code !== eanCode
+          ) {
+            return item
           }
 
-          const updated = [...prev]
-          updated[ix] = { ...updated[ix], qty: nextQty }
-          return updated
-        }
+          const nextQty =
+            num(item.qty) + delta
 
-        return [...prev, product]
-      })
+          if (nextQty <= 0) {
+            return {
+              ...item,
+              qty: 0
+            }
+          }
 
-      showToast('Added')
-    } catch (e) {
-      const msg = e?.message || 'Scan failed'
-      setError(msg)
-      showToast(msg)
-    } finally {
-      setSearching(false)
-      setEan('')
-      eanInputRef.current?.focus()
-    }
-  }
+          if (
+            nextQty >
+            item.available_qty
+          ) {
+            showMessage(
+              'error',
+              `Only ${item.available_qty} unit${
+                item.available_qty ===
+                1
+                  ? ''
+                  : 's'
+              } available for ${item.ean_code}`
+            )
 
-  const handleManualAdd = () => {
-    if (!ean) return
-    scanFlow(ean)
-  }
+            return item
+          }
 
-  const onKeyDown = (e) => {
-    if (e.key === 'Enter') {
-      e.preventDefault()
-      handleManualAdd()
-    }
-  }
-
-  const addOneMore = (row) => {
-    setItems((prev) =>
-      prev.map((p) => {
-        if (p.variant_id !== row.variant_id) return p
-        const nextQty = p.qty + 1
-
-        if (p.stock != null && nextQty > p.stock) {
-          showToast(`Only ${p.stock} units available`)
-          return p
-        }
-
-        return { ...p, qty: nextQty }
-      })
-    )
-  }
-
-  const removeOne = (row) => {
-    setItems((prev) =>
-      prev
-        .map((p) =>
-          p.variant_id === row.variant_id ? { ...p, qty: Math.max(0, p.qty - 1) } : p
-        )
-        .filter((p) => p.qty > 0)
-    )
-  }
-
-  const newSale = () => {
-    setItems([])
-    setSaleId(uuid())
-    setPaymentRef('')
-    setPaymentMethod('CASH')
-    setError('')
-    setPaying(false)
-    setSuccessOpen(false)
-    setEan('')
-    eanInputRef.current?.focus()
-  }
-
-  const proceedToCheckout = () => {
-    if (!items.length) return
-    setPaying(true)
-  }
-
-  const markPaymentPaid = async (backendSaleId) => {
-    if (!backendSaleId) return
-
-    const paths = ['/api/sales/web/set-payment-status', '/api/orders/web/set-payment-status']
-
-    for (const path of paths) {
-      try {
-        await apiPost(path, {
-          sale_id: backendSaleId,
-          status: 'PAID'
+          return {
+            ...item,
+            qty: nextQty
+          }
         })
-        return
-      } catch {}
+        .filter(
+          item => item.qty > 0
+        )
+    )
+  }
+
+  const removeItem = (
+    variantId,
+    eanCode
+  ) => {
+    setItems(current =>
+      current.filter(
+        item =>
+          !(
+            item.variant_id ===
+              variantId &&
+            item.ean_code === eanCode
+          )
+      )
+    )
+  }
+
+  const clearSale = () => {
+    setItems([])
+    setLastScanned(null)
+    setCheckoutOpen(false)
+    setPaymentMethod('POS_CASH')
+    setPaymentRef('')
+    setCustomerName('')
+    setCustomerMobile('')
+    setEan('')
+
+    setTimeout(() => {
+      inputRef.current?.focus()
+    }, 50)
+  }
+
+  const refreshExactCartStock =
+    async () => {
+      if (!items.length) {
+        return false
+      }
+
+      const refreshedItems = []
+
+      for (const item of items) {
+        try {
+          const data = await apiGet(
+            '/inventory/scan',
+            {
+              branch_id: branchId,
+              ean_code:
+                item.ean_code
+            }
+          )
+
+          const fresh =
+            normalizeProduct(data)
+
+          if (!fresh) {
+            showMessage(
+              'error',
+              `${item.ean_code} could not be verified`
+            )
+
+            return false
+          }
+
+          if (
+            fresh.ean_code !==
+            item.ean_code
+          ) {
+            showMessage(
+              'error',
+              `Barcode mismatch for ${item.ean_code}`
+            )
+
+            return false
+          }
+
+          if (
+            fresh.available_qty <
+            item.qty
+          ) {
+            setLastScanned(fresh)
+
+            showMessage(
+              'error',
+              `Only ${fresh.available_qty} unit${
+                fresh.available_qty ===
+                1
+                  ? ''
+                  : 's'
+              } available for ${fresh.ean_code}`
+            )
+
+            return false
+          }
+
+          refreshedItems.push({
+            ...item,
+            ...fresh,
+            qty: item.qty
+          })
+        } catch (error) {
+          showMessage(
+            'error',
+            error?.message ||
+              `${item.ean_code} is unavailable`
+          )
+
+          return false
+        }
+      }
+
+      setItems(refreshedItems)
+
+      return true
+    }
+
+  const openCheckout = async () => {
+    if (
+      !items.length ||
+      scanning ||
+      submitting
+    ) {
+      return
+    }
+
+    const valid =
+      await refreshExactCartStock()
+
+    if (valid) {
+      setCheckoutOpen(true)
     }
   }
 
-  const confirmPayment = async () => {
-    if (!items.length || confirming) return
+  const confirmSale = async () => {
+    if (
+      !items.length ||
+      submitting
+    ) {
+      return
+    }
 
-    setError('')
-    setConfirming(true)
+    setSubmitting(true)
 
     try {
       const payload = {
-        sale_id: saleId,
         branch_id: branchId,
-        branchId,
-        selected_branch_id: branchId,
-        selectedBranchId: branchId,
-        pickup_branch_id: branchId,
-        payment: {
-          method: paymentMethod,
-          ref: paymentRef || null,
-          amount: totals.total
-        },
-        payment_method: `POS_${paymentMethod}`,
-        payment_status: 'PENDING',
-        payment_ref: paymentRef || null,
-        source: 'POS',
-        customer_name: 'POS Customer',
-        customer_email: 'pos@vandana.local',
-        login_email: 'pos@vandana.local',
-        customer_mobile: '',
-        shipping_address: {
-          full_name: 'POS Customer',
-          phone: '',
-          address: 'Branch POS Counter',
-          city: 'Srikakulam',
-          state: 'Andhra Pradesh',
-          pincode: '532001'
-        },
-        totals: {
-          bagTotal: totals.mrpTotal || totals.total,
-          discountTotal: totals.discount,
-          couponPct: 0,
-          couponDiscount: 0,
-          convenience: 0,
-          giftWrap: 0,
-          payable: totals.total
-        },
-        items: items.map((it) => ({
-          variant_id: it.variant_id,
-          product_id: it.variant_id,
-          ean_code: it.ean_code,
-          barcode_value: it.ean_code,
-          qty: it.qty,
-          price: it.price,
-          mrp: it.mrp || it.price,
-          size: it.size || null,
-          colour: it.colour || null,
-          image_url: it.image_url || null,
-          name: it.name
-        })),
-        client_action_id: uuid()
+        payment_method:
+          paymentMethod,
+        payment_ref:
+          str(paymentRef) || null,
+        customer_name:
+          str(customerName) || null,
+        customer_mobile:
+          str(customerMobile) || null,
+        items: items.map(item => ({
+          product_id:
+            item.product_id,
+          variant_id:
+            item.variant_id,
+          ean_code:
+            item.ean_code,
+          qty: num(item.qty)
+        }))
       }
 
-      const paths = ['/api/sales/web/place', '/api/orders/web/place']
-      let lastError = null
-      let result = null
+      const result =
+        await apiPost(
+          '/sales/pos/place',
+          payload
+        )
 
-      for (const path of paths) {
-        try {
-          result = await apiPost(path, payload)
-          break
-        } catch (e) {
-          lastError = e
-        }
+      const completedReceipt = {
+        sale_id:
+          result?.sale_id ??
+          result?.id ??
+          result?.sale?.id ??
+          '',
+        quantity:
+          totals.quantity,
+        total: num(
+          result?.total ??
+            result?.totals?.payable ??
+            totals.payable
+        ),
+        payment_method:
+          result?.payment_method ??
+          paymentMethod
       }
 
-      if (!result) {
-        throw lastError || new Error('Payment failed')
-      }
+      setReceipt(
+        completedReceipt
+      )
 
-      const backendSaleId = result?.id || result?.sale_id || result?.sale?.id
-
-      if (backendSaleId) {
-        await markPaymentPaid(backendSaleId)
-      }
-
-      setPaying(false)
-      setSuccessOpen(true)
       setItems([])
-      setSaleId(uuid())
+      setLastScanned(null)
+      setCheckoutOpen(false)
+      setPaymentMethod('POS_CASH')
       setPaymentRef('')
-      setPaymentMethod('CASH')
-    } catch (e) {
-      const msg = e?.message || 'Payment failed'
-      setError(msg)
-      showToast(msg)
+      setCustomerName('')
+      setCustomerMobile('')
+      setEan('')
+
+      showMessage(
+        'success',
+        'Sale completed successfully'
+      )
+    } catch (error) {
+      const payload =
+        error?.payload || {}
+
+      if (
+        error?.status === 409 ||
+        payload?.code ===
+          'OUT_OF_STOCK'
+      ) {
+        const failedEan = str(
+          payload?.ean_code ??
+            payload?.item
+              ?.ean_code
+        )
+
+        showMessage(
+          'error',
+          failedEan
+            ? `${failedEan} has insufficient stock`
+            : payload?.message ||
+                'One of the scanned items is out of stock'
+        )
+      } else if (
+        error?.status === 401
+      ) {
+        showMessage(
+          'error',
+          'Session expired. Please login again.'
+        )
+      } else {
+        showMessage(
+          'error',
+          error?.message ||
+            'Sale could not be completed'
+        )
+      }
     } finally {
-      setConfirming(false)
+      setSubmitting(false)
     }
+  }
+
+  const paymentLabel = method => {
+    if (method === 'POS_UPI') {
+      return 'UPI'
+    }
+
+    if (method === 'POS_CARD') {
+      return 'Card'
+    }
+
+    if (method === 'POS_OTHER') {
+      return 'Other'
+    }
+
+    return 'Cash'
   }
 
   return (
     <div className="pos-page">
       <Navbar />
 
-      <div className="pos-shell">
-        <div className="pos-hero">
-          <div className="pos-hero-text">
-            <span className="pos-badge">Store Billing</span>
-            <h1 className="pos-title">Point of Sale</h1>
-            <p className="pos-subtitle">
-              Scan products, review the cart, and complete billing with a cleaner, brighter, and more polished layout.
+      <main className="pos-shell">
+        <section className="pos-header">
+          <div className="pos-header-content">
+            <span className="pos-label">
+              Store Billing
+            </span>
+
+            <h1>
+              Point of Sale
+            </h1>
+
+            <p>
+              Scan one barcode and
+              work only with that
+              exact product variant.
             </p>
           </div>
-          <div className="pos-hero-meta">
-            <div className="pos-meta-card">
-              <span className="pos-meta-label">Branch</span>
-              <span className="pos-meta-value">{branchId}</span>
-            </div>
-            <div className="pos-meta-card">
-              <span className="pos-meta-label">Sale ID</span>
-              <span className="pos-meta-value">{saleId.slice(0, 8)}</span>
-            </div>
-          </div>
-        </div>
 
-        <div className="pos-main-grid">
-          <div className="pos-left">
-            <div className="pos-panel">
-              <div className="pos-panel-head">
-                <h2>Scan Product</h2>
-                <span>{searching ? 'Searching...' : 'Ready'}</span>
-              </div>
+          <div className="pos-header-stats">
+            <div className="pos-stat">
+              <span>
+                Branch
+              </span>
 
-              <div className="scan-row">
-                <input
-                  ref={eanInputRef}
-                  type="text"
-                  placeholder="Scan EAN or type manually"
-                  value={ean}
-                  onChange={(e) => setEan(e.target.value.replace(/[^\d]/g, ''))}
-                  onKeyDown={onKeyDown}
-                />
-                <button className="btn gold" onClick={handleManualAdd} disabled={searching || !ean}>
-                  {searching ? 'Adding...' : 'Add'}
-                </button>
-              </div>
-
-              {error ? <div className="error-text">{error}</div> : null}
+              <strong>
+                {branchId}
+              </strong>
             </div>
 
-            <div className="pos-panel cart-panel">
-              <div className="pos-panel-head">
-                <h2>Cart Items</h2>
-                <span>{items.length} product{items.length === 1 ? '' : 's'}</span>
-              </div>
+            <div className="pos-stat">
+              <span>
+                Items
+              </span>
 
-              <div className="cart">
-                <div className="cart-head">
-                  <div>Item</div>
-                  <div>Details</div>
-                  <div className="right">Price</div>
-                  <div className="center">Qty</div>
-                  <div className="right">Total</div>
-                </div>
+              <strong>
+                {totals.quantity}
+              </strong>
+            </div>
 
-                {items.length === 0 ? (
-                  <div className="cart-empty">Scan or type an EAN to add items</div>
-                ) : (
-                  items.map((it) => (
-                    <div className="cart-row" key={it.variant_id}>
-                      <div className="thumb">
-                        {it.image_url ? <img src={it.image_url} alt={it.name} /> : <div className="thumb-ph" />}
-                      </div>
+            <div className="pos-stat">
+              <span>
+                Total
+              </span>
 
-                      <div className="info">
-                        <div className="name">{it.name}</div>
-                        <div className="meta">
-                          <span>{it.brand || '-'}</span>
-                          <span>Size: {it.size || '-'}</span>
-                          <span>Color: {it.colour || '-'}</span>
-                          <span>EAN: {it.ean_code}</span>
-                          {it.stock != null ? <span>Stock: {it.stock}</span> : null}
-                        </div>
-                      </div>
-
-                      <div className="right price-cell">₹{money(it.price)}</div>
-
-                      <div className="center qty">
-                        <button className="btn qty-btn" onClick={() => removeOne(it)}>-1</button>
-                        <div className="qty-box">{it.qty}</div>
-                        <button className="btn qty-btn" onClick={() => addOneMore(it)}>+1</button>
-                      </div>
-
-                      <div className="right row-total">₹{money(it.qty * num(it.price))}</div>
-                    </div>
-                  ))
+              <strong>
+                ₹
+                {money(
+                  totals.payable
                 )}
+              </strong>
+            </div>
+          </div>
+        </section>
+
+        {message ? (
+          <div
+            className={`pos-message ${message.type}`}
+          >
+            {message.text}
+          </div>
+        ) : null}
+
+        <section className="pos-layout">
+          <div className="pos-left">
+            <div className="pos-card">
+              <div className="pos-title-row">
+                <div>
+                  <span className="pos-label">
+                    Barcode
+                  </span>
+
+                  <h2>
+                    Scan Product
+                  </h2>
+                </div>
+
+                <span
+                  className={`pos-ready ${
+                    scanning
+                      ? 'loading'
+                      : ''
+                  }`}
+                >
+                  {scanning
+                    ? 'Checking...'
+                    : 'Ready'}
+                </span>
+              </div>
+
+              <form
+                className="pos-scan-form"
+                onSubmit={
+                  handleSubmit
+                }
+              >
+                <div className="pos-input-wrap">
+                  <span className="pos-barcode-icon">
+                    ▥
+                  </span>
+
+                  <input
+                    ref={inputRef}
+                    value={ean}
+                    onChange={event =>
+                      setEan(
+                        event.target.value.replace(
+                          /\s+/g,
+                          ''
+                        )
+                      )
+                    }
+                    placeholder="Scan or enter barcode"
+                    autoComplete="off"
+                    inputMode="numeric"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  className="pos-button pos-button-primary"
+                  disabled={
+                    scanning ||
+                    !str(ean)
+                  }
+                >
+                  {scanning
+                    ? 'Checking'
+                    : 'Add Product'}
+                </button>
+              </form>
+            </div>
+
+            {lastScanned ? (
+              <div className="pos-card">
+                <div className="pos-title-row">
+                  <div>
+                    <span className="pos-label">
+                      Exact Barcode
+                    </span>
+
+                    <h2>
+                      Scanned Product
+                    </h2>
+                  </div>
+
+                  <span className="pos-exact-ean">
+                    {
+                      lastScanned.ean_code
+                    }
+                  </span>
+                </div>
+
+                <div className="pos-scanned-product">
+                  <div className="pos-scanned-image">
+                    {lastScanned.image_url ? (
+                      <img
+                        src={
+                          lastScanned.image_url
+                        }
+                        alt={
+                          lastScanned.name
+                        }
+                      />
+                    ) : (
+                      <div className="pos-no-image">
+                        No Image
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="pos-scanned-info">
+                    <div className="pos-scanned-name">
+                      {
+                        lastScanned.name
+                      }
+                    </div>
+
+                    <div className="pos-scanned-brand">
+                      {lastScanned.brand ||
+                        '-'}
+                    </div>
+
+                    <div className="pos-scanned-details">
+                      <div>
+                        <span>
+                          Barcode
+                        </span>
+
+                        <strong>
+                          {
+                            lastScanned.ean_code
+                          }
+                        </strong>
+                      </div>
+
+                      <div>
+                        <span>
+                          Size
+                        </span>
+
+                        <strong>
+                          {lastScanned.size ||
+                            '-'}
+                        </strong>
+                      </div>
+
+                      <div>
+                        <span>
+                          Colour
+                        </span>
+
+                        <strong>
+                          {lastScanned.colour ||
+                            '-'}
+                        </strong>
+                      </div>
+
+                      <div>
+                        <span>
+                          Available
+                        </span>
+
+                        <strong>
+                          {
+                            lastScanned.available_qty
+                          }
+                        </strong>
+                      </div>
+
+                      <div>
+                        <span>
+                          MRP
+                        </span>
+
+                        <strong>
+                          ₹
+                          {money(
+                            lastScanned.mrp
+                          )}
+                        </strong>
+                      </div>
+
+                      <div>
+                        <span>
+                          Sale Price
+                        </span>
+
+                        <strong>
+                          ₹
+                          {money(
+                            lastScanned.price
+                          )}
+                        </strong>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : null}
+
+            <div className="pos-card">
+              <div className="pos-title-row">
+                <div>
+                  <span className="pos-label">
+                    Current Sale
+                  </span>
+
+                  <h2>
+                    Cart Items
+                  </h2>
+                </div>
+
+                <span className="pos-cart-count">
+                  {items.length}{' '}
+                  {items.length === 1
+                    ? 'barcode'
+                    : 'barcodes'}
+                </span>
+              </div>
+
+              <div className="pos-table-wrap">
+                <table className="pos-table">
+                  <thead>
+                    <tr>
+                      <th>
+                        Product
+                      </th>
+
+                      <th>
+                        Barcode
+                      </th>
+
+                      <th>
+                        Size
+                      </th>
+
+                      <th>
+                        Colour
+                      </th>
+
+                      <th>
+                        Available
+                      </th>
+
+                      <th>
+                        Price
+                      </th>
+
+                      <th>
+                        Qty
+                      </th>
+
+                      <th>
+                        Total
+                      </th>
+
+                      <th></th>
+                    </tr>
+                  </thead>
+
+                  <tbody>
+                    {!items.length ? (
+                      <tr>
+                        <td
+                          colSpan="9"
+                          className="pos-empty"
+                        >
+                          <div className="pos-empty-icon">
+                            ▥
+                          </div>
+
+                          <strong>
+                            No products
+                            scanned
+                          </strong>
+
+                          <span>
+                            Scan a barcode
+                            to add its exact
+                            variant.
+                          </span>
+                        </td>
+                      </tr>
+                    ) : (
+                      items.map(
+                        item => (
+                          <tr
+                            key={`${item.variant_id}-${item.ean_code}`}
+                          >
+                            <td>
+                              <div className="pos-product">
+                                <div className="pos-product-image">
+                                  {item.image_url ? (
+                                    <img
+                                      src={
+                                        item.image_url
+                                      }
+                                      alt={
+                                        item.name
+                                      }
+                                    />
+                                  ) : (
+                                    <span>
+                                      No
+                                      Image
+                                    </span>
+                                  )}
+                                </div>
+
+                                <div>
+                                  <strong>
+                                    {
+                                      item.name
+                                    }
+                                  </strong>
+
+                                  <span>
+                                    {item.brand ||
+                                      '-'}
+                                  </span>
+                                </div>
+                              </div>
+                            </td>
+
+                            <td className="pos-ean-cell">
+                              {
+                                item.ean_code
+                              }
+                            </td>
+
+                            <td>
+                              {item.size ||
+                                '-'}
+                            </td>
+
+                            <td>
+                              {item.colour ||
+                                '-'}
+                            </td>
+
+                            <td>
+                              <span
+                                className={`pos-stock ${
+                                  item.available_qty >
+                                  0
+                                    ? 'available'
+                                    : 'unavailable'
+                                }`}
+                              >
+                                {
+                                  item.available_qty
+                                }
+                              </span>
+                            </td>
+
+                            <td>
+                              <div className="pos-price">
+                                <strong>
+                                  ₹
+                                  {money(
+                                    item.price
+                                  )}
+                                </strong>
+
+                                {item.mrp >
+                                item.price ? (
+                                  <span>
+                                    ₹
+                                    {money(
+                                      item.mrp
+                                    )}
+                                  </span>
+                                ) : null}
+                              </div>
+                            </td>
+
+                            <td>
+                              <div className="pos-qty">
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    changeQty(
+                                      item.variant_id,
+                                      item.ean_code,
+                                      -1
+                                    )
+                                  }
+                                >
+                                  −
+                                </button>
+
+                                <strong>
+                                  {
+                                    item.qty
+                                  }
+                                </strong>
+
+                                <button
+                                  type="button"
+                                  disabled={
+                                    item.qty >=
+                                    item.available_qty
+                                  }
+                                  onClick={() =>
+                                    changeQty(
+                                      item.variant_id,
+                                      item.ean_code,
+                                      1
+                                    )
+                                  }
+                                >
+                                  +
+                                </button>
+                              </div>
+                            </td>
+
+                            <td className="pos-total-cell">
+                              ₹
+                              {money(
+                                item.price *
+                                  item.qty
+                              )}
+                            </td>
+
+                            <td>
+                              <button
+                                type="button"
+                                className="pos-remove"
+                                onClick={() =>
+                                  removeItem(
+                                    item.variant_id,
+                                    item.ean_code
+                                  )
+                                }
+                              >
+                                Remove
+                              </button>
+                            </td>
+                          </tr>
+                        )
+                      )
+                    )}
+                  </tbody>
+                </table>
               </div>
             </div>
           </div>
 
-          <div className="pos-right">
-            <div className="pos-summary-card">
-              <div className="pos-panel-head">
-                <h2>Bill Summary</h2>
+          <aside className="pos-right">
+            <div className="pos-card pos-summary">
+              <span className="pos-label">
+                Billing
+              </span>
+
+              <h2>
+                Bill Summary
+              </h2>
+
+              <div className="pos-summary-list">
+                <div>
+                  <span>
+                    Quantity
+                  </span>
+
+                  <strong>
+                    {
+                      totals.quantity
+                    }
+                  </strong>
+                </div>
+
+                <div>
+                  <span>
+                    MRP Total
+                  </span>
+
+                  <strong>
+                    ₹
+                    {money(
+                      totals.mrpTotal
+                    )}
+                  </strong>
+                </div>
+
+                <div>
+                  <span>
+                    Discount
+                  </span>
+
+                  <strong className="pos-discount">
+                    - ₹
+                    {money(
+                      totals.discount
+                    )}
+                  </strong>
+                </div>
+
+                <div className="pos-grand-total">
+                  <span>
+                    Grand Total
+                  </span>
+
+                  <strong>
+                    ₹
+                    {money(
+                      totals.payable
+                    )}
+                  </strong>
+                </div>
               </div>
 
-              <div className="summary-list">
-                <div className="summary-row">
-                  <span>Total Items</span>
-                  <strong>{totals.qty}</strong>
+              <button
+                type="button"
+                className="pos-button pos-button-primary pos-full-button"
+                disabled={
+                  !items.length ||
+                  scanning ||
+                  submitting
+                }
+                onClick={
+                  openCheckout
+                }
+              >
+                Proceed to Payment
+              </button>
+
+              <button
+                type="button"
+                className="pos-button pos-button-secondary pos-full-button"
+                disabled={
+                  !items.length ||
+                  submitting
+                }
+                onClick={
+                  clearSale
+                }
+              >
+                Clear Sale
+              </button>
+            </div>
+
+            <div className="pos-card pos-info-card">
+              <span className="pos-label">
+                POS Rules
+              </span>
+
+              <h3>
+                Exact Barcode Billing
+              </h3>
+
+              <div className="pos-info-list">
+                <div>
+                  <span>
+                    1
+                  </span>
+
+                  <p>
+                    One barcode loads
+                    only its exact
+                    variant.
+                  </p>
                 </div>
-                <div className="summary-row">
-                  <span>Subtotal</span>
-                  <strong>₹{money(totals.total)}</strong>
+
+                <div>
+                  <span>
+                    2
+                  </span>
+
+                  <p>
+                    Other colours and
+                    sizes are not
+                    automatically
+                    displayed.
+                  </p>
                 </div>
-                <div className="summary-row grand">
-                  <span>Grand Total</span>
-                  <strong>₹{money(totals.total)}</strong>
+
+                <div>
+                  <span>
+                    3
+                  </span>
+
+                  <p>
+                    Re-scanning the
+                    same barcode only
+                    increases its
+                    quantity.
+                  </p>
+                </div>
+
+                <div>
+                  <span>
+                    4
+                  </span>
+
+                  <p>
+                    Stock is verified
+                    again before
+                    payment.
+                  </p>
                 </div>
               </div>
+            </div>
+          </aside>
+        </section>
+      </main>
 
-              <div className="summary-actions">
-                <button className="btn ghost" onClick={newSale}>
-                  New Sale
-                </button>
-                <button className="btn gold" onClick={proceedToCheckout} disabled={!items.length}>
-                  Proceed to Checkout
-                </button>
+      {checkoutOpen ? (
+        <div className="pos-modal-overlay">
+          <div className="pos-modal">
+            <div className="pos-modal-header">
+              <div>
+                <span className="pos-label">
+                  Checkout
+                </span>
+
+                <h2>
+                  Complete Payment
+                </h2>
+              </div>
+
+              <button
+                type="button"
+                className="pos-close"
+                disabled={
+                  submitting
+                }
+                onClick={() =>
+                  setCheckoutOpen(
+                    false
+                  )
+                }
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="pos-payment-options">
+              {[
+                [
+                  'POS_CASH',
+                  'Cash'
+                ],
+                [
+                  'POS_UPI',
+                  'UPI'
+                ],
+                [
+                  'POS_CARD',
+                  'Card'
+                ],
+                [
+                  'POS_OTHER',
+                  'Other'
+                ]
+              ].map(
+                ([value, label]) => (
+                  <button
+                    key={value}
+                    type="button"
+                    disabled={
+                      submitting
+                    }
+                    className={
+                      paymentMethod ===
+                      value
+                        ? 'active'
+                        : ''
+                    }
+                    onClick={() =>
+                      setPaymentMethod(
+                        value
+                      )
+                    }
+                  >
+                    {label}
+                  </button>
+                )
+              )}
+            </div>
+
+            <div className="pos-customer-grid">
+              <label>
+                <span>
+                  Reference / UTR
+                </span>
+
+                <input
+                  value={
+                    paymentRef
+                  }
+                  onChange={event =>
+                    setPaymentRef(
+                      event.target
+                        .value
+                    )
+                  }
+                  placeholder="Optional"
+                  disabled={
+                    submitting
+                  }
+                />
+              </label>
+
+              <label>
+                <span>
+                  Customer Name
+                </span>
+
+                <input
+                  value={
+                    customerName
+                  }
+                  onChange={event =>
+                    setCustomerName(
+                      event.target
+                        .value
+                    )
+                  }
+                  placeholder="Optional"
+                  disabled={
+                    submitting
+                  }
+                />
+              </label>
+
+              <label className="pos-customer-full">
+                <span>
+                  Customer Mobile
+                </span>
+
+                <input
+                  value={
+                    customerMobile
+                  }
+                  onChange={event =>
+                    setCustomerMobile(
+                      event.target.value.replace(
+                        /[^0-9+]/g,
+                        ''
+                      )
+                    )
+                  }
+                  placeholder="Optional"
+                  disabled={
+                    submitting
+                  }
+                />
+              </label>
+            </div>
+
+            <div className="pos-payment-summary">
+              <div>
+                <span>
+                  Quantity
+                </span>
+
+                <strong>
+                  {
+                    totals.quantity
+                  }
+                </strong>
+              </div>
+
+              <div>
+                <span>
+                  Payment
+                </span>
+
+                <strong>
+                  {paymentLabel(
+                    paymentMethod
+                  )}
+                </strong>
+              </div>
+
+              <div>
+                <span>
+                  Payable
+                </span>
+
+                <strong>
+                  ₹
+                  {money(
+                    totals.payable
+                  )}
+                </strong>
               </div>
             </div>
 
-            <div className="pos-note-card">
-              <h3>Quick Tips</h3>
-              <ul>
-                <li>Adding items does not reduce stock</li>
-                <li>Stock reduces only after payment confirmation</li>
-                <li>Use +1 and -1 to adjust quantity instantly</li>
-              </ul>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {paying && (
-        <div className="modal-overlay">
-          <div className="modal">
-            <div className="modal-title">Payment</div>
-
-            <div className="payment-grid">
+            <div className="pos-modal-actions">
               <button
-                className={`pay-chip ${paymentMethod === 'CASH' ? 'active' : ''}`}
-                onClick={() => setPaymentMethod('CASH')}
+                type="button"
+                className="pos-button pos-button-secondary"
+                disabled={
+                  submitting
+                }
+                onClick={() =>
+                  setCheckoutOpen(
+                    false
+                  )
+                }
               >
-                Cash
-              </button>
-              <button
-                className={`pay-chip ${paymentMethod === 'UPI' ? 'active' : ''}`}
-                onClick={() => setPaymentMethod('UPI')}
-              >
-                UPI
-              </button>
-              <button
-                className={`pay-chip ${paymentMethod === 'ONLINE' ? 'active' : ''}`}
-                onClick={() => setPaymentMethod('ONLINE')}
-              >
-                Online
-              </button>
-            </div>
-
-            <input
-              className="pay-input"
-              placeholder="Reference (optional)"
-              value={paymentRef}
-              onChange={(e) => setPaymentRef(e.target.value)}
-            />
-
-            <div className="modal-total-box">
-              <span>Payable Amount</span>
-              <strong>₹{money(totals.total)}</strong>
-            </div>
-
-            <div className="modal-actions">
-              <button className="btn ghost" onClick={() => setPaying(false)} disabled={confirming}>
                 Back
               </button>
-              <button className="btn gold" onClick={confirmPayment} disabled={confirming}>
-                {confirming ? 'Confirming...' : 'Confirm'}
-              </button>
-            </div>
 
-            {error ? <div className="error-text">{error}</div> : null}
-          </div>
-        </div>
-      )}
-
-      {successOpen && (
-        <div className="modal-overlay">
-          <div className="modal success">
-            <div className="modal-title">Transaction Completed</div>
-            <div className="success-text">Payment successful. Ready for next customer.</div>
-            <div className="modal-actions">
               <button
-                className="btn gold"
-                onClick={() => {
-                  setSuccessOpen(false)
-                  eanInputRef.current?.focus()
-                }}
+                type="button"
+                className="pos-button pos-button-primary"
+                disabled={
+                  submitting ||
+                  !items.length
+                }
+                onClick={
+                  confirmSale
+                }
               >
-                OK
+                {submitting
+                  ? 'Completing Sale...'
+                  : `Confirm ₹${money(
+                      totals.payable
+                    )}`}
               </button>
             </div>
           </div>
         </div>
-      )}
+      ) : null}
 
-      {toast && <div className="pos-toast">{toast}</div>}
+      {receipt ? (
+        <div className="pos-modal-overlay">
+          <div className="pos-modal pos-success-modal">
+            <div className="pos-success-icon">
+              ✓
+            </div>
+
+            <span className="pos-label">
+              Completed
+            </span>
+
+            <h2>
+              Sale Successful
+            </h2>
+
+            <p>
+              Payment completed and
+              stock updated.
+            </p>
+
+            <div className="pos-receipt">
+              <div>
+                <span>
+                  Sale ID
+                </span>
+
+                <strong>
+                  {receipt.sale_id
+                    ? String(
+                        receipt.sale_id
+                      )
+                        .slice(
+                          0,
+                          12
+                        )
+                        .toUpperCase()
+                    : '-'}
+                </strong>
+              </div>
+
+              <div>
+                <span>
+                  Quantity
+                </span>
+
+                <strong>
+                  {
+                    receipt.quantity
+                  }
+                </strong>
+              </div>
+
+              <div>
+                <span>
+                  Payment
+                </span>
+
+                <strong>
+                  {paymentLabel(
+                    receipt.payment_method
+                  )}
+                </strong>
+              </div>
+
+              <div>
+                <span>
+                  Total
+                </span>
+
+                <strong>
+                  ₹
+                  {money(
+                    receipt.total
+                  )}
+                </strong>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              className="pos-button pos-button-primary pos-full-button"
+              onClick={() => {
+                setReceipt(null)
+
+                setTimeout(() => {
+                  inputRef.current?.focus()
+                }, 50)
+              }}
+            >
+              Start Next Sale
+            </button>
+          </div>
+        </div>
+      ) : null}
     </div>
   )
 }

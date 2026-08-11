@@ -1,7 +1,17 @@
 import React from 'react'
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
-import { AuthProvider, useAuth } from './pages/AdminAuth'
-import { LoadingProvider } from './pages/LoadingContext'
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Navigate
+} from 'react-router-dom'
+import {
+  AuthProvider,
+  useAuth
+} from './pages/AdminAuth'
+import {
+  LoadingProvider
+} from './pages/LoadingContext'
 import B2BOrders from './pages/B2BOrders'
 import HomePage from './pages/HomePage'
 import Transaction from './pages/Transaction'
@@ -15,11 +25,19 @@ import ReturnReview from './pages/ReturnReview'
 import LoginAdmin from './pages/LoginAdmin'
 import CategoryManagement from './pages/CategoryManagement'
 import ProductDesignReview from './pages/ProductDesignReview'
+import RewardPoints from './pages/RewardPoints'
 
 function RequireAuth({ children }) {
   const { token } = useAuth()
 
-  if (!token) return <Navigate to="/login" replace />
+  if (!token) {
+    return (
+      <Navigate
+        to="/login"
+        replace
+      />
+    )
+  }
 
   return children
 }
@@ -27,11 +45,27 @@ function RequireAuth({ children }) {
 function RequireSuperAdmin({ children }) {
   const { user } = useAuth()
 
-  if (!user) return children
+  if (!user) {
+    return children
+  }
 
-  const role = String(user?.role || user?.role_enum || '').toUpperCase()
+  const role = String(
+    user?.role ||
+      user?.role_enum ||
+      ''
+  ).toUpperCase()
 
-  if (role !== 'SUPER_ADMIN') return <Navigate to="/" replace />
+  if (
+    role !==
+    'SUPER_ADMIN'
+  ) {
+    return (
+      <Navigate
+        to="/"
+        replace
+      />
+    )
+  }
 
   return children
 }
@@ -39,7 +73,14 @@ function RequireSuperAdmin({ children }) {
 function PublicRoute({ children }) {
   const { token } = useAuth()
 
-  if (token) return <Navigate to="/" replace />
+  if (token) {
+    return (
+      <Navigate
+        to="/"
+        replace
+      />
+    )
+  }
 
   return children
 }
@@ -58,6 +99,7 @@ export default function App() {
                 </PublicRoute>
               }
             />
+
             <Route
               path="/"
               element={
@@ -66,6 +108,7 @@ export default function App() {
                 </RequireAuth>
               }
             />
+
             <Route
               path="/transactions"
               element={
@@ -74,6 +117,7 @@ export default function App() {
                 </RequireAuth>
               }
             />
+
             <Route
               path="/stocks"
               element={
@@ -82,6 +126,7 @@ export default function App() {
                 </RequireAuth>
               }
             />
+
             <Route
               path="/sales"
               element={
@@ -90,6 +135,7 @@ export default function App() {
                 </RequireAuth>
               }
             />
+
             <Route
               path="/customers"
               element={
@@ -98,6 +144,7 @@ export default function App() {
                 </RequireAuth>
               }
             />
+
             <Route
               path="/pos"
               element={
@@ -106,6 +153,7 @@ export default function App() {
                 </RequireAuth>
               }
             />
+
             <Route
               path="/import"
               element={
@@ -114,6 +162,16 @@ export default function App() {
                 </RequireAuth>
               }
             />
+
+            <Route
+              path="/rewards"
+              element={
+                <RequireAuth>
+                  <RewardPoints />
+                </RequireAuth>
+              }
+            />
+
             <Route
               path="/categories"
               element={
@@ -124,6 +182,7 @@ export default function App() {
                 </RequireAuth>
               }
             />
+
             <Route
               path="/product-design-review"
               element={
@@ -134,6 +193,7 @@ export default function App() {
                 </RequireAuth>
               }
             />
+
             <Route
               path="/order-issues"
               element={
@@ -142,6 +202,7 @@ export default function App() {
                 </RequireAuth>
               }
             />
+
             <Route
               path="/returns/:id"
               element={
@@ -150,6 +211,7 @@ export default function App() {
                 </RequireAuth>
               }
             />
+
             <Route
               path="/b2b-orders"
               element={
@@ -158,7 +220,16 @@ export default function App() {
                 </RequireAuth>
               }
             />
-            <Route path="*" element={<Navigate to="/" replace />} />
+
+            <Route
+              path="*"
+              element={
+                <Navigate
+                  to="/"
+                  replace
+                />
+              }
+            />
           </Routes>
         </Router>
       </LoadingProvider>
