@@ -1,7 +1,6 @@
 import React, {
   useCallback,
   useEffect,
-  useMemo,
   useState
 } from 'react'
 import Navbar from './NavbarAdmin'
@@ -404,60 +403,54 @@ const RewardPoints = () => {
       ? detailWallet.active_lots
       : []
 
-  const cards = useMemo(
-    () => [
-      {
-        label: 'B2C Customers',
-        value: formatNumber(
-          metrics.total_b2c_customers
-        ),
-        detail: 'Registered customers'
-      },
-      {
-        label: 'Active Points',
-        value: formatNumber(
-          metrics.active_points
-        ),
-        detail: `${formatNumber(
-          metrics.users_with_active_points
-        )} customers`
-      },
-      {
-        label: 'Expiring Soon',
-        value: formatNumber(
-          metrics.expiring_soon_points
-        ),
-        detail: `Within ${number(
-          settings.warning_days
-        )} days`
-      },
-      {
-        label: 'Redeemed',
-        value: formatNumber(
-          metrics.redeemed_points
-        ),
-        detail: 'Total points used'
-      },
-      {
-        label: 'Expired',
-        value: formatNumber(
-          metrics.expired_points
-        ),
-        detail: 'Expired points'
-      },
-      {
-        label: 'Refunded',
-        value: formatNumber(
-          metrics.refunded_points
-        ),
-        detail: 'Points restored'
-      }
-    ],
-    [
-      metrics,
-      settings.warning_days
-    ]
-  )
+  const cards = [
+    {
+      label: 'B2C Customers',
+      value: formatNumber(
+        metrics.total_b2c_customers
+      ),
+      detail: 'Registered customers'
+    },
+    {
+      label: 'Active Points',
+      value: formatNumber(
+        metrics.active_points
+      ),
+      detail: `${formatNumber(
+        metrics.users_with_active_points
+      )} customers`
+    },
+    {
+      label: 'Expiring Soon',
+      value: formatNumber(
+        metrics.expiring_soon_points
+      ),
+      detail: `Within ${number(
+        settings.warning_days
+      )} days`
+    },
+    {
+      label: 'Redeemed',
+      value: formatNumber(
+        metrics.redeemed_points
+      ),
+      detail: 'Total points used'
+    },
+    {
+      label: 'Expired',
+      value: formatNumber(
+        metrics.expired_points
+      ),
+      detail: 'Expired points'
+    },
+    {
+      label: 'Refunded',
+      value: formatNumber(
+        metrics.refunded_points
+      ),
+      detail: 'Points restored'
+    }
+  ]
 
   return (
     <div className="rewards-page">
