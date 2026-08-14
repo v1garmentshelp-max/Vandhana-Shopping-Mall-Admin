@@ -1,18 +1,7 @@
 import React from 'react'
-import {
-  BrowserRouter as Router,
-  Routes,
-  Route,
-  Navigate
-} from 'react-router-dom'
-import {
-  AuthProvider,
-  useAuth
-} from './pages/AdminAuth'
-import {
-  LoadingProvider
-} from './pages/LoadingContext'
-import B2BOrders from './pages/B2BOrders'
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
+import { AuthProvider, useAuth } from './pages/AdminAuth'
+import { LoadingProvider } from './pages/LoadingContext'
 import HomePage from './pages/HomePage'
 import Transaction from './pages/Transaction'
 import Stocks from './pages/Stocks'
@@ -26,46 +15,24 @@ import LoginAdmin from './pages/LoginAdmin'
 import CategoryManagement from './pages/CategoryManagement'
 import ProductDesignReview from './pages/ProductDesignReview'
 import RewardPoints from './pages/RewardPoints'
+import AdminHomepageImages from './pages/AdminHomepageImages'
 
 function RequireAuth({ children }) {
   const { token } = useAuth()
 
-  if (!token) {
-    return (
-      <Navigate
-        to="/login"
-        replace
-      />
-    )
-  }
+  if (!token) return <Navigate to="/login" replace />
 
   return children
 }
 
 function RequireSuperAdmin({ children }) {
-  const { user } = useAuth()
+  const { token, user } = useAuth()
 
-  if (!user) {
-    return children
-  }
+  if (!token) return <Navigate to="/login" replace />
 
-  const role = String(
-    user?.role ||
-      user?.role_enum ||
-      ''
-  ).toUpperCase()
+  const role = String(user?.role || user?.role_enum || '').trim().toUpperCase()
 
-  if (
-    role !==
-    'SUPER_ADMIN'
-  ) {
-    return (
-      <Navigate
-        to="/"
-        replace
-      />
-    )
-  }
+  if (role !== 'SUPER_ADMIN') return <Navigate to="/" replace />
 
   return children
 }
@@ -73,14 +40,7 @@ function RequireSuperAdmin({ children }) {
 function PublicRoute({ children }) {
   const { token } = useAuth()
 
-  if (token) {
-    return (
-      <Navigate
-        to="/"
-        replace
-      />
-    )
-  }
+  if (token) return <Navigate to="/" replace />
 
   return children
 }
@@ -91,145 +51,21 @@ export default function App() {
       <LoadingProvider>
         <Router>
           <Routes>
-            <Route
-              path="/login"
-              element={
-                <PublicRoute>
-                  <LoginAdmin />
-                </PublicRoute>
-              }
-            />
-
-            <Route
-              path="/"
-              element={
-                <RequireAuth>
-                  <HomePage />
-                </RequireAuth>
-              }
-            />
-
-            <Route
-              path="/transactions"
-              element={
-                <RequireAuth>
-                  <Transaction />
-                </RequireAuth>
-              }
-            />
-
-            <Route
-              path="/stocks"
-              element={
-                <RequireAuth>
-                  <Stocks />
-                </RequireAuth>
-              }
-            />
-
-            <Route
-              path="/sales"
-              element={
-                <RequireAuth>
-                  <Sales />
-                </RequireAuth>
-              }
-            />
-
-            <Route
-              path="/customers"
-              element={
-                <RequireAuth>
-                  <Customers />
-                </RequireAuth>
-              }
-            />
-
-            <Route
-              path="/pos"
-              element={
-                <RequireAuth>
-                  <POS />
-                </RequireAuth>
-              }
-            />
-
-            <Route
-              path="/import"
-              element={
-                <RequireAuth>
-                  <ImportStock />
-                </RequireAuth>
-              }
-            />
-
-            <Route
-              path="/rewards"
-              element={
-                <RequireAuth>
-                  <RewardPoints />
-                </RequireAuth>
-              }
-            />
-
-            <Route
-              path="/categories"
-              element={
-                <RequireAuth>
-                  <RequireSuperAdmin>
-                    <CategoryManagement />
-                  </RequireSuperAdmin>
-                </RequireAuth>
-              }
-            />
-
-            <Route
-              path="/product-design-review"
-              element={
-                <RequireAuth>
-                  <RequireSuperAdmin>
-                    <ProductDesignReview />
-                  </RequireSuperAdmin>
-                </RequireAuth>
-              }
-            />
-
-            <Route
-              path="/order-issues"
-              element={
-                <RequireAuth>
-                  <OrderIssues />
-                </RequireAuth>
-              }
-            />
-
-            <Route
-              path="/returns/:id"
-              element={
-                <RequireAuth>
-                  <ReturnReview />
-                </RequireAuth>
-              }
-            />
-
-            <Route
-              path="/b2b-orders"
-              element={
-                <RequireAuth>
-                  <B2BOrders />
-                </RequireAuth>
-              }
-            />
-
-            <Route
-              path="*"
-              element={
-                <Navigate
-                  to="/"
-                  replace
-                />
-              }
-            />
+            <Route path="/login" element={<PublicRoute><LoginAdmin /></PublicRoute>} />
+            <Route path="/" element={<RequireAuth><HomePage /></RequireAuth>} />
+            <Route path="/transactions" element={<RequireAuth><Transaction /></RequireAuth>} />
+            <Route path="/stocks" element={<RequireAuth><Stocks /></RequireAuth>} />
+            <Route path="/sales" element={<RequireAuth><Sales /></RequireAuth>} />
+            <Route path="/customers" element={<RequireAuth><Customers /></RequireAuth>} />
+            <Route path="/pos" element={<RequireAuth><POS /></RequireAuth>} />
+            <Route path="/import" element={<RequireAuth><ImportStock /></RequireAuth>} />
+            <Route path="/rewards" element={<RequireAuth><RewardPoints /></RequireAuth>} />
+            <Route path="/categories" element={<RequireAuth><RequireSuperAdmin><CategoryManagement /></RequireSuperAdmin></RequireAuth>} />
+            <Route path="/product-design-review" element={<RequireAuth><RequireSuperAdmin><ProductDesignReview /></RequireSuperAdmin></RequireAuth>} />
+            <Route path="/homepage-images" element={<RequireAuth><AdminHomepageImages /></RequireAuth>} />
+            <Route path="/order-issues" element={<RequireAuth><OrderIssues /></RequireAuth>} />
+            <Route path="/returns/:id" element={<RequireAuth><ReturnReview /></RequireAuth>} />
+            <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Router>
       </LoadingProvider>

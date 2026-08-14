@@ -1,529 +1,736 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import NavbarAdmin from './NavbarAdmin'
-import EditableImage from './EditableImage'
 import './AdminHomepageImages.css'
 
-import { Swiper, SwiperSlide } from 'swiper/react'
-import { Autoplay, Pagination } from 'swiper/modules'
-import 'swiper/css'
-import 'swiper/css/pagination'
-
 const API_BASE =
-  process.env.REACT_APP_API_BASE_URL || 'https://vandhana-shopping-mall-backend.vercel.app'
+  process.env.REACT_APP_API_BASE_URL ||
+  'https://vandhana-shopping-mall-backend.vercel.app'
 
-export default function AdminHomepageImages() {
-  const [remoteMap, setRemoteMap] = useState({})
-  const [loading, setLoading] = useState(true)
-  const [coolTab, setCoolTab] = useState('plazzo')
+const STOREFRONT_POSTER_BASE = String(
+  process.env.REACT_APP_STOREFRONT_POSTER_BASE_URL || ''
+).replace(/\/+$/, '')
 
-  useEffect(() => {
-    let isMounted = true
-    const run = async () => {
-      try {
-        const res = await fetch(`${API_BASE}/api/homepage-images`, { cache: 'no-store' })
-        if (!res.ok) {
-          if (isMounted) setLoading(false)
-          return
-        }
-        const data = await res.json()
-        const map = {}
-        data.forEach((item) => {
-          map[item.id] = item
-        })
-        if (isMounted) {
-          setRemoteMap(map)
-          setLoading(false)
-        }
-      } catch {
-        if (isMounted) setLoading(false)
+const MAX_FILE_SIZE_BYTES = 3.5 * 1024 * 1024
+
+const ALLOWED_IMAGE_TYPES = [
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'image/avif'
+]
+
+const PAGE_CONFIG = {
+  men: {
+    key: 'men',
+    label: 'Men',
+    sections: [
+      {
+        key: 'hero',
+        label: 'Hero Posters',
+        description: 'Top poster carousel shown first on the Men page.',
+        layout: 'hero',
+        slots: [
+          {
+            id: 'men.hero.1',
+            title: 'Hero Poster 1',
+            sourceAsset: 'hero-poster-1.jpeg',
+            altText: 'Anniversary Bash Sale',
+            link: '/collections?gender=Men'
+          },
+          {
+            id: 'men.hero.2',
+            title: 'Hero Poster 2',
+            sourceAsset: 'hero-poster-2.jpeg',
+            altText: 'Jeans Collection',
+            link: '/collections?gender=Men&category_id=6'
+          },
+          {
+            id: 'men.hero.3',
+            title: 'Hero Poster 3',
+            sourceAsset: 'hero-poster-3.jpeg',
+            altText: 'Oversized Tees Offer',
+            link: '/collections?gender=Men&category_id=111'
+          },
+          {
+            id: 'men.hero.4',
+            title: 'Hero Poster 4',
+            sourceAsset: 'hero-poster-6.jpeg',
+            altText: 'Anniversary Bash Sale',
+            link: '/collections?gender=Men'
+          },
+          {
+            id: 'men.hero.5',
+            title: 'Hero Poster 5',
+            sourceAsset: 'hero-poster-4.jpeg',
+            altText: 'Jeans Collection',
+            link: '/collections?gender=Men&category_id=6'
+          },
+          {
+            id: 'men.hero.6',
+            title: 'Hero Poster 6',
+            sourceAsset: 'hero-poster-5.jpeg',
+            altText: 'Oversized Tees Offer',
+            link: '/collections?gender=Men&category_id=111'
+          }
+        ]
+      },
+      {
+        key: 'offer',
+        label: 'Latest Offers',
+        description: 'Wide offer banners shown in the Latest Offers section.',
+        layout: 'offer',
+        slots: [
+          {
+            id: 'men.offer.1',
+            title: 'Offer Poster 1',
+            sourceAsset: 'offers-poster-3.jpeg',
+            altText: 'Men Latest Offer 1',
+            link: '/collections?gender=Men'
+          },
+          {
+            id: 'men.offer.2',
+            title: 'Offer Poster 2',
+            sourceAsset: 'offers-poster-4.jpeg',
+            altText: 'Men Latest Offer 2',
+            link: '/collections?gender=Men'
+          },
+          {
+            id: 'men.offer.3',
+            title: 'Offer Poster 3',
+            sourceAsset: 'offers-poster-2.jpeg',
+            altText: 'Men Latest Offer 3',
+            link: '/collections?gender=Men'
+          },
+          {
+            id: 'men.offer.4',
+            title: 'Offer Poster 4',
+            sourceAsset: 'offers-poster-1.jpeg',
+            altText: 'Men Latest Offer 4',
+            link: '/collections?gender=Men'
+          }
+        ]
       }
-    }
-    run()
-    return () => {
-      isMounted = false
-    }
-  }, [])
+    ]
+  },
+  women: {
+    key: 'women',
+    label: 'Women',
+    sections: [
+      {
+        key: 'hero',
+        label: 'Hero Posters',
+        description: 'Top poster carousel shown first on the Women page.',
+        layout: 'hero',
+        slots: [
+          {
+            id: 'women.hero.1',
+            title: 'Hero Poster 1',
+            sourceAsset: 'hero-poster-7.jpeg',
+            altText: 'Oversized Tees Offer',
+            link: '/collections?gender=Women&category_id=128'
+          },
+          {
+            id: 'women.hero.2',
+            title: 'Hero Poster 2',
+            sourceAsset: 'hero-poster-8.jpeg',
+            altText: 'Oversized Tees Offer',
+            link: '/collections?gender=Women&category_id=128'
+          },
+          {
+            id: 'women.hero.3',
+            title: 'Hero Poster 3',
+            sourceAsset: 'hero-poster-3.jpeg',
+            altText: 'Anniversary Bash Sale',
+            link: '/collections?gender=Women'
+          },
+          {
+            id: 'women.hero.4',
+            title: 'Hero Poster 4',
+            sourceAsset: 'hero-poster-9.jpeg',
+            altText: 'Anniversary Bash Sale',
+            link: '/collections?gender=Women'
+          },
+          {
+            id: 'women.hero.5',
+            title: 'Hero Poster 5',
+            sourceAsset: 'hero-poster-6.jpeg',
+            altText: 'Anniversary Bash Sale',
+            link: '/collections?gender=Women'
+          }
+        ]
+      },
+      {
+        key: 'offer',
+        label: 'Latest Offers',
+        description: 'Wide offer banners shown in the Latest Offers section.',
+        layout: 'offer',
+        slots: [
+          {
+            id: 'women.offer.1',
+            title: 'Offer Poster 1',
+            sourceAsset: 'offers-poster-5.jpeg',
+            altText: 'Women Latest Offer 1',
+            link: '/collections?gender=Women'
+          },
+          {
+            id: 'women.offer.2',
+            title: 'Offer Poster 2',
+            sourceAsset: 'offers-poster-6.jpeg',
+            altText: 'Women Latest Offer 2',
+            link: '/collections?gender=Women'
+          }
+        ]
+      }
+    ]
+  },
+  kids: {
+    key: 'kids',
+    label: 'Kids',
+    sections: [
+      {
+        key: 'hero',
+        label: 'Hero Posters',
+        description: 'Top poster carousel shown first on the Kids page.',
+        layout: 'hero',
+        slots: [
+          {
+            id: 'kids.hero.1',
+            title: 'Hero Poster 1',
+            sourceAsset: 'hero-poster-14.jpeg',
+            altText: 'Kids Collection',
+            link: '/collections?gender=Kids'
+          },
+          {
+            id: 'kids.hero.2',
+            title: 'Hero Poster 2',
+            sourceAsset: 'hero-poster-10.jpeg',
+            altText: 'Anniversary Bash Sale',
+            link: '/collections?gender=Kids'
+          },
+          {
+            id: 'kids.hero.3',
+            title: 'Hero Poster 3',
+            sourceAsset: 'hero-poster-11.jpeg',
+            altText: 'Jeans Collection',
+            link: '/collections?gender=Kids&category_id=27'
+          },
+          {
+            id: 'kids.hero.4',
+            title: 'Hero Poster 4',
+            sourceAsset: 'hero-poster-12.jpeg',
+            altText: 'Kids Wear',
+            link: '/collections?gender=Kids'
+          },
+          {
+            id: 'kids.hero.5',
+            title: 'Hero Poster 5',
+            sourceAsset: 'hero-poster-13.jpeg',
+            altText: 'Kids Fashion',
+            link: '/collections?gender=Kids'
+          }
+        ]
+      }
+    ]
+  }
+}
 
-  const getSlot = (path, altText, section) => {
-    const rec = remoteMap[path]
-    return {
-      id: path,
-      section: rec?.section || section || 'homepage',
-      defaultUrl: path,
-      imageUrl: rec?.imageUrl || path,
-      altText: rec?.altText || altText
+const getStoredToken = () =>
+  localStorage.getItem('auth_token') ||
+  sessionStorage.getItem('auth_token') ||
+  localStorage.getItem('token') ||
+  sessionStorage.getItem('token') ||
+  ''
+
+const getSourcePreviewUrl = sourceAsset => {
+  if (!STOREFRONT_POSTER_BASE) return ''
+  return `${STOREFRONT_POSTER_BASE}/${sourceAsset}`
+}
+
+const formatDate = value => {
+  if (!value) return ''
+
+  const date = new Date(value)
+
+  if (Number.isNaN(date.getTime())) return ''
+
+  return date.toLocaleString('en-IN', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  })
+}
+
+const readResponse = async response => {
+  const data = await response.json().catch(() => ({}))
+
+  if (!response.ok) {
+    const error = new Error(
+      data?.message ||
+        data?.error ||
+        `Request failed with status ${response.status}`
+    )
+
+    error.status = response.status
+    error.payload = data
+
+    throw error
+  }
+
+  return data
+}
+
+const PosterCard = ({
+  pageKey,
+  section,
+  slot,
+  slotOrder,
+  record,
+  onUpdated
+}) => {
+  const inputRef = useRef(null)
+
+  const [uploading, setUploading] = useState(false)
+  const [historyOpen, setHistoryOpen] = useState(false)
+  const [historyLoading, setHistoryLoading] = useState(false)
+  const [history, setHistory] = useState([])
+  const [restoringId, setRestoringId] = useState(null)
+  const [error, setError] = useState('')
+
+  const sourcePreviewUrl = getSourcePreviewUrl(slot.sourceAsset)
+
+  const currentImage =
+    record?.imageUrl ||
+    record?.defaultImageUrl ||
+    sourcePreviewUrl ||
+    ''
+
+  const handleReplaceClick = () => {
+    if (uploading) return
+    inputRef.current?.click()
+  }
+
+  const handleFileChange = async event => {
+    const file = event.target.files?.[0]
+
+    if (!file) return
+
+    if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+      setError('Please upload JPG, PNG, WEBP or AVIF image.')
+      event.target.value = ''
+      return
+    }
+
+    if (file.size > MAX_FILE_SIZE_BYTES) {
+      setError('Image must be smaller than 3.5 MB.')
+      event.target.value = ''
+      return
+    }
+
+    setUploading(true)
+    setError('')
+
+    try {
+      const token = getStoredToken()
+
+      const formData = new FormData()
+
+      formData.append('image', file)
+      formData.append('page', pageKey)
+      formData.append('section', section.key)
+      formData.append('slotOrder', String(slotOrder))
+      formData.append('altText', slot.altText || '')
+      formData.append('link', slot.link || '')
+
+      if (sourcePreviewUrl) {
+        formData.append('defaultImageUrl', sourcePreviewUrl)
+      }
+
+      formData.append(
+        'extra',
+        JSON.stringify({
+          sourceAsset: slot.sourceAsset,
+          title: slot.title,
+          layout: section.layout
+        })
+      )
+
+      const response = await fetch(
+        `${API_BASE}/api/homepage-images/${encodeURIComponent(slot.id)}/replace`,
+        {
+          method: 'POST',
+          headers: token
+            ? {
+                Authorization: `Bearer ${token}`
+              }
+            : {},
+          body: formData
+        }
+      )
+
+      const updated = await readResponse(response)
+
+      onUpdated(updated)
+
+      if (historyOpen) {
+        await loadHistory()
+      }
+    } catch (err) {
+      setError(
+        err?.message ||
+          'Unable to replace poster.'
+      )
+    } finally {
+      setUploading(false)
+
+      if (inputRef.current) {
+        inputRef.current.value = ''
+      }
     }
   }
 
-  const handleUpdated = (updated) => {
-    setRemoteMap((prev) => ({
-      ...prev,
+  const loadHistory = async () => {
+    setHistoryLoading(true)
+    setError('')
+
+    try {
+      const token = getStoredToken()
+
+      const response = await fetch(
+        `${API_BASE}/api/homepage-images/${encodeURIComponent(slot.id)}/history`,
+        {
+          method: 'GET',
+          cache: 'no-store',
+          headers: token
+            ? {
+                Authorization: `Bearer ${token}`
+              }
+            : {}
+        }
+      )
+
+      const data = await readResponse(response)
+
+      setHistory(Array.isArray(data) ? data : [])
+    } catch (err) {
+      setHistory([])
+      setError(
+        err?.message ||
+          'Unable to load previous images.'
+      )
+    } finally {
+      setHistoryLoading(false)
+    }
+  }
+
+  const handleHistoryToggle = async () => {
+    const next = !historyOpen
+
+    setHistoryOpen(next)
+
+    if (next) {
+      await loadHistory()
+    }
+  }
+
+  const handleRestore = async historyItem => {
+    if (!historyItem?.id || restoringId) return
+
+    setRestoringId(historyItem.id)
+    setError('')
+
+    try {
+      const token = getStoredToken()
+
+      const response = await fetch(
+        `${API_BASE}/api/homepage-images/${encodeURIComponent(slot.id)}/history/${encodeURIComponent(historyItem.id)}/restore`,
+        {
+          method: 'POST',
+          headers: token
+            ? {
+                Authorization: `Bearer ${token}`
+              }
+            : {}
+        }
+      )
+
+      const updated = await readResponse(response)
+
+      onUpdated(updated)
+
+      await loadHistory()
+    } catch (err) {
+      setError(
+        err?.message ||
+          'Unable to restore previous poster.'
+      )
+    } finally {
+      setRestoringId(null)
+    }
+  }
+
+  return (
+    <article className={`poster-manager-card ${section.layout === 'offer' ? 'poster-manager-card-offer' : 'poster-manager-card-hero'}`}>
+      <div className="poster-manager-card-top">
+        <div>
+          <span className="poster-manager-slot-number">{String(slotOrder).padStart(2, '0')}</span>
+          <h3>{slot.title}</h3>
+        </div>
+        <span className="poster-manager-current-badge">{record?.imageUrl ? 'CUSTOM' : 'WEBSITE CURRENT'}</span>
+      </div>
+
+      <div className={`poster-manager-preview ${section.layout === 'offer' ? 'poster-manager-preview-offer' : 'poster-manager-preview-hero'}`}>
+        {currentImage ? (
+          <img src={currentImage} alt={record?.altText || slot.altText || slot.title} />
+        ) : (
+          <div className="poster-manager-source-placeholder">
+            <span>Current Website Poster</span>
+            <strong>{slot.sourceAsset}</strong>
+          </div>
+        )}
+
+        {uploading ? (
+          <div className="poster-manager-upload-overlay">
+            <div className="poster-manager-spinner" />
+            <span>Uploading</span>
+          </div>
+        ) : null}
+      </div>
+
+      <div className="poster-manager-card-info">
+        <div className="poster-manager-file-row">
+          <span>Website file</span>
+          <strong>{slot.sourceAsset}</strong>
+        </div>
+
+        <div className="poster-manager-file-row">
+          <span>Slot ID</span>
+          <strong>{slot.id}</strong>
+        </div>
+
+        {record?.updatedAt ? (
+          <div className="poster-manager-file-row">
+            <span>Last updated</span>
+            <strong>{formatDate(record.updatedAt)}</strong>
+          </div>
+        ) : null}
+      </div>
+
+      {error ? <div className="poster-manager-error">{error}</div> : null}
+
+      <div className="poster-manager-actions">
+        <button type="button" className="poster-manager-replace-btn" onClick={handleReplaceClick} disabled={uploading}>{uploading ? 'Uploading...' : 'Replace Image'}</button>
+        <button type="button" className={`poster-manager-history-btn ${historyOpen ? 'active' : ''}`} onClick={handleHistoryToggle}>{historyOpen ? 'Hide Previous' : 'Previous Images'}</button>
+      </div>
+
+      <input ref={inputRef} type="file" accept=".jpg,.jpeg,.png,.webp,.avif,image/jpeg,image/png,image/webp,image/avif" onChange={handleFileChange} className="poster-manager-file-input" />
+
+      {historyOpen ? (
+        <div className="poster-manager-history">
+          <div className="poster-manager-history-head">
+            <h4>Previous Images</h4>
+            <span>{history.length}</span>
+          </div>
+
+          {historyLoading ? (
+            <div className="poster-manager-history-loading">
+              <div className="poster-manager-small-spinner" />
+              <span>Loading previous images...</span>
+            </div>
+          ) : history.length ? (
+            <div className="poster-manager-history-grid">
+              {history.map(item => (
+                <div className="poster-manager-history-item" key={item.id}>
+                  <div className={`poster-manager-history-image ${section.layout === 'offer' ? 'offer' : 'hero'}`}>
+                    <img src={item.imageUrl} alt={item.altText || slot.title} loading="lazy" />
+                  </div>
+                  <div className="poster-manager-history-meta">
+                    <span>{formatDate(item.createdAt)}</span>
+                    <strong>{item.changeType || 'REPLACE'}</strong>
+                  </div>
+                  <button type="button" className="poster-manager-restore-btn" onClick={() => handleRestore(item)} disabled={Boolean(restoringId)}>{restoringId === item.id ? 'Restoring...' : 'Restore'}</button>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="poster-manager-empty-history">No previous images yet.</div>
+          )}
+        </div>
+      ) : null}
+    </article>
+  )
+}
+
+export default function AdminHomepageImages() {
+  const [activePage, setActivePage] = useState('men')
+  const [remoteMap, setRemoteMap] = useState({})
+  const [loading, setLoading] = useState(true)
+  const [pageError, setPageError] = useState('')
+
+  const currentPage = PAGE_CONFIG[activePage]
+
+  const allSlots = useMemo(
+    () =>
+      Object.values(PAGE_CONFIG).flatMap(page =>
+        page.sections.flatMap(section =>
+          section.slots.map((slot, index) => ({
+            ...slot,
+            page: page.key,
+            section: section.key,
+            slotOrder: index + 1
+          }))
+        )
+      ),
+    []
+  )
+
+  const totalSlots = allSlots.length
+
+  const customCount = useMemo(
+    () =>
+      allSlots.filter(slot => Boolean(remoteMap[slot.id]?.imageUrl)).length,
+    [allSlots, remoteMap]
+  )
+
+  const loadImages = async () => {
+    setLoading(true)
+    setPageError('')
+
+    try {
+      const response = await fetch(
+        `${API_BASE}/api/homepage-images`,
+        {
+          method: 'GET',
+          cache: 'no-store'
+        }
+      )
+
+      const data = await readResponse(response)
+
+      const nextMap = {}
+
+      if (Array.isArray(data)) {
+        data.forEach(item => {
+          if (item?.id) {
+            nextMap[item.id] = item
+          }
+        })
+      }
+
+      setRemoteMap(nextMap)
+    } catch (err) {
+      setRemoteMap({})
+      setPageError(
+        err?.message ||
+          'Unable to load poster mappings.'
+      )
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    void loadImages()
+  }, [])
+
+  const handleUpdated = updated => {
+    if (!updated?.id) return
+
+    setRemoteMap(previous => ({
+      ...previous,
       [updated.id]: updated
     }))
   }
 
-  if (loading) {
-    return (
-      <>
-        <NavbarAdmin />
-        <div className="admin-homepage-page">
-          <div className="admin-homepage-shell">
-            <div className="admin-homepage-loading-card">
-              <div className="admin-homepage-loading-spinner" />
-              <h2>Loading homepage preview...</h2>
-              <p>Please wait while the editor fetches the latest image slots.</p>
-            </div>
-          </div>
-        </div>
-      </>
-    )
-  }
-
-  const mainHeroBanners = [
-    '/images/ATTACH-BANNER.png',
-    '/images/CUCUMBER-BANNER.png',
-    '/images/QUICK-DRY-BANNER.png',
-    '/images/JOCKEY-BANNER.png',
-    '/images/TWIN-BIRDS-BANNER.png',
-    '/images/INDIAN-FLOWER-BANNER.png',
-    '/images/DAZZEL-BANNER.png',
-    '/images/ASWATI-BANNER.png'
-  ]
-
-  const womenGrid = [
-    '/images/updated/grid1.jpg',
-    '/images/updated/grid2.jpg',
-    '/images/updated/grid3.jpg',
-    '/images/updated/grid4.jpg'
-  ]
-
-  const coolImages = {
-    plazzo: [
-      '/images/updated/plazzo1.webp',
-      '/images/updated/plazzo2.webp',
-      '/images/updated/plazzo3.webp',
-      '/images/updated/plazzo4.webp'
-    ],
-    jeggings: [
-      '/images/updated/jeggings1.webp',
-      '/images/updated/jeggings2.webp',
-      '/images/updated/jeggings3.webp',
-      '/images/updated/jeggings4.webp'
-    ],
-    nightPants: [
-      '/images/updated/night-pants1.webp',
-      '/images/updated/night-pants4.webp',
-      '/images/updated/night-pants4.webp',
-      '/images/updated/night-pants4.webp'
-    ],
-    tshirts: [
-      '/images/updated/t-shirt1.webp',
-      '/images/updated/t-shirt2.webp',
-      '/images/updated/t-shirt3.webp',
-      '/images/updated/t-shirt4.webp'
-    ]
-  }
-
-  const aurum2Items = [
-    '/images/women/new/category12.png',
-    '/images/women/new/category9.png',
-    '/images/women/new/category10.png',
-    '/images/women/new/category11.png',
-    '/images/women/new/category13.png',
-    '/images/women/new/category14.png',
-    '/images/women/new/category15.png',
-    '/images/women/new/category16.png'
-  ]
-
-  const twinBirdsMarquee = [
-    '/images/women/new/category-1.png',
-    '/images/women/new/category-2.png',
-    '/images/women/new/category-3.png',
-    '/images/women/new/category-4.png',
-    '/images/women/new/category-5.png',
-    '/images/women/new/category-6.png'
-  ]
-
-  const attachBanners = [
-    '/images/banners/attach-banner-1.png',
-    '/images/banners/attach-banner-2.png',
-    '/images/banners/attach-banner-3.png',
-    '/images/banners/attach-banner-4.png'
-  ]
-
-  const editorialImages = [
-    '/images/updated/left.jpg',
-    '/images/updated/center.jpg',
-    '/images/updated/right.jpg'
-  ]
-
-  const indianFlowerPicks = [
-    '/images/women/new/zig-zag3.png',
-    '/images/women/new/zig-zag1.png',
-    '/images/women/new/zig-zag2.png',
-    '/images/women/new/zig-zag4.png',
-    '/images/women/new/zig-zag5.png'
-  ]
-
-  const innerwearEssentials = [
-    '/images/updated/inner1.jpg',
-    '/images/updated/inner2.jpg',
-    '/images/updated/inner3.jpg',
-    '/images/updated/inner5.jpg'
-  ]
-
-  const mensJockey = [
-    '/images/home/jockey2.webp',
-    '/images/home/jockey3.webp',
-    '/images/home/jockey4.webp',
-    '/images/home/jockey5.webp',
-    '/images/home/jockey6.webp',
-    '/images/home/jockey7.webp',
-    '/images/home/jockey8.webp',
-    '/images/home/jockey9.webp'
-  ]
-
-  const mensDaily = [
-    '/images/updated/men1.jpg',
-    '/images/updated/men2.jpg',
-    '/images/updated/men3.jpg',
-    '/images/updated/men4.jpg',
-    '/images/updated/men5.jpg',
-    '/images/updated/men6.jpg',
-    '/images/updated/men7.jpg'
-  ]
-
   return (
     <>
       <NavbarAdmin />
-      <div className="admin-homepage-page">
-        <div className="admin-homepage-shell">
-          <div className="admin-homepage-topbar">
+
+      <main className="poster-manager-page">
+        <div className="poster-manager-shell">
+          <header className="poster-manager-header">
             <div>
-              <span className="admin-homepage-badge">Homepage Editor</span>
-              <h1 className="admin-homepage-heading">Homepage image manager</h1>
-              <p className="admin-homepage-subheading">
-                Click any image card to replace it. All sections are grouped for easier editing and cleaner workflow.
-              </p>
+              <span className="poster-manager-eyebrow">Website Content</span>
+              <h1>Website Poster Manager</h1>
+              <p>Manage the exact hero and offer poster positions used by the Men, Women and Kids pages.</p>
+            </div>
+
+            <button type="button" className="poster-manager-refresh-btn" onClick={loadImages} disabled={loading}>{loading ? 'Refreshing...' : 'Refresh'}</button>
+          </header>
+
+          <div className="poster-manager-summary">
+            <div className="poster-manager-summary-card">
+              <span>Total Website Slots</span>
+              <strong>{totalSlots}</strong>
+            </div>
+
+            <div className="poster-manager-summary-card">
+              <span>Custom Posters</span>
+              <strong>{customCount}</strong>
+            </div>
+
+            <div className="poster-manager-summary-card">
+              <span>Original Posters</span>
+              <strong>{totalSlots - customCount}</strong>
             </div>
           </div>
 
-          <div className="admin-homepage-spacer">
-            <section className="admin-homepage-section">
-              <div className="admin-homepage-section-head">
-                <h2 className="admin-homepage-section-title">1. Main Hero Banners</h2>
-                <p className="admin-homepage-section-note">Primary homepage hero slider</p>
-              </div>
-              <div className="admin-homepage-banner-frame large">
-                <Swiper
-                  modules={[Autoplay, Pagination]}
-                  loop
-                  slidesPerView={1}
-                  autoplay={{ delay: 3500 }}
-                  pagination={{ clickable: true }}
-                >
-                  {mainHeroBanners.map((path, i) => {
-                    const slot = getSlot(path, `Hero ${i}`, 'Main Hero')
-                    return (
-                      <SwiperSlide key={path}>
-                        <div className="admin-homepage-banner-slide">
-                          <EditableImage
-                            slotId={slot.id}
-                            section={slot.section}
-                            imageUrl={slot.imageUrl}
-                            defaultUrl={slot.defaultUrl}
-                            altText={slot.altText}
-                            onUpdated={handleUpdated}
-                          />
-                        </div>
-                      </SwiperSlide>
-                    )
-                  })}
-                </Swiper>
-              </div>
-            </section>
+          {pageError ? <div className="poster-manager-page-error">{pageError}</div> : null}
 
-            <section className="admin-homepage-section">
-              <div className="admin-homepage-section-head">
-                <h2 className="admin-homepage-section-title">2. Women's Category Grid</h2>
-                <p className="admin-homepage-section-note">Main women category highlights</p>
-              </div>
-              <div className="admin-homepage-grid grid-4">
-                {womenGrid.map((path, i) => {
-                  const slot = getSlot(path, `Women Grid ${i}`, 'Category Grid')
-                  return (
-                    <div className="admin-homepage-card standard" key={path}>
-                      <EditableImage
-                        slotId={slot.id}
-                        section={slot.section}
-                        imageUrl={slot.imageUrl}
-                        defaultUrl={slot.defaultUrl}
-                        altText={slot.altText}
-                        onUpdated={handleUpdated}
-                      />
-                    </div>
-                  )
-                })}
-              </div>
-            </section>
-
-            <section className="admin-homepage-section">
-              <div className="admin-homepage-section-head">
-                <h2 className="admin-homepage-section-title">3. Stay Cool in Style</h2>
-                <p className="admin-homepage-section-note">Tabbed image collection by category</p>
-              </div>
-              <div className="admin-homepage-tabs">
-                {Object.keys(coolImages).map((tab) => (
-                  <button
-                    key={tab}
-                    className={`admin-homepage-tab ${coolTab === tab ? 'active' : ''}`}
-                    onClick={() => setCoolTab(tab)}
-                  >
-                    {tab.toUpperCase()}
-                  </button>
-                ))}
-              </div>
-              <div className="admin-homepage-grid grid-4">
-                {coolImages[coolTab].map((src, i) => {
-                  const slot = getSlot(src, `Cool ${coolTab} ${i}`, 'Cool Tabs')
-                  return (
-                    <div className="admin-homepage-card standard" key={`${src}-${i}`}>
-                      <EditableImage
-                        slotId={slot.id}
-                        section={slot.section}
-                        imageUrl={slot.imageUrl}
-                        defaultUrl={slot.defaultUrl}
-                        altText={slot.altText}
-                        onUpdated={handleUpdated}
-                      />
-                    </div>
-                  )
-                })}
-              </div>
-            </section>
-
-            <section className="admin-homepage-section">
-              <div className="admin-homepage-section-head">
-                <h2 className="admin-homepage-section-title">4. Women's Categories Explore</h2>
-                <p className="admin-homepage-section-note">Expanded women's category cards</p>
-              </div>
-              <div className="admin-homepage-grid grid-4">
-                {aurum2Items.map((path, i) => {
-                  const slot = getSlot(path, `Aurum Category ${i}`, "Women's Categories")
-                  return (
-                    <div className="admin-homepage-card standard" key={path}>
-                      <EditableImage
-                        slotId={slot.id}
-                        section={slot.section}
-                        imageUrl={slot.imageUrl}
-                        defaultUrl={slot.defaultUrl}
-                        altText={slot.altText}
-                        onUpdated={handleUpdated}
-                      />
-                    </div>
-                  )
-                })}
-              </div>
-            </section>
-
-            <section className="admin-homepage-section">
-              <div className="admin-homepage-section-head">
-                <h2 className="admin-homepage-section-title">5. Twin Birds Marquee</h2>
-                <p className="admin-homepage-section-note">Remaining marquee assets</p>
-              </div>
-              <div className="admin-homepage-grid grid-6">
-                {twinBirdsMarquee.map((path, i) => {
-                  const slot = getSlot(path, `Marquee ${i}`, 'Twin Birds Marquee')
-                  return (
-                    <div className="admin-homepage-card square" key={path}>
-                      <EditableImage
-                        slotId={slot.id}
-                        section={slot.section}
-                        imageUrl={slot.imageUrl}
-                        defaultUrl={slot.defaultUrl}
-                        altText={slot.altText}
-                        onUpdated={handleUpdated}
-                      />
-                    </div>
-                  )
-                })}
-              </div>
-            </section>
-
-            <section className="admin-homepage-section narrow-section">
-              <div className="admin-homepage-section-head">
-                <h2 className="admin-homepage-section-title">6. Popular Brands Side Photo</h2>
-                <p className="admin-homepage-section-note">Single support visual</p>
-              </div>
-              <div className="admin-homepage-card standard">
-                <EditableImage
-                  slotId="/images/contact-side.jpg"
-                  section="Popular Brands"
-                  imageUrl={getSlot('/images/contact-side.jpg').imageUrl}
-                  defaultUrl="/images/contact-side.jpg"
-                  altText="Contact Side"
-                  onUpdated={handleUpdated}
-                />
-              </div>
-            </section>
-
-            <section className="admin-homepage-section">
-              <div className="admin-homepage-section-head">
-                <h2 className="admin-homepage-section-title">7. Secondary Banners</h2>
-                <p className="admin-homepage-section-note">Attach banner slider section</p>
-              </div>
-              <div className="admin-homepage-banner-frame medium">
-                <Swiper
-                  modules={[Autoplay]}
-                  loop
-                  slidesPerView={1}
-                  autoplay={{ delay: 3500 }}
-                >
-                  {attachBanners.map((path, i) => {
-                    const slot = getSlot(path, `Attach Banner ${i}`, 'Secondary Banners')
-                    return (
-                      <SwiperSlide key={path}>
-                        <div className="admin-homepage-banner-slide">
-                          <EditableImage
-                            slotId={slot.id}
-                            section={slot.section}
-                            imageUrl={slot.imageUrl}
-                            defaultUrl={slot.defaultUrl}
-                            altText={slot.altText}
-                            onUpdated={handleUpdated}
-                          />
-                        </div>
-                      </SwiperSlide>
-                    )
-                  })}
-                </Swiper>
-              </div>
-            </section>
-
-            <section className="admin-homepage-section">
-              <div className="admin-homepage-section-head">
-                <h2 className="admin-homepage-section-title">8. Editorial Images</h2>
-                <p className="admin-homepage-section-note">Three feature editorial cards</p>
-              </div>
-              <div className="admin-homepage-grid grid-3">
-                {editorialImages.map((path, i) => {
-                  const slot = getSlot(path, `Editorial ${i}`, 'Editorial')
-                  return (
-                    <div className="admin-homepage-card standard" key={path}>
-                      <EditableImage
-                        slotId={slot.id}
-                        section={slot.section}
-                        imageUrl={slot.imageUrl}
-                        defaultUrl={slot.defaultUrl}
-                        altText={slot.altText}
-                        onUpdated={handleUpdated}
-                      />
-                    </div>
-                  )
-                })}
-              </div>
-            </section>
-
-            <section className="admin-homepage-section">
-              <div className="admin-homepage-section-head">
-                <h2 className="admin-homepage-section-title">9. Indian Flower Picks</h2>
-                <p className="admin-homepage-section-note">Zig zag feature product visuals</p>
-              </div>
-              <div className="admin-homepage-grid grid-5">
-                {indianFlowerPicks.map((path, i) => {
-                  const slot = getSlot(path, `Indian Flower ${i}`, 'Indian Flower')
-                  return (
-                    <div className="admin-homepage-card standard" key={path}>
-                      <EditableImage
-                        slotId={slot.id}
-                        section={slot.section}
-                        imageUrl={slot.imageUrl}
-                        defaultUrl={slot.defaultUrl}
-                        altText={slot.altText}
-                        onUpdated={handleUpdated}
-                      />
-                    </div>
-                  )
-                })}
-              </div>
-            </section>
-
-            <section className="admin-homepage-section">
-              <div className="admin-homepage-section-head">
-                <h2 className="admin-homepage-section-title">10. Innerwear Essentials</h2>
-                <p className="admin-homepage-section-note">Square essentials section cards</p>
-              </div>
-              <div className="admin-homepage-grid grid-4">
-                {innerwearEssentials.map((path, i) => {
-                  const slot = getSlot(path, `Innerwear ${i}`, 'Innerwear Essentials')
-                  return (
-                    <div className="admin-homepage-card square" key={path}>
-                      <EditableImage
-                        slotId={slot.id}
-                        section={slot.section}
-                        imageUrl={slot.imageUrl}
-                        defaultUrl={slot.defaultUrl}
-                        altText={slot.altText}
-                        onUpdated={handleUpdated}
-                      />
-                    </div>
-                  )
-                })}
-              </div>
-            </section>
-
-            <section className="admin-homepage-section">
-              <div className="admin-homepage-section-head">
-                <h2 className="admin-homepage-section-title">11. Men's Essentials</h2>
-                <p className="admin-homepage-section-note">
-                  These images are reused for round icons and supporting product picks.
-                </p>
-              </div>
-              <div className="admin-homepage-grid grid-6">
-                {mensJockey.map((path, i) => {
-                  const slot = getSlot(path, `Jockey Mens ${i}`, 'Mens Essentials')
-                  return (
-                    <div className="admin-homepage-card circle" key={path}>
-                      <EditableImage
-                        slotId={slot.id}
-                        section={slot.section}
-                        imageUrl={slot.imageUrl}
-                        defaultUrl={slot.defaultUrl}
-                        altText={slot.altText}
-                        onUpdated={handleUpdated}
-                      />
-                    </div>
-                  )
-                })}
-              </div>
-            </section>
-
-            <section className="admin-homepage-section">
-              <div className="admin-homepage-section-head">
-                <h2 className="admin-homepage-section-title">12. Men's Daily Essentials</h2>
-                <p className="admin-homepage-section-note">Daily wear feature collection</p>
-              </div>
-              <div className="admin-homepage-grid grid-4">
-                {mensDaily.map((path, i) => {
-                  const slot = getSlot(path, `Mens Daily ${i}`, 'Mens Daily')
-                  return (
-                    <div className="admin-homepage-card standard" key={path}>
-                      <EditableImage
-                        slotId={slot.id}
-                        section={slot.section}
-                        imageUrl={slot.imageUrl}
-                        defaultUrl={slot.defaultUrl}
-                        altText={slot.altText}
-                        onUpdated={handleUpdated}
-                      />
-                    </div>
-                  )
-                })}
-              </div>
-            </section>
+          <div className="poster-manager-page-tabs">
+            {Object.values(PAGE_CONFIG).map(page => (
+              <button type="button" key={page.key} className={`poster-manager-page-tab ${activePage === page.key ? 'active' : ''}`} onClick={() => setActivePage(page.key)}>
+                <span>{page.label}</span>
+                <small>{page.sections.reduce((sum, section) => sum + section.slots.length, 0)} posters</small>
+              </button>
+            ))}
           </div>
+
+          {loading ? (
+            <div className="poster-manager-loading">
+              <div className="poster-manager-spinner-large" />
+              <h2>Loading website posters</h2>
+              <p>Reading the latest poster mappings from the backend.</p>
+            </div>
+          ) : (
+            <div className="poster-manager-content">
+              <div className="poster-manager-page-heading">
+                <span>{currentPage.label.toUpperCase()} PAGE</span>
+                <h2>{currentPage.label} Website Posters</h2>
+              </div>
+
+              {currentPage.sections.map(section => (
+                <section className="poster-manager-section" key={`${currentPage.key}-${section.key}`}>
+                  <div className="poster-manager-section-head">
+                    <div>
+                      <span className="poster-manager-section-type">{section.key === 'hero' ? 'TOP OF PAGE' : 'LATEST OFFERS'}</span>
+                      <h2>{section.label}</h2>
+                      <p>{section.description}</p>
+                    </div>
+
+                    <strong>{section.slots.length} posters</strong>
+                  </div>
+
+                  <div className={`poster-manager-grid poster-manager-grid-${section.layout}`}>
+                    {section.slots.map((slot, index) => (
+                      <PosterCard
+                        key={slot.id}
+                        pageKey={currentPage.key}
+                        section={section}
+                        slot={slot}
+                        slotOrder={index + 1}
+                        record={remoteMap[slot.id]}
+                        onUpdated={handleUpdated}
+                      />
+                    ))}
+                  </div>
+                </section>
+              ))}
+            </div>
+          )}
         </div>
-      </div>
+      </main>
     </>
   )
 }

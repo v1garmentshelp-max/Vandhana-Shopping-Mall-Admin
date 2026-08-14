@@ -1,26 +1,66 @@
 import React, { useRef, useState } from 'react'
+import { apiUpload } from './api'
 import './EditableImage.css'
 
-const API_BASE = process.env.REACT_APP_API_BASE_URL || 'https://vandhana-shopping-mall-backend.vercel.app'
 const MAX_FILE_SIZE_BYTES = 3.5 * 1024 * 1024
 
-export default function EditableImage({ slotId, section, imageUrl, defaultUrl, altText, onUpdated }) {
+const ALLOWED_TYPES = [
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'image/avif'
+]
+
+export default function EditableImage({
+  slotId,
+  page,
+  section,
+  slotOrder,
+  imageUrl,
+  defaultUrl,
+  altText,
+  link,
+  extra,
+  onUpdated
+}) {
   const inputRef = useRef(null)
   const [uploading, setUploading] = useState(false)
 
-  const handleClick = (e) => {
-    e.preventDefault()
-    e.stopPropagation()
-    if (inputRef.current) inputRef.current.click()
+  const handleClick = (event) => {
+    event.preventDefault()
+    event.stopPropagation()
+
+    if (!uploading && inputRef.current) {
+      inputRef.current.click()
+    }
   }
 
-  const handleChange = async (e) => {
-    const file = e.target.files && e.target.files[0]
-    if (!file) return
+  const handleChange = async (event) => {
+    const file =
+      event.target.files &&
+      event.target.files[0]
+
+    if (!file) {
+      return
+    }
+
+    if (!ALLOWED_TYPES.includes(file.type)) {
+      alert('Please upload JPG, PNG, WEBP or AVIF image.')
+
+      if (inputRef.current) {
+        inputRef.current.value = ''
+      }
+
+      return
+    }
 
     if (file.size > MAX_FILE_SIZE_BYTES) {
       alert('File is too large. Please upload an image smaller than 3.5 MB.')
-      if (inputRef.current) inputRef.current.value = ''
+
+      if (inputRef.current) {
+        inputRef.current.value = ''
+      }
+
       return
     }
 
@@ -28,87 +68,92 @@ export default function EditableImage({ slotId, section, imageUrl, defaultUrl, a
       setUploading(true)
 
       const formData = new FormData()
+
       formData.append('image', file)
 
-      const uploadRes = await fetch(`${API_BASE}/api/upload`, {
-        method: 'POST',
-        body: formData
-      })
-
-      if (!uploadRes.ok) {
-        if (uploadRes.status === 413) {
-          alert('Image is too large for the server. Please upload a smaller image under 3.5 MB.')
-        } else {
-          alert('Failed to upload image.')
-        }
-        setUploading(false)
-        return
+      if (page) {
+        formData.append('page', page)
       }
 
-      const uploadJson = await uploadRes.json()
-      const newImageUrl = uploadJson.imageUrl
-
-      const body = {
-        section: section || null,
-        imageUrl: newImageUrl,
-        altText: altText || '',
-        link: null,
-        extra: null
+      if (section) {
+        formData.append('section', section)
       }
 
-      const patchRes = await fetch(`${API_BASE}/api/homepage-images/${encodeURIComponent(slotId)}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body)
-      })
-
-      if (!patchRes.ok) {
-        alert('Failed to save homepage image mapping.')
-        setUploading(false)
-        return
+      if (
+        slotOrder !== undefined &&
+        slotOrder !== null
+      ) {
+        formData.append(
+          'slotOrder',
+          String(slotOrder)
+        )
       }
 
-      const updated = await patchRes.json()
-      if (onUpdated) onUpdated(updated)
-    } catch {
-      alert('Something went wrong while uploading. Please try again.')
+      if (defaultUrl) {
+        formData.append(
+          'defaultImageUrl',
+          defaultUrl
+        )
+      }
+
+      if (altText) {
+        formData.append(
+          'altText',
+          altText
+        )
+      }
+
+      if (link) {
+        formData.append(
+          'link',
+          link
+        )
+      }
+
+      if (extra) {
+        formData.append(
+          'extra',
+          JSON.stringify(extra)
+        )
+      }
+
+      const updated =
+        await apiUpload(
+          `/homepage-images/${encodeURIComponent(slotId)}/replace`,
+          formData
+        )
+
+      if (onUpdated) {
+        onUpdated(updated)
+      }
+    } catch (error) {
+      const message =
+        error?.payload?.message ||
+        error?.message ||
+        'Something went wrong while uploading. Please try again.'
+
+      alert(message)
     } finally {
       setUploading(false)
-      if (inputRef.current) inputRef.current.value = ''
+
+      if (inputRef.current) {
+        inputRef.current.value = ''
+      }
     }
   }
 
-  const label = uploading ? 'Uploading...' : 'Replace'
-
   return (
     <div className="editable-image-wrapper">
-      <img
-        src={imageUrl || defaultUrl}
-        alt={altText || ''}
-        className="editable-image-img"
-      />
+      <img src={imageUrl || defaultUrl} alt={altText || ''} className="editable-image-img" />
 
       <div className="editable-image-overlay">
         <div className="editable-image-overlay-content">
           <span className="editable-image-badge">Editable</span>
-          <button
-            type="button"
-            className="editable-image-btn"
-            onClick={handleClick}
-            disabled={uploading}
-          >
-            {label}
-          </button>
+          <button type="button" className="editable-image-btn" onClick={handleClick} disabled={uploading}>{uploading ? 'Uploading...' : 'Replace'}</button>
         </div>
       </div>
 
-      <input
-        ref={inputRef}
-        type="file"
-        accept="image/*"
-        className="editable-image-input"
-        onChange={handleChange}
-      />
+      <input ref={inputRef} type="file" accept=".jpg,.jpeg,.png,.webp,.avif,image/jpeg,image/png,image/webp,image/avif" className="editable-image-input" onChange={handleChange} />
     </div>
   )
 }
