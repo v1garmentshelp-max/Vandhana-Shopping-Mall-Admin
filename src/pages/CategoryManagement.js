@@ -154,11 +154,6 @@ export default function CategoryManagement() {
       return
     }
 
-    if (Number(parent.product_count || 0) > 0) {
-      setMessage({ type: 'error', text: 'Products are already assigned to this category' })
-      return
-    }
-
     setEditor({
       mode: 'create',
       category: null,
@@ -300,7 +295,7 @@ export default function CategoryManagement() {
   const addDisabled =
     !gender ||
     !rootCategory ||
-    Boolean(selectedCategory && (!selectedCategory.is_active || Number(selectedCategory.product_count || 0) > 0))
+    Boolean(selectedCategory && !selectedCategory.is_active)
 
   return (
     <div className="category-page">

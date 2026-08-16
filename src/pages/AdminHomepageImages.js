@@ -565,6 +565,8 @@ const PosterCard = ({
 export default function AdminHomepageImages() {
   const [activePage, setActivePage] = useState('men')
   const [remoteMap, setRemoteMap] = useState({})
+  const [sectionSettings, setSectionSettings] = useState({})
+  const [updatingSetting, setUpdatingSetting] = useState('')
   const [loading, setLoading] = useState(true)
   const [pageError, setPageError] = useState('')
 
@@ -598,15 +600,15 @@ export default function AdminHomepageImages() {
     setPageError('')
 
     try {
-      const response = await fetch(
-        `${API_BASE}/api/homepage-images`,
-        {
-          method: 'GET',
-          cache: 'no-store'
-        }
-      )
+      const [imagesResponse, settingsResponse] = await Promise.all([
+        fetch(`${API_BASE}/api/homepage-images`, { method: 'GET', cache: 'no-store' }),
+        fetch(`${API_BASE}/api/homepage-images/settings`, { method: 'GET', cache: 'no-store' })
+      ])
 
-      const data = await readResponse(response)
+      const [data, settingsData] = await Promise.all([
+        readResponse(imagesResponse),
+        readResponse(settingsResponse)
+      ])
 
       const nextMap = {}
 
@@ -619,6 +621,18 @@ export default function AdminHomepageImages() {
       }
 
       setRemoteMap(nextMap)
+
+      const nextSettings = {}
+
+      if (Array.isArray(settingsData)) {
+        settingsData.forEach(item => {
+          if (item?.page && item?.section) {
+            nextSettings[`${item.page}.${item.section}`] = item.enabled !== false
+          }
+        })
+      }
+
+      setSectionSettings(nextSettings)
     } catch (err) {
       setRemoteMap({})
       setPageError(
@@ -641,6 +655,38 @@ export default function AdminHomepageImages() {
       ...previous,
       [updated.id]: updated
     }))
+  }
+
+  const handleSectionToggle = async (page, section) => {
+    const key = `${page}.${section}`
+    const enabled = sectionSettings[key] === false
+
+    setUpdatingSetting(key)
+    setPageError('')
+
+    try {
+      const token = getStoredToken()
+      const response = await fetch(
+        `${API_BASE}/api/homepage-images/settings/${encodeURIComponent(page)}/${encodeURIComponent(section)}`,
+        {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {})
+          },
+          body: JSON.stringify({ enabled })
+        }
+      )
+      const updated = await readResponse(response)
+      setSectionSettings(previous => ({
+        ...previous,
+        [key]: updated.enabled !== false
+      }))
+    } catch (err) {
+      setPageError(err?.message || 'Unable to update section visibility.')
+    } finally {
+      setUpdatingSetting('')
+    }
   }
 
   return (
@@ -709,10 +755,29 @@ export default function AdminHomepageImages() {
                       <p>{section.description}</p>
                     </div>
 
-                    <strong>{section.slots.length} posters</strong>
+                    {section.key === 'offer' ? (
+                      <div className="poster-manager-section-controls">
+                        <span className={`poster-manager-status ${sectionSettings[`${currentPage.key}.${section.key}`] === false ? 'off' : 'on'}`}>
+                          {sectionSettings[`${currentPage.key}.${section.key}`] === false ? 'OFF' : 'ON'}
+                        </span>
+                        <button
+                          type="button"
+                          className={`poster-manager-toggle ${sectionSettings[`${currentPage.key}.${section.key}`] === false ? '' : 'active'}`}
+                          role="switch"
+                          aria-checked={sectionSettings[`${currentPage.key}.${section.key}`] !== false}
+                          aria-label={`${section.label} visibility`}
+                          disabled={updatingSetting === `${currentPage.key}.${section.key}`}
+                          onClick={() => handleSectionToggle(currentPage.key, section.key)}
+                        >
+                          <span />
+                        </button>
+                      </div>
+                    ) : (
+                      <strong>{section.slots.length} posters</strong>
+                    )}
                   </div>
 
-                  <div className={`poster-manager-grid poster-manager-grid-${section.layout}`}>
+                  <div className={`poster-manager-grid poster-manager-grid-${section.layout} ${section.key === 'offer' && sectionSettings[`${currentPage.key}.${section.key}`] === false ? 'poster-manager-grid-disabled' : ''}`}>
                     {section.slots.map((slot, index) => (
                       <PosterCard
                         key={slot.id}
