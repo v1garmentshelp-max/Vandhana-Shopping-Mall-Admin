@@ -7,12 +7,9 @@ const API_BASE_RAW = (typeof import.meta !== 'undefined' && import.meta.env && i
 const ASSETS_BASE_RAW = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_ASSETS_BASE) || (typeof process !== 'undefined' && process.env && process.env.REACT_APP_ASSETS_BASE) || DEFAULT_ASSETS_BASE
 const API_BASE = API_BASE_RAW.replace(/\/+$/, '')
 const ASSETS_BASE = ASSETS_BASE_RAW.replace(/\/+$/, '')
-const FETCH_PAGE_SIZE = 500
 const TABLE_PAGE_SIZE = 40
 const CACHE_TTL = 60000
 const SEARCH_DELAY = 250
-const MAX_FETCH_PAGES = 200
-
 let productRowsCache = { branchId: '', timestamp: 0, rows: [] }
 
 const coerceNumber = (value) => {
@@ -26,7 +23,14 @@ const hasGroupedVariantValue = (value) => cleanText(value).includes(',')
 
 const getBranchId = () => {
   if (typeof window === 'undefined') return ''
-  return localStorage.getItem('branch_id') || localStorage.getItem('branchId') || localStorage.getItem('selectedBranchId') || ''
+  const direct = localStorage.getItem('branch_id') || localStorage.getItem('branchId') || localStorage.getItem('selectedBranchId') || ''
+  if (direct) return direct
+  try {
+    const user = JSON.parse(localStorage.getItem('auth_user') || '{}')
+    return String(user?.branch_id || user?.branchId || '')
+  } catch {
+    return ''
+  }
 }
 
 const getAuthHeaders = () => {
@@ -198,16 +202,64 @@ const getItemsFromResponse = (data) => {
   return []
 }
 
-const getTotalPages = (data, pageSize) => {
-  const direct = coerceNumber(data?.totalPages || data?.total_pages || data?.pagination?.totalPages || data?.pagination?.total_pages || data?.meta?.totalPages || data?.meta?.total_pages)
+const getCategorySource = (data) => {
+  if (Array.isArray(data)) return data
+  if (Array.isArray(data?.tree)) return data.tree
+  if (Array.isArray(data?.categories)) return data.categories
+  if (Array.isArray(data?.rows)) return data.rows
+  if (Array.isArray(data?.data)) return data.data
+  return []
+}
 
-  if (direct > 0) return Math.ceil(direct)
-
-  const total = coerceNumber(data?.total || data?.totalCount || data?.total_count || data?.pagination?.total || data?.pagination?.totalCount || data?.meta?.total || data?.meta?.totalCount)
-
-  if (total > 0 && pageSize > 0) return Math.ceil(total / pageSize)
-
-  return 0
+const flattenCategoryOptions = (data) => {
+  const source = getCategorySource(data)
+  if (!source.length) return []
+  const result = []
+  const hasNestedChildren = source.some((item) => Array.isArray(item?.children))
+  if (hasNestedChildren) {
+    const walk = (items, parentNames = [], inheritedGender = '') => {
+      for (const item of Array.isArray(items) ? items : []) {
+        if (!item || item.is_active === false) continue
+        const children = (Array.isArray(item.children) ? item.children : []).filter((child) => child && child.is_active !== false)
+        const name = cleanText(item.name)
+        const names = [...parentNames, name].filter(Boolean)
+        const gender = cleanText(item.gender || inheritedGender).toUpperCase()
+        const label = cleanText(item.category_path || item.categoryPath) || names.join(' > ')
+        const parentId = item.parent_id ?? item.parentId ?? null
+        const selectable = item.selectable === true || (item.selectable !== false && children.length === 0 && parentId != null)
+        if (selectable && item.id != null && label) result.push({ id: String(item.id), label, gender, sort_order: coerceNumber(item.sort_order) })
+        if (children.length) walk(children, names, gender)
+      }
+    }
+    walk(source)
+  } else {
+    const activeRows = source.filter((item) => item && item.is_active !== false)
+    const parentIds = new Set()
+    activeRows.forEach((item) => {
+      const parentId = item.parent_id ?? item.parentId
+      if (parentId != null) parentIds.add(String(parentId))
+    })
+    activeRows.forEach((item) => {
+      const id = item.id != null ? String(item.id) : ''
+      const parentId = item.parent_id ?? item.parentId ?? null
+      const label = cleanText(item.category_path || item.categoryPath || item.name)
+      const gender = cleanText(item.gender).toUpperCase()
+      const selectable = item.selectable === true || (item.selectable !== false && parentId != null && !parentIds.has(id))
+      if (id && label && selectable) result.push({ id, label, gender, sort_order: coerceNumber(item.sort_order) })
+    })
+  }
+  const unique = new Map()
+  result.forEach((item) => {
+    if (!unique.has(item.id)) unique.set(item.id, item)
+  })
+  return Array.from(unique.values()).sort((a, b) => {
+    const genderOrder = { MEN: 1, WOMEN: 2, KIDS: 3 }
+    const ag = genderOrder[a.gender] || 9
+    const bg = genderOrder[b.gender] || 9
+    if (ag !== bg) return ag - bg
+    if (a.sort_order !== b.sort_order) return a.sort_order - b.sort_order
+    return a.label.localeCompare(b.label, undefined, { numeric: true })
+  })
 }
 
 const fetchJson = async (url, signal) => {
@@ -218,100 +270,19 @@ const fetchJson = async (url, signal) => {
     signal,
     cache: 'no-store'
   })
-
   if (!response.ok) throw new Error(`Request failed with status ${response.status}`)
-
   return response.json()
 }
 
-const getPagedUrls = (page) => [
-  withBranch(`${API_BASE}/api/products?category=all&page=${page}&limit=${FETCH_PAGE_SIZE}`),
-  withBranch(`${API_BASE}/api/products?page=${page}&limit=${FETCH_PAGE_SIZE}`),
-  withBranch(`${API_BASE}/api/products?all=true&page=${page}&limit=${FETCH_PAGE_SIZE}`)
-]
-
-const fetchFirstWorkingPage = async (signal) => {
-  const urls = getPagedUrls(1)
-  let lastError = null
-
-  for (let index = 0; index < urls.length; index += 1) {
-    try {
-      const data = await fetchJson(urls[index], signal)
-      const items = getItemsFromResponse(data)
-
-      if (items.length) return { data, items, urlIndex: index }
-    } catch (error) {
-      if (error?.name === 'AbortError') throw error
-      lastError = error
-    }
-  }
-
-  try {
-    const data = await fetchJson(withBranch(`${API_BASE}/api/products?all=true&limit=5000`), signal)
-    return { data, items: getItemsFromResponse(data), urlIndex: -1 }
-  } catch (error) {
-    if (error?.name === 'AbortError') throw error
-    throw lastError || error
-  }
+const fetchAllCategories = async (signal) => {
+  const data = await fetchJson(`${API_BASE}/api/categories/tree?_ts=${Date.now()}`, signal)
+  return flattenCategoryOptions(data)
 }
 
-const fetchAllProducts = async (onProgress, signal) => {
-  const first = await fetchFirstWorkingPage(signal)
-  const collected = new Map()
-
-  const addItems = (items) => {
-    const mappedRows = flattenProducts(items)
-    let added = 0
-
-    for (const row of mappedRows) {
-      if (!collected.has(row.variant_key)) added += 1
-      collected.set(row.variant_key, row)
-    }
-
-    return added
-  }
-
-  addItems(first.items)
-  onProgress?.(Array.from(collected.values()), { page: 1 })
-
-  if (first.urlIndex < 0) return Array.from(collected.values())
-
-  const totalPagesFromFirst = getTotalPages(first.data, FETCH_PAGE_SIZE)
-
-  if (totalPagesFromFirst === 1) return Array.from(collected.values())
-  if (!totalPagesFromFirst && first.items.length !== FETCH_PAGE_SIZE) return Array.from(collected.values())
-
-  let previousSignature = first.items.slice(0, 5).map((item) => cleanText(item?.variant_id || item?.id || item?.product_id || item?.name)).join('|')
-
-  for (let page = 2; page <= MAX_FETCH_PAGES; page += 1) {
-    if (signal?.aborted) throw new DOMException('Aborted', 'AbortError')
-    if (totalPagesFromFirst && page > totalPagesFromFirst) break
-
-    const url = getPagedUrls(page)[first.urlIndex]
-    const data = await fetchJson(url, signal)
-    const items = getItemsFromResponse(data)
-
-    if (!items.length) break
-
-    const signature = items.slice(0, 5).map((item) => cleanText(item?.variant_id || item?.id || item?.product_id || item?.name)).join('|')
-
-    if (signature && signature === previousSignature) break
-
-    previousSignature = signature
-
-    const added = addItems(items)
-
-    if (!added) break
-
-    onProgress?.(Array.from(collected.values()), { page })
-
-    const totalPages = getTotalPages(data, FETCH_PAGE_SIZE)
-
-    if (totalPages && page >= totalPages) break
-    if (items.length < FETCH_PAGE_SIZE) break
-  }
-
-  return Array.from(collected.values())
+const fetchAllProducts = async (signal) => {
+  const url = withBranch(`${API_BASE}/api/products?all=true&include_out_of_stock=true&group_by=design&_ts=${Date.now()}`)
+  const data = await fetchJson(url, signal)
+  return flattenProducts(getItemsFromResponse(data))
 }
 
 const deleteVariantRequest = async (item) => {
@@ -326,7 +297,7 @@ const deleteVariantRequest = async (item) => {
 
   const suffix = query.toString() ? `?${query.toString()}` : ''
 
-  const response = await fetch(`${API_BASE}/api/products/${encodeURIComponent(variantId)}${suffix}`, {
+  const response = await fetch(`${API_BASE}/api/products/variant/${encodeURIComponent(variantId)}${suffix}`, {
     method: 'DELETE',
     headers: getAuthHeaders(),
     credentials: 'omit',
@@ -408,14 +379,13 @@ const DropdownCell = ({ title, options, selected, onToggle, onToggleAll }) => {
 
 const DeleteProduct = () => {
   const [rows, setRows] = useState([])
+  const [categories, setCategories] = useState([])
   const [filter, setFilter] = useState('All')
   const [categoryFilter, setCategoryFilter] = useState('All')
   const [searchInput, setSearchInput] = useState('')
   const [search, setSearch] = useState('')
   const [sortBy, setSortBy] = useState('recent')
   const [isLoading, setIsLoading] = useState(false)
-  const [isLoadingMore, setIsLoadingMore] = useState(false)
-  const [loadedPages, setLoadedPages] = useState(0)
   const [popupMessage, setPopupMessage] = useState('')
   const [popupType, setPopupType] = useState('')
   const [confirmItems, setConfirmItems] = useState([])
@@ -440,60 +410,41 @@ const DeleteProduct = () => {
     }, time)
   }, [])
 
+  const fetchCategories = useCallback(async (signal) => {
+    try {
+      const items = await fetchAllCategories(signal)
+      setCategories(items)
+    } catch (error) {
+      if (error?.name === 'AbortError') return
+      setCategories([])
+    }
+  }, [])
+
   const fetchAll = useCallback(async (force = false) => {
     const branchId = getBranchId()
     const now = Date.now()
-
     if (!force && productRowsCache.rows.length && productRowsCache.branchId === branchId && now - productRowsCache.timestamp < CACHE_TTL) {
       setRows(productRowsCache.rows)
       setIsLoading(false)
-      setIsLoadingMore(false)
       return
     }
-
     if (abortRef.current) abortRef.current.abort()
-
     const controller = new AbortController()
     abortRef.current = controller
-
     const requestId = requestIdRef.current + 1
     requestIdRef.current = requestId
-
     setIsLoading(true)
-    setIsLoadingMore(false)
-    setLoadedPages(0)
-
     if (force) setRows([])
-
     try {
-      const allRows = await fetchAllProducts((partialRows, progress) => {
-        if (requestId !== requestIdRef.current || controller.signal.aborted) return
-
-        setRows(partialRows)
-        setLoadedPages(progress.page)
-
-        if (progress.page === 1) {
-          setIsLoading(false)
-          setIsLoadingMore(true)
-        }
-      }, controller.signal)
-
+      const allRows = await fetchAllProducts(controller.signal)
       if (requestId !== requestIdRef.current || controller.signal.aborted) return
-
       setRows(allRows)
-
-      productRowsCache = {
-        branchId,
-        timestamp: Date.now(),
-        rows: allRows
-      }
-
+      productRowsCache = { branchId, timestamp: Date.now(), rows: allRows }
       setSelectedMap({})
       setVariantChoices({})
       setCurrentPage(1)
     } catch (error) {
       if (error?.name === 'AbortError') return
-
       if (requestId === requestIdRef.current) {
         setRows([])
         setSelectedMap({})
@@ -501,21 +452,20 @@ const DeleteProduct = () => {
         showPopup(error?.message || 'Unable to load products', 'error', 3000)
       }
     } finally {
-      if (requestId === requestIdRef.current) {
-        setIsLoading(false)
-        setIsLoadingMore(false)
-      }
+      if (requestId === requestIdRef.current) setIsLoading(false)
     }
   }, [showPopup])
 
   useEffect(() => {
+    const categoryController = new AbortController()
     fetchAll(false)
-
+    fetchCategories(categoryController.signal)
     return () => {
+      categoryController.abort()
       if (abortRef.current) abortRef.current.abort()
       if (popupTimerRef.current) clearTimeout(popupTimerRef.current)
     }
-  }, [fetchAll])
+  }, [fetchAll, fetchCategories])
 
   useEffect(() => {
     const timer = setTimeout(() => setSearch(searchInput.trim().toLowerCase()), SEARCH_DELAY)
@@ -523,23 +473,14 @@ const DeleteProduct = () => {
   }, [searchInput])
 
   const categoryFilterOptions = useMemo(() => {
-    const map = new Map()
-
-    for (const row of rows) {
-      const category = String(row.category || '').toLowerCase()
-
-      if (filter === 'Men' && category !== 'men') continue
-      if (filter === 'Women' && category !== 'women') continue
-      if (filter === 'Kids' && !category.startsWith('kids')) continue
-
-      const id = String(row.category_id || '')
-      const label = row.category_path || [row.parent_category_name, row.category_name].filter(Boolean).join(' > ') || row.category_name
-
-      if (id && label && !map.has(id)) map.set(id, { id, label })
-    }
-
-    return Array.from(map.values())
-  }, [rows, filter])
+    const gender = filter === 'Men' ? 'MEN' : filter === 'Women' ? 'WOMEN' : filter === 'Kids' ? 'KIDS' : ''
+    return categories
+      .filter((category) => !gender || category.gender === gender)
+      .sort((a, b) => {
+        if (a.sort_order !== b.sort_order) return a.sort_order - b.sort_order
+        return a.label.localeCompare(b.label, undefined, { numeric: true })
+      })
+  }, [categories, filter])
 
   useEffect(() => {
     setCategoryFilter('All')
@@ -889,12 +830,10 @@ const DeleteProduct = () => {
             <option value="brand_asc">Brand: A to Z</option>
           </select>
 
-          <button className="refresh-btn-vandana" onClick={() => fetchAll(true)} disabled={isLoading}>{isLoading ? 'Loading...' : 'Refresh'}</button>
+          <button className="refresh-btn-vandana" onClick={() => { fetchAll(true); fetchCategories() }} disabled={isLoading}>{isLoading ? 'Loading...' : 'Refresh'}</button>
           <button className="danger-btn-vandana" onClick={() => askDelete(selectedItems)}>Delete Selected{selectedItems.length ? ` (${selectedItems.length})` : ''}</button>
         </div>
       </div>
-
-      {isLoadingMore ? <div className="background-loading-vandana">Products loaded. Loading remaining products in background{loadedPages ? ` • Batch ${loadedPages}` : ''}{rows.length ? ` • ${rows.length} variants loaded` : ''}</div> : null}
 
       <div className="delete-section2-vandana">
         <div className="table-title-row-vandana">
