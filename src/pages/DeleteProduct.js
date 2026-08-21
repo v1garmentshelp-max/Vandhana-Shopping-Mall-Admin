@@ -19,8 +19,6 @@ const coerceNumber = (value) => {
 
 const cleanText = (value) => String(value ?? '').replace(/\s+/g, ' ').trim()
 const normalizeKey = (value) => cleanText(value).toLowerCase()
-const hasGroupedVariantValue = (value) => cleanText(value).includes(',')
-
 const getBranchId = () => {
   if (typeof window === 'undefined') return ''
   const direct = localStorage.getItem('branch_id') || localStorage.getItem('branchId') || localStorage.getItem('selectedBranchId') || ''
@@ -88,8 +86,6 @@ const mapVariantRow = (product, variant) => {
   const size = cleanText(variant.size)
 
   if (!variantId || !color || !size) return null
-  if (hasGroupedVariantValue(color) || hasGroupedVariantValue(size)) return null
-
   const originalPriceB2c = variant.original_price_b2c ?? variant.mrp ?? variant.price ?? variant.sale_price ?? product.original_price_b2c ?? product.mrp ?? product.price ?? 0
   const discountB2c = variant.discount_b2c ?? variant.b2c_discount_pct ?? product.discount_b2c ?? product.b2c_discount_pct ?? 0
   const originalPriceB2b = variant.original_price_b2b ?? variant.cost_price ?? variant.original_price_b2c ?? product.original_price_b2b ?? product.original_price_b2c ?? 0
@@ -136,8 +132,6 @@ const mapSingleRow = (product) => {
   const size = cleanText(product.size)
 
   if (!variantId || !color || !size) return null
-  if (hasGroupedVariantValue(color) || hasGroupedVariantValue(size)) return null
-
   const mapped = {
     id: variantId,
     variant_id: variantId,
