@@ -280,7 +280,7 @@ const fetchAllCategories = async (signal) => {
 }
 
 const fetchAllProducts = async (signal) => {
-  const url = withBranch(`${API_BASE}/api/products?all=true&include_out_of_stock=true&group_by=design&_ts=${Date.now()}`)
+  const url = withBranch(`${API_BASE}/api/products?all=true&include_out_of_stock=true&include_grouped_values=true&group_by=design&_ts=${Date.now()}`)
   const data = await fetchJson(url, signal)
   return flattenProducts(getItemsFromResponse(data))
 }
