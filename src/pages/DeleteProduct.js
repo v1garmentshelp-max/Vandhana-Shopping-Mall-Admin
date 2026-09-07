@@ -299,7 +299,7 @@ const deleteVariantRequest = async (item) => {
   })
 
   if (!response.ok) {
-    let message = 'Variant deactivation failed'
+    let message = 'Variant deletion failed'
 
     try {
       const data = await response.json()
@@ -732,11 +732,11 @@ const DeleteProduct = () => {
     }
 
     if (deletedItems.length && !failedItems.length) {
-      showPopup(deletedItems.length === 1 ? 'Variant deactivated successfully' : `${deletedItems.length} variants deactivated successfully`, 'success', 2600)
+      showPopup(deletedItems.length === 1 ? 'Variant permanently deleted successfully' : `${deletedItems.length} variants permanently deleted successfully`, 'success', 2600)
     } else if (deletedItems.length && failedItems.length) {
-      showPopup(`Deactivated ${deletedItems.length}. Failed ${failedItems.length}.`, 'error', 3200)
+      showPopup(`Deleted ${deletedItems.length}. Failed ${failedItems.length}.`, 'error', 3200)
     } else {
-      showPopup(failedItems[0]?.error?.message || 'Deactivation failed', 'error', 3000)
+      showPopup(failedItems[0]?.error?.message || 'Deletion failed', 'error', 3000)
     }
 
     setConfirmItems([])
@@ -825,7 +825,7 @@ const DeleteProduct = () => {
           </select>
 
           <button className="refresh-btn-vandana" onClick={() => { fetchAll(true); fetchCategories() }} disabled={isLoading}>{isLoading ? 'Loading...' : 'Refresh'}</button>
-          <button className="danger-btn-vandana" onClick={() => askDelete(selectedItems)}>Deactivate Selected{selectedItems.length ? ` (${selectedItems.length})` : ''}</button>
+          <button className="danger-btn-vandana" onClick={() => askDelete(selectedItems)}>Delete Selected{selectedItems.length ? ` (${selectedItems.length})` : ''}</button>
         </div>
       </div>
 
@@ -856,7 +856,7 @@ const DeleteProduct = () => {
                 <th>Stock</th>
                 <th>Reserved</th>
                 <th>Image</th>
-                <th>Deactivate</th>
+                <th>Delete</th>
               </tr>
             </thead>
 
@@ -883,7 +883,7 @@ const DeleteProduct = () => {
                     <td>{group.stock_display}</td>
                     <td>{group.reserved_display}</td>
                     <td>{group.image_url ? <div className="image-cell-vandana"><img src={group.image_url} alt={group.product_name} loading="lazy" decoding="async" className="table-image-vandana" />{group.different_images > 1 ? <span>+{group.different_images - 1}</span> : null}</div> : <div className="table-image-placeholder-vandana">No Image</div>}</td>
-                    <td><button className="delete-btn-vandana" disabled={!group.matchingVariants.length} onClick={() => askDelete(group.matchingVariants)}>Deactivate{group.matchingVariants.length > 1 ? ` (${group.matchingVariants.length})` : ''}</button></td>
+                    <td><button className="delete-btn-vandana" disabled={!group.matchingVariants.length} onClick={() => askDelete(group.matchingVariants)}>Delete{group.matchingVariants.length > 1 ? ` (${group.matchingVariants.length})` : ''}</button></td>
                   </tr>
                 )
               })}
@@ -910,8 +910,8 @@ const DeleteProduct = () => {
       {showConfirm ? (
         <div className="popup-confirm-overlay-vandana">
           <div className="popup-confirm-box-vandana">
-            <p className="confirm-title-vandana">{confirmItems.length > 1 ? `Deactivate ${confirmItems.length} selected variants?` : 'Deactivate this variant?'}</p>
-            <div className="confirm-warning-vandana">{confirmItems.length} variant{confirmItems.length === 1 ? '' : 's'} will be deactivated.</div>
+            <p className="confirm-title-vandana">{confirmItems.length > 1 ? `Permanently delete ${confirmItems.length} selected variants?` : 'Permanently delete this variant?'}</p>
+            <div className="confirm-warning-vandana">This permanently removes the selected variant{confirmItems.length === 1 ? '' : 's'}, barcodes, stock and images. This action cannot be undone.</div>
 
             <div className="confirm-products-vandana">
               {confirmItems.map((item) => (
@@ -937,7 +937,7 @@ const DeleteProduct = () => {
             </div>
 
             <div className="popup-actions-vandana">
-              <button onClick={() => confirmDelete(true)}>Yes, Deactivate{confirmItems.length > 1 ? ` ${confirmItems.length} Variants` : ''}</button>
+              <button onClick={() => confirmDelete(true)}>Yes, Delete Permanently{confirmItems.length > 1 ? ` ${confirmItems.length} Variants` : ''}</button>
               <button onClick={() => confirmDelete(false)}>Cancel</button>
             </div>
           </div>
