@@ -973,6 +973,7 @@ export default function OrderDetailPopup({
                         {it.image_url ? <img src={it.image_url} alt={getItemName(it)} /> : <div className="odp-item-placeholder" />}
                       </div>
                       <div className="odp-item-main">
+                        {it.is_custom && it.custom_payload && <details><summary>Customer print artwork</summary>{['front','back'].map(side=><div key={side}><strong>{side}</strong>{it.custom_payload.design?.[side]&&<a href={it.custom_payload.design[side]} target="_blank" rel="noreferrer"><img style={{width:150,maxWidth:'100%',display:'block'}} src={it.custom_payload.design[side]} alt={`${side} design preview`}/></a>}{it.custom_payload.designOnly?.[side]&&<a href={it.custom_payload.designOnly[side]} target="_blank" rel="noreferrer">Open {side} print artwork</a>}</div>)}</details>}
                         <div className="odp-item-top">
                           <div className="odp-item-meta">
                             <span className="odp-item-label">Product</span>

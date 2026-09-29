@@ -23,7 +23,9 @@ const NavbarAdmin = () => {
     { name: 'Rewards', path: '/rewards' },
     ...(isSuperAdmin ? [
       { name: 'Categories', path: '/categories' },
-      { name: 'Design Review', path: '/product-design-review' }
+      { name: 'Design Review', path: '/product-design-review' },
+      { name: 'Mobile Studio', path: '/mobile-studio' },
+      { name: 'Mobile Requests', path: '/mobile-requests' }
     ] : []),
     { name: 'Homepage Images', path: '/homepage-images' },
     { name: 'Cancellations', path: '/order-issues' }

@@ -10,12 +10,15 @@ import Customers from './pages/Customers'
 import ImportStock from './pages/ImportStock'
 import POS from './pages/POS'
 import OrderIssues from './pages/OrderIssues'
+import OrderCancellations from './pages/OrderCancellations'
 import ReturnReview from './pages/ReturnReview'
 import LoginAdmin from './pages/LoginAdmin'
 import CategoryManagement from './pages/CategoryManagement'
 import ProductDesignReview from './pages/ProductDesignReview'
 import RewardPoints from './pages/RewardPoints'
 import AdminHomepageImages from './pages/AdminHomepageImages'
+import MobileStudio from './pages/MobileStudio'
+import MobileRequests from './pages/MobileRequests'
 
 function RequireAuth({ children }) {
   const { token } = useAuth()
@@ -62,7 +65,10 @@ export default function App() {
             <Route path="/rewards" element={<RequireAuth><RewardPoints /></RequireAuth>} />
             <Route path="/categories" element={<RequireAuth><RequireSuperAdmin><CategoryManagement /></RequireSuperAdmin></RequireAuth>} />
             <Route path="/product-design-review" element={<RequireAuth><RequireSuperAdmin><ProductDesignReview /></RequireSuperAdmin></RequireAuth>} />
+            <Route path="/mobile-studio" element={<RequireAuth><RequireSuperAdmin><MobileStudio /></RequireSuperAdmin></RequireAuth>} />
+            <Route path="/mobile-requests" element={<RequireAuth><RequireSuperAdmin><MobileRequests /></RequireSuperAdmin></RequireAuth>} />
             <Route path="/homepage-images" element={<RequireAuth><AdminHomepageImages /></RequireAuth>} />
+            <Route path="/order-cancellations" element={<RequireAuth><OrderCancellations /></RequireAuth>} />
             <Route path="/order-issues" element={<RequireAuth><OrderIssues /></RequireAuth>} />
             <Route path="/returns/:id" element={<RequireAuth><ReturnReview /></RequireAuth>} />
             <Route path="*" element={<Navigate to="/" replace />} />

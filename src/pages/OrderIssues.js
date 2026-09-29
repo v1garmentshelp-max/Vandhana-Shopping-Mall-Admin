@@ -2,8 +2,12 @@ import React, { useEffect, useMemo, useState } from 'react'
 import './OrderIssues.css'
 import Navbar from './NavbarAdmin'
 import OrderCancelPopup from './OrderCancelPopup'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 
+const staffFetch=(url,opts={})=>{
+  const token=localStorage.getItem('auth_token')||localStorage.getItem('admin_token')||localStorage.getItem('token')||localStorage.getItem('adminToken')||localStorage.getItem('accessToken')||'';
+  return fetch(url,{...opts,headers:{...(opts.headers||{}),Authorization:`Bearer ${token}`}})
+}
 const DEFAULT_API_BASE = 'https://vandhana-shopping-mall-backend.vercel.app'
 const API_BASE_RAW =
   (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_BASE) ||
@@ -78,7 +82,7 @@ export default function OrderIssues() {
   const fetchSales = async () => {
     setLoading(true)
     try {
-      const res = await fetch(`${API_BASE}/api/sales/web`)
+      const res = await staffFetch(`${API_BASE}/api/sales/web`)
       const data = await res.json()
       setSales(Array.isArray(data) ? data : [])
     } catch {
@@ -144,7 +148,7 @@ export default function OrderIssues() {
     setCancelBusyId(popupSale.id)
     const payType = getPaymentType(popupSale)
     try {
-      await fetch(`${API_BASE}/api/orders/cancel`, {
+      const response = await staffFetch(`${API_BASE}/api/orders/cancel`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -154,6 +158,8 @@ export default function OrderIssues() {
           source: 'admin'
         })
       })
+      const result = await response.json().catch(() => ({}))
+      if(!response.ok)throw new Error(result.message || 'Cancellation was not completed. Open customer cancellation requests.')
       const trimmedReason = reasonText && reasonText.trim() ? reasonText.trim() : ''
       const nowIso = new Date().toISOString()
       setSales((prev) =>
@@ -171,7 +177,8 @@ export default function OrderIssues() {
         )
       )
       closeCancelPopup()
-    } catch {
+    } catch (e) {
+      window.alert(e.message)
       setPopupSubmitting(false)
       setCancelBusyId(null)
     }
@@ -181,7 +188,7 @@ export default function OrderIssues() {
     setReturnsLoading(true)
     setReturnsError('')
     try {
-      const res = await fetch(`${API_BASE}/api/returns/admin`)
+      const res = await staffFetch(`${API_BASE}/api/returns/admin`)
       if (!res.ok) throw new Error('Unable to load returns')
       const data = await res.json()
       setReturnsList(Array.isArray(data.rows || data) ? data.rows || data : [])
@@ -198,7 +205,7 @@ export default function OrderIssues() {
     setRefundsLoading(true)
     setRefundsError('')
     try {
-      const res = await fetch(`${API_BASE}/api/returns/admin/refunds`)
+      const res = await staffFetch(`${API_BASE}/api/returns/admin/refunds`)
       if (!res.ok) throw new Error('Unable to load refunds')
       const data = await res.json()
       setRefundsList(Array.isArray(data.rows || data) ? data.rows || data : [])
@@ -223,6 +230,7 @@ export default function OrderIssues() {
   return (
     <div className="oi-screen">
       <Navbar />
+      <div style={{padding:"18px 28px"}}><Link to="/order-cancellations">Open customer cancellation requests →</Link></div>
       <div className="oi-layout">
         <header className="oi-header">
           <div className="oi-header-main">

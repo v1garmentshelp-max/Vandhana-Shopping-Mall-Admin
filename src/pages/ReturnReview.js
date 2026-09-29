@@ -3,6 +3,10 @@ import './ReturnReview.css'
 import Navbar from './NavbarAdmin'
 import { useParams, useNavigate } from 'react-router-dom'
 
+const staffFetch=(url,opts={})=>{
+  const token=localStorage.getItem('auth_token')||localStorage.getItem('admin_token')||localStorage.getItem('token')||localStorage.getItem('adminToken')||localStorage.getItem('accessToken')||'';
+  return fetch(url,{...opts,headers:{...(opts.headers||{}),Authorization:`Bearer ${token}`}})
+}
 const DEFAULT_API_BASE = 'https://vandhana-shopping-mall-backend.vercel.app'
 const API_BASE_RAW =
   (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_BASE) ||
@@ -42,6 +46,9 @@ export default function ReturnReview() {
   const [rejectReason, setRejectReason] = useState('')
   const [actionLoading, setActionLoading] = useState(false)
   const [refundLoading, setRefundLoading] = useState(false)
+  const [refundReference,setRefundReference]=useState('')
+  const [itemsReceived,setItemsReceived]=useState(false)
+  const [transferConfirmed,setTransferConfirmed]=useState(false)
   const [message, setMessage] = useState('')
   const [messageType, setMessageType] = useState('ok')
 
@@ -54,7 +61,7 @@ export default function ReturnReview() {
     setLoading(true)
     setError('')
     try {
-      const res = await fetch(`${API_BASE}/api/returns/${requestIdParam}`, {
+      const res = await staffFetch(`${API_BASE}/api/returns/${requestIdParam}`, {
         cache: 'no-store'
       })
       const data = await res.json().catch(() => ({}))
@@ -81,7 +88,7 @@ export default function ReturnReview() {
     setActionLoading(true)
     setMessage('')
     try {
-      const res = await fetch(`${API_BASE}/api/returns/${request.id}/approve`, {
+      const res = await staffFetch(`${API_BASE}/api/returns/${request.id}/approve`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' }
       })
@@ -110,7 +117,7 @@ export default function ReturnReview() {
     setActionLoading(true)
     setMessage('')
     try {
-      const res = await fetch(`${API_BASE}/api/returns/${request.id}/reject`, {
+      const res = await staffFetch(`${API_BASE}/api/returns/${request.id}/reject`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ reason: rejectReason })
@@ -135,9 +142,10 @@ export default function ReturnReview() {
     setRefundLoading(true)
     setMessage('')
     try {
-      const res = await fetch(`${API_BASE}/api/returns/${request.id}/refund-complete`, {
+      const res = await staffFetch(`${API_BASE}/api/returns/${request.id}/refund-complete`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({amount_paise:request.refund?.amount_paise,reference:refundReference,items_received:itemsReceived,transfer_confirmed:transferConfirmed})
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok || data.ok === false) {
@@ -202,7 +210,7 @@ export default function ReturnReview() {
   const isApproved = status === 'APPROVED'
   const isRejected = status === 'REJECTED'
   const canDecide = isRequested
-  const canMarkRefundComplete = refundStatus === 'PENDING_REFUND'
+  const canMarkRefundComplete = refundStatus === 'PENDING_REFUND' && !!request.refund && itemsReceived && (request.refund.amount_paise === 0 || refundReference.trim().length >= 6) && (request.sale?.payment_method !== 'COD' || transferConfirmed)
 
   let progressLabel = 'Requested'
   if (refundStatus === 'REFUNDED') {
@@ -284,7 +292,7 @@ export default function ReturnReview() {
                 <div className="rr-value">{request.customer_mobile || '-'}</div>
               </div>
               <div className="rr-summary-item">
-                <div className="rr-label">Paid amount</div>
+                {request.items?.length>0 && <div><strong>Selected items only</strong>{request.items.map((it,i)=><p key={i}>{it.name} · {it.size} · {it.colour} · Qty {it.qty} · ₹{(Number(it.price)*Number(it.qty)).toFixed(2)} before order adjustments</p>)}<p>Review reward redemption and delivery charges before deciding the refund. Innerwear is excluded.</p></div>}<div className="rr-label">Order paid amount (not the return refund)</div>
                 <div className="rr-value">
                   {sale.totals ? formatPriceFromTotals(sale.totals) : '-'}
                 </div>
@@ -433,6 +441,7 @@ export default function ReturnReview() {
                   After you send the refund from your payment gateway or bank, mark it completed.
                 </div>
               </div>
+              <div style={{padding:"16px",background:"#f2f6ed",borderRadius:"10px"}}>{request.refund ? <><p><strong>Product-only refund: ₹{Number(request.refund.amount).toFixed(2)}</strong></p><p>Delivery / COD excluded: ₹{Number(request.refund.excluded_delivery_and_cod).toFixed(2)} · Reward points to restore: {request.refund.reward_points}</p><label style={{display:"block",margin:"12px 0"}}>Refund / bank transfer reference<input value={refundReference} onChange={e=>setRefundReference(e.target.value)} style={{display:"block",padding:"10px",width:"100%"}} /></label><label style={{display:"block",margin:"12px 0"}}><input type="checkbox" checked={itemsReceived} onChange={e=>setItemsReceived(e.target.checked)} /> Returned items have been received and checked.</label>{request.sale?.payment_method === "COD" && <label><input type="checkbox" checked={transferConfirmed} onChange={e=>setTransferConfirmed(e.target.checked)} /> I sent the exact product-only amount to the customer.</label>}</> : <p>Refund calculation needs review before any payment is sent.</p>}</div>
               <div className="rr-refund-line">
                 <span className="rr-refund-pill">
                   Current refund status: {refundStatus || 'Not started'}
