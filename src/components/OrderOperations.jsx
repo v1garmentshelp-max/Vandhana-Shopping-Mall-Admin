@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import './OrderOperations.css';
 const defaultBase='https://vandhana-shopping-mall-backend.vercel.app';
-export const API_BASE=((typeof import.meta!=='undefined' && import.meta.env?.VITE_API_BASE) || (typeof process!=='undefined' && process.env?.REACT_APP_API_BASE) || defaultBase).replace(/\/+$/,'');
+export const API_BASE=(process.env.REACT_APP_API_BASE || defaultBase).replace(/\/+$/,'');
 export const getStaffToken=()=>localStorage.getItem('auth_token')||localStorage.getItem('admin_token')||localStorage.getItem('token')||localStorage.getItem('adminToken')||localStorage.getItem('accessToken')||'';
 export async function staffRequest(path,body,signal) {
   const response=await fetch(`${API_BASE}/api${path}`,{method:body===undefined?'GET':'POST',cache:'no-store',signal,
@@ -42,7 +42,7 @@ function ShippingControls({id,onChanged}) {
   const refresh=useCallback(async()=>{try{setState(await staffRequest(`/order-shipping/${id}`));setError('');}catch(e){setError(e.message);}},[id]);
   useEffect(()=>{void refresh();},[refresh]);
   async function run(path,body){if(busy)return;setBusy(true);setError('');try{const result=await staffRequest(`/order-shipping/${id}${path}`,body);if(path==='/couriers')setCouriers(result.couriers||result.available_courier_companies||result.data?.available_courier_companies||[]);else if(path==='/pickups')setPickups(result.pickups||[]);else{await refresh();await onChanged();}}catch(e){setError(e.message);}finally{setBusy(false);}}
-  const closed=!!state?.blocked || state?.sale && (/CANCEL|RETURN|RTO|DELIVER/.test(state.sale.status)||state.sale.payment_method==='ONLINE'&&state.sale.payment_status!=='PAID');
+  const closed=!!state?.blocked || (state?.sale && (/CANCEL|RETURN|RTO|DELIVER/.test(state.sale.status)||(state.sale.payment_method==='ONLINE'&&state.sale.payment_status!=='PAID')));
   return <section className="v1ops-card"><h3>Shiprocket dispatch</h3>{error&&<p role="alert" className="v1ops-error">{error}</p>}{state?.workflow?.last_error&&<p className="v1ops-error">{state.workflow.last_error}</p>}
     <Entry name="Shipping phase">{label(state?.workflow?.phase)}</Entry><Entry name="Carrier order ID">{state?.shipment?.shiprocket_order_id||'Not linked'}</Entry>
     {state?.blocked&&<p className="v1ops-muted">{state.blocked}</p>}
@@ -86,7 +86,10 @@ export default function OrderOperations() {
   function refund(kind,request) {setAction({type:'refund',title:`Refund ${kind==='RETURN'?'returned products':'cancelled order'}`,description:`Order ${selected}. Confirm the approved product amount.`,kind,id:kind==='RETURN'?request.id:selected,amount:request.refund_amount_paise,points:request.refund_points,method:detail.payment_method});}
   function submit(body){const a=action;let path;
     if(a.type==='refund')path=a.method==='COD'&&Number(a.amount)>0?(a.kind==='RETURN'?`/returns/${a.id}/refund-complete`:`/storefront/admin/cancellations/${a.id}/refund-complete`):`/order-management/refunds/${a.kind}/${a.id}/initiate`;
-    else if(a.type==='cancel')path='/orders/cancel',body={...body,sale_id:selected};
+    else if(a.type==='cancel'){
+      path='/orders/cancel';
+      body={...body,sale_id:selected};
+    }
     else if(a.type==='rejectCancellation')path=`/storefront/admin/cancellations/${selected}/reject`;
     else if(a.type==='approveReturn')path=`/returns/${a.id}/approve`;
     else if(a.type==='rejectReturn')path=`/returns/${a.id}/reject`;
