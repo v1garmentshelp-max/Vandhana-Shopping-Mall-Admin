@@ -1,0 +1,19 @@
+{
+  "changed": [
+    "src/App.js",
+    "src/pages/NavbarAdmin.js",
+    "src/pages/OrderDetailPopup.js"
+  ],
+  "added": [
+    "vercel.json",
+    ".env.example",
+    "public/index.html",
+    "public/images/main.png",
+    "src/pages/ShiwangOffer.js",
+    "src/pages/ShiwangOffer.css",
+    "SHIWANG-DEPLOYMENT-GUIDE.md",
+    "SHIWANG-CHANGES.json"
+  ],
+  "release": "Shiwang pair offer — 15 October 2026",
+  "database_migration_required": false
+}

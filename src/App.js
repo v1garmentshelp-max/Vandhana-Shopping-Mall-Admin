@@ -1,4 +1,5 @@
 import React from 'react'
+import ShiwangOffer from './pages/ShiwangOffer'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider, useAuth } from './pages/AdminAuth'
 import { LoadingProvider } from './pages/LoadingContext'
@@ -62,6 +63,7 @@ export default function App() {
             <Route path="/customers" element={<RequireAuth><Customers /></RequireAuth>} />
             <Route path="/pos" element={<RequireAuth><POS /></RequireAuth>} />
             <Route path="/import" element={<RequireAuth><ImportStock /></RequireAuth>} />
+            <Route path="/offers/shiwang" element={<RequireAuth><ShiwangOffer /></RequireAuth>} />
             <Route path="/rewards" element={<RequireAuth><RewardPoints /></RequireAuth>} />
             <Route path="/categories" element={<RequireAuth><RequireSuperAdmin><CategoryManagement /></RequireSuperAdmin></RequireAuth>} />
             <Route path="/product-design-review" element={<RequireAuth><RequireSuperAdmin><ProductDesignReview /></RequireSuperAdmin></RequireAuth>} />

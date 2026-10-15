@@ -855,6 +855,7 @@ export default function OrderDetailPopup({
               </div>
 
               <div className="odp-payment-box">
+                {Number(saleTotals.offer_discount) > 0 && <p className="odp-step-card-sub">Shiwang pair savings: {money(saleTotals.offer_discount)} (included in Discount below).</p>}
                 <div className="odp-payment-line">
                   <span className="odp-pay-k">Bag total</span>
                   <span className="odp-pay-v">{money(saleTotals.bagTotal)}</span>

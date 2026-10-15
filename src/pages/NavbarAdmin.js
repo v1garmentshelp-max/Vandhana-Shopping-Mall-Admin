@@ -21,6 +21,7 @@ const NavbarAdmin = () => {
     { name: 'POS', path: '/pos' },
     { name: 'Import', path: '/import' },
     { name: 'Rewards', path: '/rewards' },
+    { name: 'Shiwang Offer', path: '/offers/shiwang' },
     ...(isSuperAdmin ? [
       { name: 'Categories', path: '/categories' },
       { name: 'Design Review', path: '/product-design-review' },
@@ -93,7 +94,7 @@ const NavbarAdmin = () => {
     <>
       <nav className="navbar-final">
         <div className="top-row-final">
-          <Link to="/" className="logo-final" onClick={handleNavClick} aria-label="Admin home"><img src="/images/main.svg" alt="Vandhana Shopping Mall" /></Link>
+          <Link to="/" className="logo-final" onClick={handleNavClick} aria-label="Admin home"><img src="/images/main.png" alt="Vandhana Shopping Mall" /></Link>
 
           <div className="nav-center-final desktop-tab-only-final">
             <div className="nav-scroll-final">{renderLinks(false)}</div>
@@ -109,7 +110,7 @@ const NavbarAdmin = () => {
 
       <aside ref={mobileNavRef} className={`mobile-drawer-final ${isMobileNavOpen ? 'mobile-drawer-open-final' : ''}`} aria-hidden={!isMobileNavOpen}>
         <div className="mobile-drawer-header-final">
-          <Link to="/" className="mobile-logo-final" onClick={handleNavClick} aria-label="Admin home"><img src="/images/main.svg" alt="Vandhana Shopping Mall" /></Link>
+          <Link to="/" className="mobile-logo-final" onClick={handleNavClick} aria-label="Admin home"><img src="/images/main.png" alt="Vandhana Shopping Mall" /></Link>
           <button type="button" className="close-btn-final" onClick={() => setIsMobileNavOpen(false)} aria-label="Close navigation">×</button>
         </div>
 
