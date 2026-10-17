@@ -1,4 +1,4 @@
-// useOfflineQueue.js
+                     
 import { useEffect, useRef, useState } from 'react';
 
 const KEY = 'pos_offline_queue_v1';
@@ -26,7 +26,7 @@ export default function useOfflineQueue({ retryMs = 4000 } = {}) {
     saveQueue(q);
   };
 
-  // auto retry when online
+                           
   useEffect(() => {
     const tick = async () => {
       if (!navigator.onLine) return;
@@ -39,7 +39,7 @@ export default function useOfflineQueue({ retryMs = 4000 } = {}) {
             credentials: 'include'
           });
           if (res.ok) dequeueById(item.id);
-        } catch { /* keep in queue */ }
+        } catch {                     }
       }
     };
     timer.current = setInterval(tick, retryMs);

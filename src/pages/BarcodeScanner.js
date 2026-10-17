@@ -1,13 +1,13 @@
-// BarcodeScanner.js
+                    
 import React, { useEffect, useRef, useState } from 'react';
 
-/**
- * Lightweight wrapper that tries camera scanning via @zxing/browser
- * but gracefully falls back to manual input if not available.
- *
- * Props:
- *  - onDetected(value: string)
- */
+   
+                                                                    
+                                                              
+  
+         
+                               
+   
 export default function BarcodeScanner({ onDetected }) {
   const videoRef = useRef(null);
   const [supported, setSupported] = useState(false);
@@ -20,7 +20,7 @@ export default function BarcodeScanner({ onDetected }) {
 
     async function start() {
       try {
-        // dynamic import (won't break build if library missing)
+                                                                
         const mod = await import('@zxing/browser').catch(() => null);
         if (!mod) return;
 
@@ -38,7 +38,7 @@ export default function BarcodeScanner({ onDetected }) {
             if (res?.text) {
               onDetected?.(res.text.trim());
             } else if (err) {
-              // ignore frequent decode errors
+                                              
             }
           }
         );
