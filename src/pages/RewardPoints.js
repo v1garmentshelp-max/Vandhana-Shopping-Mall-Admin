@@ -496,7 +496,7 @@ const RewardPoints = () => {
         <section className="rewards-settings">
           <div className="rewards-setting">
             <span>Redemption Limit</span>
-            <strong>{formatNumber(settings.max_points_per_product ?? 10)} points per product purchased</strong>
+            <strong>{formatNumber(settings.max_redemption_percent ?? 10)}% of product subtotal after discounts</strong>
           </div>
           <div className="rewards-setting">
             <span>
