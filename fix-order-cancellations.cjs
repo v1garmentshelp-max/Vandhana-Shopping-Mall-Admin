@@ -1,13 +1,13 @@
-/*
- * Run from your existing CRA admin project root:
- *   node fix-order-cancellations.cjs
- * Optional: pass the admin project directory as the first argument.
- * This script only patches src/pages/OrderCancellations.js. It adds explicit
- * grouping to mixed && / || expressions without changing their current
- * JavaScript evaluation order. It uses the Babel parser already installed
- * with react-scripts, checks the parsed code before writing, and backs up
- * the original file to your operating system's temporary directory.
- */
+  
+                                                 
+                                     
+                                                                    
+                                                                             
+                                                                       
+                                                                          
+                                                                          
+                                                                    
+   
 'use strict';
 
 const fs = require('node:fs');
@@ -100,7 +100,7 @@ function main() {
   const backupDirectory = fs.mkdtempSync(path.join(os.tmpdir(), 'v1garments-order-cancellations-'));
   const backup = path.join(backupDirectory, 'OrderCancellations.js');
   fs.copyFileSync(target, backup);
-  // Keep the existing file's permissions and line endings. No formatter runs.
+                                                                              
   fs.writeFileSync(target, result.source, 'utf8');
   console.log(`Updated src/pages/OrderCancellations.js: ${result.pairs} parenthesis pair(s), line(s) ${result.lines.join(', ')}.`);
   console.log('Verified: the parsed JavaScript structure and evaluation order are unchanged.');

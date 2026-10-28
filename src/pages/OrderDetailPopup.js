@@ -371,7 +371,9 @@ const derivePaymentMeta = (sale, detail, transactionDetail, latestShipment) => {
     bankSettlementState = 'NA'
   }
 
-  const remittanceAmount = asNum(remittance.amount) || getPayable(sale)
+  const savedTotals = parseMaybeJson(sale?.totals) || {}
+  const codBalance = savedTotals.balance_on_delivery ?? Math.max(0, getPayable(sale) - asNum(savedTotals.cod_advance || 0))
+  const remittanceAmount = remittance.amount != null && remittance.amount !== '' ? asNum(remittance.amount) : isCOD ? codBalance : getPayable(sale)
 
   return {
     paymentType,
@@ -855,6 +857,7 @@ export default function OrderDetailPopup({
               </div>
 
               <div className="odp-payment-box">
+                {Number(saleTotals.cod_advance || 0)>0 && <><div className="odp-payment-line"><span>Advance paid online</span><strong>{money(saleTotals.cod_advance_paid || 0)}</strong></div><div className="odp-payment-line"><span>COD balance at delivery</span><strong>{money(saleTotals.balance_on_delivery)}</strong></div><p>{Number(saleTotals.cod_advance_paid || 0)<Number(saleTotals.cod_advance) ? "Advance payment pending. Dispatch is blocked." : "Advance verified. Collect only the balance at delivery."} Platform, handling and COD charges are non-refundable on returns.</p></>}
                 {Number(saleTotals.offer_discount) > 0 && <p className="odp-step-card-sub">Shiwang pair savings: {money(saleTotals.offer_discount)} (included in Discount below).</p>}
                 <div className="odp-payment-line">
                   <span className="odp-pay-k">Bag total</span>

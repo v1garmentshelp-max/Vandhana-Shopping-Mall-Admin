@@ -296,7 +296,9 @@ function derivePaymentMeta(row) {
     bankSettlementState = 'NA'
   }
 
-  const remittanceAmount = asNum(remittance.amount) || getPayable(row)
+  const savedTotals = parseTotals(row.totals) || {}
+  const codBalance = savedTotals.balance_on_delivery ?? Math.max(0, getPayable(row) - asNum(savedTotals.cod_advance || 0))
+  const remittanceAmount = remittance.amount != null && remittance.amount !== '' ? asNum(remittance.amount) : isCOD ? codBalance : getPayable(row)
 
   return {
     paymentType,
