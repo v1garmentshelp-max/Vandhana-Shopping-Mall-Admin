@@ -1,5 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react'
 import './ReturnReview.css'
+import ReturnCourierControls from '../components/ReturnCourierControls'
+import ReturnResolutionControls from '../components/ReturnResolutionControls'
 import Navbar from './NavbarAdmin'
 import { useParams, useNavigate } from 'react-router-dom'
 
@@ -44,11 +46,8 @@ export default function ReturnReview() {
   const [error, setError] = useState('')
 
   const [rejectReason, setRejectReason] = useState('')
+  const [parcel,setParcel]=useState({weight:'0.5',length:'10',breadth:'10',height:'5'})
   const [actionLoading, setActionLoading] = useState(false)
-  const [refundLoading, setRefundLoading] = useState(false)
-  const [refundReference,setRefundReference]=useState('')
-  const [itemsReceived,setItemsReceived]=useState(false)
-  const [transferConfirmed,setTransferConfirmed]=useState(false)
   const [message, setMessage] = useState('')
   const [messageType, setMessageType] = useState('ok')
 
@@ -58,7 +57,6 @@ export default function ReturnReview() {
       setError('Missing request id')
       return
     }
-    setLoading(true)
     setError('')
     try {
       const res = await staffFetch(`${API_BASE}/api/returns/${requestIdParam}`, {
@@ -80,6 +78,7 @@ export default function ReturnReview() {
   }, [requestIdParam])
 
   useEffect(() => {
+    setLoading(true)
     loadRequest()
   }, [loadRequest])
 
@@ -90,14 +89,15 @@ export default function ReturnReview() {
     try {
       const res = await staffFetch(`${API_BASE}/api/returns/${request.id}/approve`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({parcel:Object.fromEntries(Object.entries(parcel).map(([key,value])=>[key,Number(value)]))})
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok || data.ok === false) {
         throw new Error(data.message || 'Unable to approve request')
       }
       setMessageType('ok')
-      setMessage('Request approved successfully. Refund is now approved and pending completion.')
+      setMessage('Return approved. Select a courier and request pickup. Refund follows product receipt and inspection.')
       await loadRequest()
     } catch (e) {
       setMessageType('error')
@@ -134,31 +134,6 @@ export default function ReturnReview() {
       setMessage(e.message || 'Error rejecting request.')
     } finally {
       setActionLoading(false)
-    }
-  }
-
-  async function handleRefundComplete() {
-    if (!request) return
-    setRefundLoading(true)
-    setMessage('')
-    try {
-      const res = await staffFetch(`${API_BASE}/api/returns/${request.id}/refund-complete`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({amount_paise:request.refund?.amount_paise,reference:refundReference,items_received:itemsReceived,transfer_confirmed:transferConfirmed})
-      })
-      const data = await res.json().catch(() => ({}))
-      if (!res.ok || data.ok === false) {
-        throw new Error(data.message || 'Unable to mark refund as completed')
-      }
-      setMessageType('ok')
-      setMessage('Refund marked as completed.')
-      await loadRequest()
-    } catch (e) {
-      setMessageType('error')
-      setMessage(e.message || 'Error updating refund status.')
-    } finally {
-      setRefundLoading(false)
     }
   }
 
@@ -210,7 +185,6 @@ export default function ReturnReview() {
   const isApproved = status === 'APPROVED'
   const isRejected = status === 'REJECTED'
   const canDecide = isRequested
-  const canMarkRefundComplete = refundStatus === 'PENDING_REFUND' && !!request.refund && itemsReceived && (request.refund.amount_paise === 0 || refundReference.trim().length >= 6) && (request.sale?.payment_method !== 'COD' || transferConfirmed)
 
   let progressLabel = 'Requested'
   if (refundStatus === 'REFUNDED') {
@@ -241,7 +215,7 @@ export default function ReturnReview() {
               <span className="rr-badge">Return Management</span>
               <h1 className="rr-title">Return / Refund Review</h1>
               <p className="rr-subtitle">
-                Review product images, verify bank details, and complete the decision flow with a cleaner dashboard.
+                Review the return, arrange pickup, inspect received products and process the approved refund.
               </p>
             </div>
           </div>
@@ -360,7 +334,7 @@ export default function ReturnReview() {
             <div className="rr-card-header">
               <h2>Bank / UPI Details</h2>
               <div className="rr-card-caption">
-                Refund will be processed to these details after approval.
+                COD product refunds use these details. Online refunds go to the original payment method.
               </div>
             </div>
             <div className="rr-form-grid">
@@ -398,6 +372,7 @@ export default function ReturnReview() {
                   Approve if the product condition and details are valid, otherwise reject.
                 </div>
               </div>
+              {canDecide&&<div className="rr-form-grid">{[['weight','Packed weight (kg)'],['length','Length (cm)'],['breadth','Breadth (cm)'],['height','Height (cm)']].map(([key,title])=><label className="rr-form-field" key={key}>{title}<input type="number" min="0.01" step="0.01" value={parcel[key]} onChange={e=>setParcel(p=>({...p,[key]:e.target.value}))} disabled={actionLoading}/></label>)}<p>Check the package measurements before creating the return booking.</p></div>}
               <div className="rr-form-field rr-form-field-full">
                 <label>Rejection reason (only required when rejecting)</label>
                 <textarea
@@ -434,34 +409,9 @@ export default function ReturnReview() {
 
             <div className="rr-divider" />
 
-            <div className="rr-action-section">
-              <div className="rr-card-header">
-                <h2>Refund handling</h2>
-                <div className="rr-card-caption">
-                  After you send the refund from your payment gateway or bank, mark it completed.
-                </div>
-              </div>
-              <div style={{padding:"16px",background:"#f2f6ed",borderRadius:"10px"}}>{request.refund ? <><p><strong>Product-only refund: ₹{Number(request.refund.amount).toFixed(2)}</strong></p><p>Delivery / COD excluded: ₹{Number(request.refund.excluded_delivery_and_cod).toFixed(2)} · Reward points to restore: {request.refund.reward_points}</p><label style={{display:"block",margin:"12px 0"}}>Refund / bank transfer reference<input value={refundReference} onChange={e=>setRefundReference(e.target.value)} style={{display:"block",padding:"10px",width:"100%"}} /></label><label style={{display:"block",margin:"12px 0"}}><input type="checkbox" checked={itemsReceived} onChange={e=>setItemsReceived(e.target.checked)} /> Returned items have been received and checked.</label>{request.sale?.payment_method === "COD" && <label><input type="checkbox" checked={transferConfirmed} onChange={e=>setTransferConfirmed(e.target.checked)} /> I sent the exact product-only amount to the customer.</label>}</> : <p>Refund calculation needs review before any payment is sent.</p>}</div>
-              <div className="rr-refund-line">
-                <span className="rr-refund-pill">
-                  Current refund status: {refundStatus || 'Not started'}
-                </span>
-                <button
-                  type="button"
-                  className="rr-primary-btn ghost"
-                  onClick={handleRefundComplete}
-                  disabled={!canMarkRefundComplete || refundLoading}
-                >
-                  {refundLoading ? 'Updating…' : 'Mark refund completed'}
-                </button>
-              </div>
-              {!canMarkRefundComplete && (
-                <div className="rr-note">
-                  Refund can be marked completed only after the request is approved and refund is
-                  pending.
-                </div>
-              )}
-            </div>
+            <ReturnCourierControls request={request} onChanged={loadRequest}/>
+            <div className="rr-divider" />
+            <ReturnResolutionControls request={request} onChanged={loadRequest}/>
 
             {message && (
               <div

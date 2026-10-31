@@ -1,15 +1,8 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import './OrderOperations.css';
-const defaultBase='https://vandhana-shopping-mall-backend.vercel.app';
-export const API_BASE=(process.env.REACT_APP_API_BASE || defaultBase).replace(/\/+$/,'');
-export const getStaffToken=()=>localStorage.getItem('auth_token')||localStorage.getItem('admin_token')||localStorage.getItem('token')||localStorage.getItem('adminToken')||localStorage.getItem('accessToken')||'';
-export async function staffRequest(path,body,signal) {
-  const response=await fetch(`${API_BASE}/api${path}`,{method:body===undefined?'GET':'POST',cache:'no-store',signal,
-    headers:{'Content-Type':'application/json',Authorization:`Bearer ${getStaffToken()}`},body:body===undefined?undefined:JSON.stringify(body)});
-  const data=await response.json().catch(()=>({}));
-  if(!response.ok)throw new Error(response.status===401?'Please sign in again.':response.status>=500?'The server could not complete this request. Refresh and retry.':data.message||'Request could not be completed.');
-  return data;
-}
+import ReverseControls from './ReturnCourierControls';
+import { staffRequest } from './orderStaffApi';
+export { API_BASE, getStaffToken, staffRequest } from './orderStaffApi';
 const cash=value=>new Intl.NumberFormat('en-IN',{style:'currency',currency:'INR'}).format(Number(value||0));
 const when=value=>value?new Date(value).toLocaleString('en-IN'):'Not recorded';
 const label=value=>String(value||'Not recorded').replace(/_/g,' ');
@@ -52,16 +45,6 @@ function ShippingControls({id,onChanged}) {
     {state?.shipment&&!closed&&<><button disabled={busy} onClick={()=>void run('/couriers')}>Check available couriers</button>{!!couriers.length&&<div className="v1ops-actions"><select aria-label="Courier" value={courier} onChange={e=>setCourier(e.target.value)}><option value="">Choose courier</option>{couriers.map(item=><option key={item.courier_company_id} value={item.courier_company_id}>{item.courier_name} · {cash(item.rate)}</option>)}</select><button disabled={busy||!courier} onClick={()=>void run('/awb',{courier_id:Number(courier)})}>Generate AWB</button></div>}<button disabled={busy||!state.shipment.awb} onClick={()=>void run('/pickup',{})}>Request pickup</button></>}
     <div className="v1ops-actions"><button disabled={busy} onClick={()=>void run('/tracking')}>Refresh carrier status</button>{['label','invoice','manifest'].map(type=><button key={type} disabled={busy||!state?.shipment?.awb} onClick={async()=>{setBusy(true);try{const result=await staffRequest(`/order-shipping/${id}/documents/${type}`,{});const url=result.url||result[`${type}_url`];if(!/^https:\/\//.test(url||''))throw new Error('Document URL is unavailable.');window.open(url,'_blank','noopener,noreferrer');}catch(e){setError(e.message);}finally{setBusy(false);}}}>Open {type}</button>)}</div>
   </section>;
-}
-function ReverseControls({request,onChanged}) {
-  const [couriers,setCouriers]=useState([]),[courier,setCourier]=useState(''),[remote,setRemote]=useState(''),[busy,setBusy]=useState(false),[error,setError]=useState('');
-  async function run(action,body){if(busy)return;setBusy(true);setError('');try{const result=await staffRequest(`/returns/${request.id}/shipping/${action}`,body);if(action==='couriers')setCouriers(result.couriers||[]);else await onChanged();}catch(e){setError(e.message);}finally{setBusy(false);}}
-  if(request.items_received_at||['REJECTED','CANCELLED'].includes(request.status))return null;
-  const reverse=request.reverse_shipment;
-  return <div className="v1ops-reverse"><h4>Return courier</h4>{error&&<p className="v1ops-error" role="alert">{error}</p>}{reverse?.last_error&&<p className="v1ops-error">{reverse.last_error}</p>}
-    {!reverse&&<><p className="v1ops-muted">For a booking timeout, find return reference RET-{request.id} in Shiprocket and link its numeric carrier order ID.</p><div className="v1ops-actions"><input aria-label="Shiprocket return order ID" value={remote} onChange={e=>setRemote(e.target.value.replace(/\D/g,''))} placeholder="Existing carrier return order ID"/><button disabled={busy||!remote} onClick={()=>void run('reconcile',{order_id:remote})}>Link return booking</button></div></>}
-    {reverse&&<><p>{reverse.awb||'AWB pending'} · {label(reverse.status)}</p><button disabled={busy} onClick={()=>void run('reconcile',{})}>Refresh return carrier status</button>{request.status==='APPROVED'&&!reverse.awb&&<><button disabled={busy} onClick={()=>void run('couriers')}>Load reverse couriers</button>{!!couriers.length&&<div className="v1ops-actions"><select aria-label="Return courier" value={courier} onChange={e=>setCourier(e.target.value)}><option value="">Choose reverse courier</option>{couriers.map(item=><option key={item.courier_company_id} value={item.courier_company_id}>{item.courier_name} · {cash(item.rate)}</option>)}</select><button disabled={busy||!courier} onClick={()=>void run('awb',{courier_id:Number(courier)})}>Generate return AWB</button></div>}</>}{request.status==='APPROVED'&&reverse.awb&&<button disabled={busy||!!reverse.pickup_requested_at} onClick={()=>void run('pickup',{})}>{reverse.pickup_requested_at?'Return pickup recorded':'Request return pickup'}</button>}</>}
-  </div>;
 }
 export default function OrderOperations() {
   const [filters,setFilters]=useState({queue:'',status:'ALL',q:'',payment_method:'',page:1}),[search,setSearch]=useState(''),[refresh,setRefresh]=useState(0);
